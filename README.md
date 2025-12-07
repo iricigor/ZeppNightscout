@@ -26,7 +26,7 @@ This project is configured for GitHub Codespaces with GitHub Copilot support:
 
 ## Testing
 
-For detailed testing instructions, see the [Testing Guide](TESTING.md).
+For detailed testing instructions, see the [Testing Guide](docs/TESTING.md).
 
 ### Automated Testing
 
@@ -68,7 +68,7 @@ zeus build --production
 zeus install
 ```
 
-For detailed build and deployment instructions, see [TESTING.md](TESTING.md).
+For detailed build and deployment instructions, see [TESTING.md](docs/TESTING.md).
 
 ## API Integration
 
