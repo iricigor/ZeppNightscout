@@ -34,6 +34,54 @@ setup:
                 "apiLevelLimitMax": "2.0.0"
               }
             }
+          },
+          {
+            "productName": "gts-4",
+            "deviceSource": "gts-4",
+            "code": "gts-4",
+            "value": {
+              "shape": "rectangle",
+              "screen": {
+                "size": "390*450"
+              },
+              "os": {
+                "apiLevel": "1.0.1",
+                "apiLevelLimitMin": "1.0.0",
+                "apiLevelLimitMax": "2.0.0"
+              }
+            }
+          },
+          {
+            "productName": "bip-6",
+            "deviceSource": "bip-6",
+            "code": "bip-6",
+            "value": {
+              "shape": "rectangle",
+              "screen": {
+                "size": "320*380"
+              },
+              "os": {
+                "apiLevel": "1.0.1",
+                "apiLevelLimitMin": "1.0.0",
+                "apiLevelLimitMax": "2.0.0"
+              }
+            }
+          },
+          {
+            "productName": "t-rex-3",
+            "deviceSource": "t-rex-3",
+            "code": "t-rex-3",
+            "value": {
+              "shape": "round",
+              "screen": {
+                "size": "480*480"
+              },
+              "os": {
+                "apiLevel": "1.0.1",
+                "apiLevelLimitMin": "1.0.0",
+                "apiLevelLimitMax": "2.0.0"
+              }
+            }
           }
         ],
         "devices_beta": [],
