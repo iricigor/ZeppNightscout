@@ -60,7 +60,7 @@ function parseNightscoutData(entries) {
     currentBG: latest.sgv ? latest.sgv.toString() : '--',
     trend: trend,
     delta: deltaDisplay,
-    dataPoints: dataPoints.reverse(), // Reverse to show oldest to newest
+    dataPoints: dataPoints.slice().reverse(), // Reverse to show oldest to newest (use slice to avoid mutation)
     rawData: latest
   };
 }
