@@ -1,7 +1,7 @@
 {
-  "configVersion": "v2",
+  "configVersion": "v3",
   "app": {
-    "appId": "com.nightscout.zepp",
+    "appId": 1000089,
     "appName": "Nightscout",
     "appType": "app",
     "version": {
@@ -9,7 +9,7 @@
       "name": "0.1.0"
     },
     "icon": "icon.png",
-    "vendor": "Nightscout",
+    "vender": "Nightscout",
     "description": "Connect to Nightscout and display CGM data"
   },
   "permissions": [
@@ -24,7 +24,7 @@
     }
   },
   "targets": {
-    "balance": {
+    "gtr-3": {
       "module": {
         "page": {
           "pages": [
@@ -34,9 +34,21 @@
         "app-side": {
           "path": "app-side/index"
         }
-      }
+      },
+      "platforms": [
+        {
+          "name": "gtr-3",
+          "deviceSource": 226
+        },
+        {
+          "name": "gtr-3w",
+          "deviceSource": 227
+        }
+      ],
+      "designWidth": 454
     }
   },
+  "defaultLanguage": "en-US",
   "i18n": {
     "en-US": {
       "appName": "Nightscout"
