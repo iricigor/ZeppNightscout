@@ -29,5 +29,8 @@ jobs:
     - name: Run unit tests
       run: npm test
       
+    - name: Validate build requirements
+      run: npm run test:build
+      
     - name: Test help command
       run: npm run help
