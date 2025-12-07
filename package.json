@@ -3,9 +3,15 @@
   "version": "1.0.0",
   "description": "An app for Zepp OS that connects to Nightscout instance and displays CGM data",
   "scripts": {
-    "dev": "echo 'Zepp OS development server'",
-    "build": "echo 'Building Zepp OS app'",
-    "test": "echo 'No tests yet'"
+    "dev": "echo 'Run: zeus dev (requires @zeppos/zeus-cli)'",
+    "build": "echo 'Run: zeus build (requires @zeppos/zeus-cli)'",
+    "build:prod": "echo 'Run: zeus build --production (requires @zeppos/zeus-cli)'",
+    "install:device": "echo 'Run: zeus install (requires @zeppos/zeus-cli and connected device)'",
+    "test": "node test-parser.js",
+    "test:syntax": "node --check page/index.js && node --check app-side/index.js && node --check shared/message.js",
+    "simulator": "echo 'Run: zeus dev (requires @zeppos/zeus-cli)'",
+    "lint": "echo 'Linting not configured yet'",
+    "help": "node scripts/help.js"
   },
   "keywords": [
     "zeppos",

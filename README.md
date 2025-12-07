@@ -24,9 +24,51 @@ This project is configured for GitHub Codespaces with GitHub Copilot support:
    - Configure VS Code with ESLint, Prettier, and GitHub Copilot extensions
    - Forward port 8080 for development server
 
+## Testing
+
+For detailed testing instructions, see the [Testing Guide](TESTING.md).
+
+### Automated Testing
+
+This project uses GitHub Actions to automatically run tests on every pull request:
+
+- ✅ JavaScript syntax validation
+- ✅ Unit tests (26 assertions)
+- ✅ Command verification
+
+All tests must pass before merging.
+
+### Quick Start
+
+```bash
+# Test data parser
+npm test
+
+# Check JavaScript syntax
+npm run test:syntax
+
+# Build and run in simulator (requires Zeus CLI)
+npm run dev
+```
+
 ## Building for Zepp OS
 
 To build this app for Zepp OS devices, you'll need the Zepp OS development tools. Follow the official [Zepp OS documentation](https://docs.zepp.com/) for setup instructions.
+
+### Quick Build
+
+```bash
+# Install Zeus CLI
+npm install -g @zeppos/zeus-cli
+
+# Build the app
+zeus build --production
+
+# Install to connected device
+zeus install
+```
+
+For detailed build and deployment instructions, see [TESTING.md](TESTING.md).
 
 ## API Integration
 

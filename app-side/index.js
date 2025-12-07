@@ -176,7 +176,7 @@ AppSideService({
       trend: trend,
       delta: deltaDisplay,
       lastUpdate: lastUpdate,
-      dataPoints: dataPoints.reverse(), // Reverse to show oldest to newest
+      dataPoints: dataPoints.slice().reverse(), // Reverse to show oldest to newest (slice to avoid mutation)
       rawData: latest
     };
   },
