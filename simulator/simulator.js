@@ -34,6 +34,13 @@ const TREND_MAP = {
     'RATE OUT OF RANGE': '⇕'
 };
 
+// UI color constants
+const UI_COLORS = {
+    SUCCESS: '#48bb78',
+    ERROR: '#f56565',
+    NEUTRAL: '#888'
+};
+
 // State
 let currentState = {
     apiUrl: '',
@@ -252,14 +259,14 @@ function showTokenStatus(type, icon, message) {
     tokenValidationStatus.textContent = message;
     
     if (type === 'success') {
-        tokenStatusIcon.style.color = '#48bb78';
-        tokenValidationStatus.style.color = '#48bb78';
+        tokenStatusIcon.style.color = UI_COLORS.SUCCESS;
+        tokenValidationStatus.style.color = UI_COLORS.SUCCESS;
     } else if (type === 'error') {
-        tokenStatusIcon.style.color = '#f56565';
-        tokenValidationStatus.style.color = '#f56565';
+        tokenStatusIcon.style.color = UI_COLORS.ERROR;
+        tokenValidationStatus.style.color = UI_COLORS.ERROR;
     } else {
-        tokenStatusIcon.style.color = '#888';
-        tokenValidationStatus.style.color = '#888';
+        tokenStatusIcon.style.color = UI_COLORS.NEUTRAL;
+        tokenValidationStatus.style.color = UI_COLORS.NEUTRAL;
     }
 }
 
