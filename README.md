@@ -28,6 +28,16 @@ This project is configured for GitHub Codespaces with GitHub Copilot support:
 
 For detailed testing instructions, see the [Testing Guide](TESTING.md).
 
+### Automated Testing
+
+This project uses GitHub Actions to automatically run tests on every pull request:
+
+- ✅ JavaScript syntax validation
+- ✅ Unit tests (26 assertions)
+- ✅ Command verification
+
+All tests must pass before merging.
+
 ### Quick Start
 
 ```bash

@@ -2,6 +2,16 @@
 
 Quick reference for common testing commands and workflows.
 
+## Continuous Integration
+
+**GitHub Actions automatically runs tests on all PRs**
+
+- ✅ JavaScript syntax validation
+- ✅ Unit tests (26 assertions)  
+- ✅ Command verification
+
+View results in PR → Checks section.
+
 ## Prerequisites
 
 ```bash

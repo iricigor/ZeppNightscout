@@ -5,6 +5,7 @@ This guide explains how to test the ZeppNightscout app functionality in both loc
 ## Table of Contents
 
 - [Overview](#overview)
+- [Continuous Integration](#continuous-integration)
 - [Prerequisites](#prerequisites)
 - [Local Development Testing](#local-development-testing)
 - [Simulator Testing](#simulator-testing)
@@ -19,6 +20,46 @@ The ZeppNightscout app can be tested at multiple levels:
 1. **Code-level testing**: Verify JavaScript code functions correctly
 2. **Simulator testing**: Test the app in the Zepp OS simulator
 3. **Device testing**: Deploy and test on your actual watch
+4. **Automated CI testing**: GitHub Actions runs tests on every PR
+
+## Continuous Integration
+
+This project uses GitHub Actions to automatically run tests on every pull request and push to main/master branches.
+
+### What Gets Tested
+
+When you open a PR or push code, the following tests run automatically:
+
+1. **JavaScript Syntax Check**: Validates all JS files for syntax errors
+2. **Unit Tests**: Runs the data parser test suite (26 assertions)
+3. **Help Command**: Verifies the help script works correctly
+
+### Viewing Test Results
+
+1. Go to the **Pull Requests** tab in GitHub
+2. Select your PR
+3. Scroll down to the **Checks** section
+4. Click on **Test** to see detailed results
+
+All tests must pass before merging a PR.
+
+### GitHub Actions Workflow
+
+The test workflow is defined in `.github/workflows/test.yml` and includes:
+
+```yaml
+- Check JavaScript syntax
+- Run unit tests
+- Test help command
+```
+
+To run the same tests locally before pushing:
+
+```bash
+npm run test:syntax  # Check syntax
+npm test             # Run unit tests
+npm run help         # Test help command
+```
 
 ## Prerequisites
 
