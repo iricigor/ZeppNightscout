@@ -34,7 +34,9 @@ When you open a PR or push code, the following tests run automatically:
 
 1. **JavaScript Syntax Check**: Validates all JS files for syntax errors
 2. **Unit Tests**: Runs the data parser test suite (26 assertions)
-3. **Help Command**: Verifies the help script works correctly
+3. **Build Validation**: Validates all required build files and configuration (31 assertions)
+4. **Actual Build**: Builds the app with Zeus CLI to ensure it compiles successfully
+5. **Help Command**: Verifies the help script works correctly
 
 ### Viewing Test Results
 
@@ -52,6 +54,8 @@ The test workflow is defined in `.github/workflows/test.yml` and includes:
 ```yaml
 - Check JavaScript syntax
 - Run unit tests
+- Validate build requirements
+- Install Zeus CLI and build the app
 - Test help command
 ```
 
@@ -60,6 +64,7 @@ To run the same tests locally before pushing:
 ```bash
 npm run test:syntax  # Check syntax
 npm test             # Run unit tests
+npm run test:build   # Validate build requirements
 npm run help         # Test help command
 ```
 
