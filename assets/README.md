@@ -1,16 +1,20 @@
 # Assets Directory
 
-This directory contains app resources:
+This directory contains device-specific app resources.
 
-- **icon.png**: App icon (recommended size: 192x192px)
-- **images/**: Additional images used in the app
-- **fonts/**: Custom fonts if needed
+## Structure
+
+Assets are organized by device target name:
+- **gtr-3/**: Resources for GTR-3 devices
+- **gtr-3w/**: Resources for GTR-3W devices
+
+Each device folder contains:
+- **icon.png**: App icon (192x192px)
+- Additional images and resources as needed
 
 ## Icon
 
-Place your app icon as `icon.png` in this directory. The icon should:
-- Be 192x192 pixels
-- Be in PNG format
-- Represent the Nightscout app (e.g., glucose meter, chart icon)
-
-For now, this is a placeholder. Add your actual icon file here.
+The icon.png files are 192x192 pixel PNG images with:
+- Blue background (#1a73e8)
+- White drop/glucose symbol
+- "NS" text for Nightscout branding
