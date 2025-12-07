@@ -9,7 +9,7 @@
       "name": "1.0.0"
     },
     "icon": "icon.png",
-    "vender": "Nightscout",
+    "vendor": "Nightscout",
     "description": "Connect to Nightscout and display CGM data"
   },
   "permissions": [

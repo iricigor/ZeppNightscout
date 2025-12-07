@@ -2,7 +2,6 @@
   "name": "zepp-nightscout",
   "version": "1.0.0",
   "description": "An app for Zepp OS that connects to Nightscout instance and displays CGM data",
-  "main": "app.js",
   "scripts": {
     "dev": "echo 'Zepp OS development server'",
     "build": "echo 'Building Zepp OS app'",
