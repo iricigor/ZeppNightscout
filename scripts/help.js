@@ -8,6 +8,7 @@ console.log('\n=== ZeppNightscout - Available Commands ===\n');
 console.log('Testing:');
 console.log('  npm test              - Run unit tests (test-parser.js)');
 console.log('  npm run test:syntax   - Check JavaScript syntax');
+console.log('  npm run test:build    - Validate build requirements');
 console.log('');
 console.log('Development (requires Zeus CLI):');
 console.log('  npm run dev           - Start development server');

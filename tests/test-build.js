@@ -96,8 +96,7 @@ try {
   });
 
 } catch (error) {
-  console.log('✗ Error parsing app.json:', error.message);
-  failed++;
+  assert(false, `Error parsing app.json: ${error.message}`);
 }
 
 console.log();
@@ -119,16 +118,17 @@ jsFiles.forEach(file => {
     // Basic validation - check file is not empty and has some content
     assert(content.length > 0, `${file} is not empty`);
     
-    // Check for common syntax patterns
-    const hasValidStructure = 
-      content.includes('Page(') || 
-      content.includes('AppSideService(') || 
-      content.includes('module.exports') ||
-      content.includes('export');
-    assert(hasValidStructure, `${file} has valid Zepp OS structure`);
+    // Check for Zepp OS structural patterns or standard exports
+    // More robust check that looks for multiple patterns
+    const hasPageStructure = content.includes('Page(') && content.includes('{');
+    const hasServiceStructure = content.includes('AppSideService(') && content.includes('{');
+    const hasModuleExports = content.includes('module.exports');
+    const hasESExport = /export\s+(default|const|let|var|function|class)/.test(content);
+    
+    const hasValidStructure = hasPageStructure || hasServiceStructure || hasModuleExports || hasESExport;
+    assert(hasValidStructure, `${file} has valid structure (function/class/export declaration)`);
   } catch (error) {
-    console.log('✗', `Error reading ${file}:`, error.message);
-    failed++;
+    assert(false, `Error reading ${file}: ${error.message}`);
   }
 });
 
@@ -149,8 +149,7 @@ try {
   assert(packageJson.scripts.build !== undefined, 'package.json has build script');
   
 } catch (error) {
-  console.log('✗ Error parsing package.json:', error.message);
-  failed++;
+  assert(false, `Error parsing package.json: ${error.message}`);
 }
 
 console.log();
