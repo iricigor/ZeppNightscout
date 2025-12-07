@@ -411,7 +411,7 @@ Once installed:
 
 **Solution:**
 - Ensure you selected the correct device model when running `zeus preview`
-- Verify `deviceSource` in `app.json` matches your watch
+- Verify the device target in `app.json` matches your watch (e.g., `gtr-3` in the `targets` section)
 - Try selecting a different but compatible device model
 - Wait a few moments and try again (may be temporary server issue)
 
@@ -437,7 +437,7 @@ The QR code is valid for a limited time. Simply run `zeus preview` again to gene
 #### "Account mismatch"
 
 **Solution:**
-Make sure the account logged in to `zeus login` matches the account used in the Zepp App.
+Make sure the account logged in to `zeus login` matches the account used in the Zepp App. You can verify your logged-in Zeus account by checking the Zeus CLI configuration or by running `zeus login` again to see your current session.
 
 ### When to Use Each Method
 

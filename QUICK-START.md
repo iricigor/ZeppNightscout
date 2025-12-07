@@ -57,7 +57,11 @@ The terminal will show a QR code after selecting your watch model.
 ### Step 6: Configure & Test
 
 1. Open the **Nightscout** app on your watch
-2. Configure your Nightscout URL (currently set in code)
+2. Configure your Nightscout URL by editing `page/index.js` line 18:
+   ```javascript
+   apiUrl: 'https://your-nightscout.herokuapp.com',
+   ```
+   Change it to your actual Nightscout URL, then rebuild and scan the QR code again.
 3. Tap "Fetch Data" to load glucose readings
 4. Watch your CGM data appear!
 
