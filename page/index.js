@@ -10,6 +10,10 @@ const SCREEN_WIDTH = 480;
 const SCREEN_HEIGHT = 480;
 const MARGIN = 20;
 
+// Graph canvas heights
+const GRAPH_HEIGHT_LARGE = 200;  // For Page 2 (Graph page)
+const GRAPH_HEIGHT_SMALL = 80;   // For legacy or small displays
+
 // Data configuration
 const DATA_POINTS_COUNT = 200; // Number of glucose readings to fetch and display
 
@@ -74,6 +78,9 @@ Page({
         this.navigatePage(1);
       }
     });
+
+    // Store navigation widgets for potential cleanup (though these persist across page refreshes)
+    this.navWidgets = [leftNavArea, rightNavArea];
   },
 
   /**
@@ -216,6 +223,7 @@ Page({
    */
   buildUI() {
     this.widgets = {};
+    this.allWidgets = [];
     this.refreshUI();
   },
 
@@ -223,8 +231,17 @@ Page({
    * Refresh the UI to show the current page
    */
   refreshUI() {
-    // Clear all existing widgets except the base layer
-    hmUI.deleteWidget(hmUI.widget.GROUP);
+    // Clear all existing widgets by deleting them individually
+    if (this.allWidgets && Array.isArray(this.allWidgets)) {
+      this.allWidgets.forEach(widget => {
+        try {
+          hmUI.deleteWidget(widget);
+        } catch (e) {
+          console.log('Error deleting widget:', e);
+        }
+      });
+    }
+    this.allWidgets = [];
     
     // Render current page
     switch (this.state.currentPage) {
@@ -717,9 +734,9 @@ Page({
     if (!this.widgets.canvas) return;
 
     const canvas = this.widgets.canvas;
-    // Get canvas dimensions - Page 2 has larger graph (200px) vs Page 1's legacy small graph
+    // Get canvas dimensions - Page 2 has larger graph
     const width = SCREEN_WIDTH - (MARGIN * 2);
-    const height = this.state.currentPage === 1 ? 200 : 80;
+    const height = this.state.currentPage === 1 ? GRAPH_HEIGHT_LARGE : GRAPH_HEIGHT_SMALL;
 
     // Clear canvas
     canvas.clear();
@@ -737,16 +754,28 @@ Page({
       // Apply zoom - show fewer points when zoomed in
       const zoom = this.state.graphZoom || 1.0;
       const totalPoints = this.state.dataPoints.length;
-      const visiblePoints = Math.ceil(totalPoints / zoom);
+      const visiblePoints = Math.min(Math.ceil(totalPoints / zoom), totalPoints);
       const startIdx = Math.max(0, totalPoints - visiblePoints);
       const visibleData = this.state.dataPoints.slice(startIdx);
 
       const pointCount = visibleData.length;
+      
+      // Guard against division by zero
+      if (pointCount <= 1) {
+        canvas.setFillStyle(0x888888);
+        canvas.fillText('Not enough data', width / 2 - 40, height / 2);
+        return;
+      }
+      
       const xStep = width / (pointCount - 1);
 
-      // Scale data to fit in canvas
-      const maxBG = Math.max(...visibleData);
-      const minBG = Math.min(...visibleData);
+      // Scale data to fit in canvas - using loop to avoid stack overflow
+      let maxBG = visibleData[0];
+      let minBG = visibleData[0];
+      for (let i = 1; i < visibleData.length; i++) {
+        if (visibleData[i] > maxBG) maxBG = visibleData[i];
+        if (visibleData[i] < minBG) minBG = visibleData[i];
+      }
       const range = maxBG - minBG || 100;
 
       for (let i = 0; i < pointCount - 1; i++) {
@@ -773,8 +802,10 @@ Page({
   fetchData() {
     console.log('Fetching data from Nightscout...');
     
-    // Show loading state
-    this.widgets.bgValue.setProperty(hmUI.prop.TEXT, 'Loading...');
+    // Show loading state - check if widget exists first
+    if (this.widgets.bgValue) {
+      this.widgets.bgValue.setProperty(hmUI.prop.TEXT, 'Loading...');
+    }
     
     // Send message to app-side to fetch data
     try {
@@ -786,7 +817,9 @@ Page({
       messaging.peerSocket.send(message);
     } catch (error) {
       console.error('Error sending fetch request:', error);
-      this.widgets.bgValue.setProperty(hmUI.prop.TEXT, 'Error');
+      if (this.widgets.bgValue) {
+        this.widgets.bgValue.setProperty(hmUI.prop.TEXT, 'Error');
+      }
     }
   },
 
