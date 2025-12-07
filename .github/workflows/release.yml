@@ -137,26 +137,27 @@ jobs:
       id: find_artifacts
       run: |
         # Find all .zab files (Zepp App Bundle)
-        if [ -f "output/com.nightscout.zepp.zab" ]; then
-          echo "ARTIFACT_PATH=output/com.nightscout.zepp.zab" >> $GITHUB_OUTPUT
+        # Zeus CLI outputs to dist/ directory
+        if [ -f "dist/com.nightscout.zepp.zab" ]; then
+          echo "ARTIFACT_PATH=dist/com.nightscout.zepp.zab" >> $GITHUB_OUTPUT
           echo "ARTIFACT_NAME=com.nightscout.zepp.zab" >> $GITHUB_OUTPUT
-        elif [ -d "output" ]; then
-          ZAB_FILE=$(find output -name "*.zab" | head -n 1)
+        elif [ -d "dist" ]; then
+          ZAB_FILE=$(find dist -name "*.zab" | head -n 1)
           if [ -n "$ZAB_FILE" ]; then
             echo "ARTIFACT_PATH=$ZAB_FILE" >> $GITHUB_OUTPUT
             echo "ARTIFACT_NAME=$(basename $ZAB_FILE)" >> $GITHUB_OUTPUT
           else
-            echo "::error::No .zab file found in output directory"
+            echo "::error::No .zab file found in dist directory"
             exit 1
           fi
         else
-          echo "::error::Output directory not found"
+          echo "::error::Build output directory (dist/) not found"
           exit 1
         fi
         
         # List what we have
         echo "Build artifacts:"
-        ls -la output/ || echo "No output directory"
+        ls -la dist/ || echo "No dist directory"
     
     - name: Generate QR code for download
       id: qr_code
