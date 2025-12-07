@@ -3,6 +3,70 @@
  * Browser-based simulator for quick testing
  */
 
+// Watch model configurations
+const WATCH_MODELS = {
+  balance: {
+    name: "Amazfit Balance",
+    width: 480,
+    height: 480,
+    shape: "round",
+  },
+  "gtr-3-pro": {
+    name: "Amazfit GTR 3 Pro",
+    width: 480,
+    height: 480,
+    shape: "round",
+  },
+  "gtr-4": {
+    name: "Amazfit GTR 4",
+    width: 466,
+    height: 466,
+    shape: "round",
+  },
+  "gtr-3": {
+    name: "Amazfit GTR 3",
+    width: 454,
+    height: 454,
+    shape: "round",
+  },
+  "t-rex-3": {
+    name: "Amazfit T-Rex 3",
+    width: 480,
+    height: 480,
+    shape: "round",
+  },
+  "gts-4": {
+    name: "Amazfit GTS 4",
+    width: 390,
+    height: 450,
+    shape: "square",
+  },
+  "gts-3": {
+    name: "Amazfit GTS 3",
+    width: 390,
+    height: 450,
+    shape: "square",
+  },
+  "bip-6": {
+    name: "Amazfit Bip 6",
+    width: 390,
+    height: 450,
+    shape: "square",
+  },
+  "gts-4-mini": {
+    name: "Amazfit GTS 4 mini",
+    width: 336,
+    height: 384,
+    shape: "square",
+  },
+  "bip-5": {
+    name: "Amazfit Bip 5",
+    width: 320,
+    height: 380,
+    shape: "square",
+  },
+};
+
 // Mock data for testing
 const MOCK_DATA = Array.from({ length: 200 }, (_, i) => {
   const baseValue = 120;
@@ -46,6 +110,7 @@ const UI_COLORS = {
 
 // State
 let currentState = {
+  currentModel: "balance", // Default to Amazfit Balance
   apiUrl: "",
   apiToken: "",
   currentBG: "--",
@@ -61,6 +126,8 @@ document.addEventListener("DOMContentLoaded", () => {
   log("Simulator ready");
   setupEventListeners();
   initializeGraph();
+  // Set default model
+  changeWatchModel();
 });
 
 function setupEventListeners() {
@@ -69,6 +136,9 @@ function setupEventListeners() {
     .addEventListener("click", validateToken);
   document.getElementById("fetch-btn").addEventListener("click", fetchData);
   document.getElementById("mock-btn").addEventListener("click", loadMockData);
+  document
+    .getElementById("watch-model")
+    .addEventListener("change", changeWatchModel);
 
   // Enable/disable verify button based on input fields
   const apiUrlInput = document.getElementById("api-url");
@@ -90,6 +160,56 @@ function setupEventListeners() {
 
   apiUrlInput.addEventListener("input", updateVerifyButtonState);
   apiTokenInput.addEventListener("input", updateVerifyButtonState);
+}
+
+function changeWatchModel() {
+  const modelSelect = document.getElementById("watch-model");
+  const modelId = modelSelect ? modelSelect.value : (currentState.currentModel || "balance");
+  const model = WATCH_MODELS[modelId];
+
+  if (!model) {
+    log(`Unknown model: ${modelId}`, "error");
+    return;
+  }
+
+  currentState.currentModel = modelId;
+  log(`Switching to ${model.name} (${model.width}×${model.height}, ${model.shape})`);
+
+  // Update watch screen dimensions and shape
+  const watchScreen = document.querySelector(".watch-screen");
+  if (!watchScreen) {
+    log("Watch screen element not found", "error");
+    return;
+  }
+
+  watchScreen.style.width = `${model.width}px`;
+  watchScreen.style.height = `${model.height}px`;
+
+  // Update shape class
+  if (model.shape === "square") {
+    watchScreen.classList.add("square");
+  } else {
+    watchScreen.classList.remove("square");
+  }
+
+  // Reinitialize graph with new dimensions
+  const canvas = document.getElementById("glucose-graph");
+  if (!canvas) {
+    log("Canvas element not found", "error");
+    return;
+  }
+
+  canvas.width = canvas.offsetWidth;
+  canvas.height = canvas.offsetHeight;
+
+  // Redraw with existing data if available
+  if (currentState.dataPoints.length > 0) {
+    drawGraph(currentState.dataPoints);
+  } else {
+    initializeGraph();
+  }
+
+  showStatus(`Switched to ${model.name}`, "success");
 }
 
 function log(message, type = "info") {
@@ -354,8 +474,9 @@ function processData(entries) {
   // Format time
   const lastUpdate = formatTimeSince(latest.date || latest.dateString);
 
-  // Update state
+  // Update state - preserve existing properties like currentModel
   currentState = {
+    ...currentState,
     apiUrl: document.getElementById("api-url").value,
     currentBG: latest.sgv ? latest.sgv.toString() : "--",
     trend: trend,

@@ -42,11 +42,16 @@
         width: 480px;
         height: 480px;
         background: #000;
-        border-radius: 20px;
+        border-radius: 50%;
         position: relative;
         overflow: hidden;
         color: white;
         font-family: Arial, sans-serif;
+        transition: all 0.3s ease;
+      }
+
+      .watch-screen.square {
+        border-radius: 20px;
       }
 
       .watch-content {
@@ -88,7 +93,19 @@
         transition: border-color 0.3s;
       }
 
-      .control-group input:focus {
+      .control-group select {
+        width: 100%;
+        padding: 10px;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        font-size: 14px;
+        transition: border-color 0.3s;
+        background-color: white;
+        cursor: pointer;
+      }
+
+      .control-group input:focus,
+      .control-group select:focus {
         outline: none;
         border-color: #667eea;
       }
@@ -295,6 +312,22 @@
         <h2>Simulator Controls</h2>
 
         <div id="status-container"></div>
+
+        <div class="control-group">
+          <label for="watch-model">Watch Model</label>
+          <select id="watch-model" class="model-select">
+            <option value="balance">Amazfit Balance (480×480, Round)</option>
+            <option value="gtr-3-pro">Amazfit GTR 3 Pro (480×480, Round)</option>
+            <option value="gtr-4">Amazfit GTR 4 (466×466, Round)</option>
+            <option value="gtr-3">Amazfit GTR 3 (454×454, Round)</option>
+            <option value="t-rex-3">Amazfit T-Rex 3 (480×480, Round)</option>
+            <option value="gts-4">Amazfit GTS 4 (390×450, Square)</option>
+            <option value="gts-3">Amazfit GTS 3 (390×450, Square)</option>
+            <option value="bip-6">Amazfit Bip 6 (390×450, Square)</option>
+            <option value="gts-4-mini">Amazfit GTS 4 mini (336×384, Square)</option>
+            <option value="bip-5">Amazfit Bip 5 (320×380, Square)</option>
+          </select>
+        </div>
 
         <div class="control-group">
           <label for="api-url">Nightscout API URL</label>
