@@ -1,0 +1,91 @@
+# Copilot Coding Agent Environment Configuration
+# This file configures the environment for GitHub Copilot Coding Agent
+# See: https://docs.github.com/en/copilot/how-tos/use-copilot-agents/coding-agent/customize-the-agent-environment
+
+name: Zepp OS Development Environment
+
+# Setup commands run when the agent starts
+setup:
+  # Install Zeus CLI globally
+  - name: Install Zeus CLI
+    run: npm install -g @zeppos/zeus-cli
+
+  # Setup offline device cache to allow zeus build to run without internet
+  # This cache contains device configurations for Zepp OS simulators
+  # expiredTime is set to far future (year 2286) to prevent cache expiration
+  - name: Setup Zeus device cache
+    run: |
+      mkdir -p ~/.zepp
+      cat > ~/.zepp/.zeus_devices << 'EOF'
+      {
+        "devices": [
+          {
+            "productName": "gtr-3",
+            "deviceSource": "gtr-3",
+            "code": "gtr-3",
+            "value": {
+              "shape": "round",
+              "screen": {
+                "size": "454*454"
+              },
+              "os": {
+                "apiLevel": "1.0.1",
+                "apiLevelLimitMin": "1.0.0",
+                "apiLevelLimitMax": "2.0.0"
+              }
+            }
+          },
+          {
+            "productName": "gts-4",
+            "deviceSource": "gts-4",
+            "code": "gts-4",
+            "value": {
+              "shape": "rectangle",
+              "screen": {
+                "size": "390*450"
+              },
+              "os": {
+                "apiLevel": "1.0.1",
+                "apiLevelLimitMin": "1.0.0",
+                "apiLevelLimitMax": "2.0.0"
+              }
+            }
+          },
+          {
+            "productName": "bip-6",
+            "deviceSource": "bip-6",
+            "code": "bip-6",
+            "value": {
+              "shape": "rectangle",
+              "screen": {
+                "size": "320*380"
+              },
+              "os": {
+                "apiLevel": "1.0.1",
+                "apiLevelLimitMin": "1.0.0",
+                "apiLevelLimitMax": "2.0.0"
+              }
+            }
+          },
+          {
+            "productName": "t-rex-3",
+            "deviceSource": "t-rex-3",
+            "code": "t-rex-3",
+            "value": {
+              "shape": "round",
+              "screen": {
+                "size": "480*480"
+              },
+              "os": {
+                "apiLevel": "1.0.1",
+                "apiLevelLimitMin": "1.0.0",
+                "apiLevelLimitMax": "2.0.0"
+              }
+            }
+          }
+        ],
+        "devices_beta": [],
+        "expiredTime": 9999999999999,
+        "version": "1.8.1"
+      }
+      EOF
