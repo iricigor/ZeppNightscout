@@ -5,9 +5,11 @@ An app for Zepp OS that connects to Nightscout instance and displays CGM data.
 ## Features
 
 - **Settings Text Field**: Configure your Nightscout API URL
-- **Glucose Graph**: Visual representation of recent glucose readings
+- **URL Verification**: Verify your Nightscout URL before fetching data (uses `/api/v1/status` endpoint)
+- **Glucose Graph**: Visual representation of recent glucose readings (displays 200 data points)
 - **Calculated Values**: Display current BG, trend arrow, delta, and last update time
 - **Internet Connectivity**: Fetches real-time data from Nightscout API
+- **Pixel-Perfect Display**: 200 values for ~200px screen width (one pixel per value)
 
 ## Development Setup
 
@@ -28,10 +30,19 @@ To build this app for Zepp OS devices, you'll need the Zepp OS development tools
 
 ## API Integration
 
-The app connects to Nightscout API using the following endpoint:
+The app connects to Nightscout API using the following endpoints:
+
+### URL Verification
 ```
-GET {nightscout-url}/api/v1/entries.json?count=10
+GET {nightscout-url}/api/v1/status
 ```
+This endpoint is used to verify the Nightscout URL without transferring CGM data. It returns server status information.
+
+### Data Fetching
+```
+GET {nightscout-url}/api/v1/entries.json?count=200
+```
+Fetches 200 glucose readings for detailed trend visualization (one value per pixel for ~200px screen width).
 
 ### Security
 
