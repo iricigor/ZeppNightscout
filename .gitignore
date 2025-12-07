@@ -11,11 +11,14 @@ output/
 *.zip
 
 # IDE
-.vscode/
 .idea/
 *.swp
 *.swo
 *~
+# Keep .vscode/launch.json for F5 debugging
+!.vscode/
+.vscode/*
+!.vscode/launch.json
 
 # OS
 .DS_Store

@@ -11,7 +11,8 @@
     "test": "node tests/test-parser.js",
     "test:syntax": "node --check page/index.js && node --check app-side/index.js && node --check shared/message.js",
     "test:build": "node tests/test-build.js",
-    "simulator": "echo 'Run: zeus dev (requires @zeppos/zeus-cli)'",
+    "simulator": "node scripts/start-simulator.js",
+    "start": "node scripts/start-simulator.js",
     "lint": "echo 'Linting not configured yet'",
     "help": "node scripts/help.js"
   },

@@ -32,6 +32,26 @@ This project is configured for GitHub Codespaces with GitHub Copilot support:
 
 For detailed testing instructions, see the [Testing Guide](docs/TESTING.md).
 
+### Quick Testing with Browser Simulator (F5)
+
+**NEW!** Test the app instantly in your browser without any device or Zeus CLI:
+
+```bash
+# Press F5 in VS Code (recommended)
+# or
+npm run simulator
+```
+
+This opens a browser-based simulator that:
+- ✅ Runs locally on port 8080
+- ✅ Works in GitHub Codespaces with port forwarding
+- ✅ Opens automatically in your browser
+- ✅ Supports real Nightscout API testing
+- ✅ Includes mock data for offline testing
+- ✅ No device or Zeus CLI required
+
+See [simulator/README.md](simulator/README.md) for detailed documentation.
+
 ### Automated Testing
 
 This project uses GitHub Actions to automatically run tests on every pull request:
@@ -47,6 +67,9 @@ All tests must pass before merging.
 ### Quick Start
 
 ```bash
+# Quick browser testing (no device needed)
+npm run simulator
+
 # Test data parser
 npm test
 
@@ -56,7 +79,7 @@ npm run test:syntax
 # Validate build requirements
 npm run test:build
 
-# Build and run in simulator (requires Zeus CLI)
+# Build and run in Zeus simulator (requires Zeus CLI)
 npm run dev
 ```
 
