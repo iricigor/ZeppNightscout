@@ -7,7 +7,8 @@ Quick reference for common testing commands and workflows.
 **GitHub Actions automatically runs tests on all PRs**
 
 - ✅ JavaScript syntax validation
-- ✅ Unit tests (26 assertions)  
+- ✅ Unit tests (26 assertions)
+- ✅ Build validation (31 assertions)
 - ✅ Command verification
 
 View results in PR → Checks section.
@@ -27,6 +28,9 @@ npm test
 
 # Check JavaScript syntax
 npm run test:syntax
+
+# Validate build requirements
+npm run test:build
 
 # View available commands
 npm run help
@@ -96,6 +100,7 @@ adb logcat | grep Nightscout
 ### Before Committing
 - [ ] `npm run test:syntax` - No syntax errors
 - [ ] `npm test` - All tests pass
+- [ ] `npm run test:build` - Build requirements validated
 - [ ] Code reviewed manually
 
 ### Before Deploying

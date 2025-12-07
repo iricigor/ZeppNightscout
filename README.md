@@ -38,6 +38,7 @@ This project uses GitHub Actions to automatically run tests on every pull reques
 
 - ✅ JavaScript syntax validation
 - ✅ Unit tests (26 assertions)
+- ✅ Build validation (31 assertions)
 - ✅ Command verification
 
 All tests must pass before merging.
@@ -50,6 +51,9 @@ npm test
 
 # Check JavaScript syntax
 npm run test:syntax
+
+# Validate build requirements
+npm run test:build
 
 # Build and run in simulator (requires Zeus CLI)
 npm run dev
