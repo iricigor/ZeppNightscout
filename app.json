@@ -24,7 +24,7 @@
     }
   },
   "targets": {
-    "gtr-3": {
+    "balance": {
       "module": {
         "page": {
           "pages": [
