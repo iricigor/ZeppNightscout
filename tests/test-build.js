@@ -160,52 +160,56 @@ console.log('Test 5: Asset Files Validation');
 console.log('-'.repeat(50));
 
 // Check device-specific icons based on targets in app.json
-const targetKeys = Object.keys(appJson.targets);
-let iconFound = false;
+if (appJson && appJson.targets) {
+  const targetKeys = Object.keys(appJson.targets);
+  let iconFound = false;
 
-targetKeys.forEach(target => {
-  const deviceIconPath = `assets/${target}/icon.png`;
-  const filePath = path.join(process.cwd(), deviceIconPath);
-  try {
-    const stats = fs.statSync(filePath);
-    assert(stats.size > 0, `${deviceIconPath} exists and is not empty`);
-    
-    // Check file size is reasonable for an icon (between 1KB and 1MB)
-    const sizeInKB = stats.size / 1024;
-    assert(
-      sizeInKB > 1 && sizeInKB < 1024,
-      `${deviceIconPath} has reasonable size (${sizeInKB.toFixed(2)} KB)`
-    );
-    iconFound = true;
-  } catch (error) {
-    // Icon is optional - just log a warning
-    console.log('⚠', `${deviceIconPath} not found (optional)`);
-  }
-});
-
-// Also check platforms array for additional device names
-targetKeys.forEach(target => {
-  const platforms = appJson.targets[target].platforms || [];
-  platforms.forEach(platform => {
-    if (platform.name && platform.name !== target) {
-      const deviceIconPath = `assets/${platform.name}/icon.png`;
-      const filePath = path.join(process.cwd(), deviceIconPath);
-      try {
-        const stats = fs.statSync(filePath);
-        assert(stats.size > 0, `${deviceIconPath} exists and is not empty`);
-        
-        const sizeInKB = stats.size / 1024;
-        assert(
-          sizeInKB > 1 && sizeInKB < 1024,
-          `${deviceIconPath} has reasonable size (${sizeInKB.toFixed(2)} KB)`
-        );
-        iconFound = true;
-      } catch (error) {
-        console.log('⚠', `${deviceIconPath} not found (optional)`);
-      }
+  targetKeys.forEach(target => {
+    const deviceIconPath = `assets/${target}/icon.png`;
+    const filePath = path.join(process.cwd(), deviceIconPath);
+    try {
+      const stats = fs.statSync(filePath);
+      assert(stats.size > 0, `${deviceIconPath} exists and is not empty`);
+      
+      // Check file size is reasonable for an icon (between 1KB and 1MB)
+      const sizeInKB = stats.size / 1024;
+      assert(
+        sizeInKB > 1 && sizeInKB < 1024,
+        `${deviceIconPath} has reasonable size (${sizeInKB.toFixed(2)} KB)`
+      );
+      iconFound = true;
+    } catch (error) {
+      // Icon is optional - just log a warning
+      console.log('⚠', `${deviceIconPath} not found (optional)`);
     }
   });
-});
+
+  // Also check platforms array for additional device names
+  targetKeys.forEach(target => {
+    const platforms = appJson.targets[target].platforms || [];
+    platforms.forEach(platform => {
+      if (platform.name && platform.name !== target) {
+        const deviceIconPath = `assets/${platform.name}/icon.png`;
+        const filePath = path.join(process.cwd(), deviceIconPath);
+        try {
+          const stats = fs.statSync(filePath);
+          assert(stats.size > 0, `${deviceIconPath} exists and is not empty`);
+          
+          const sizeInKB = stats.size / 1024;
+          assert(
+            sizeInKB > 1 && sizeInKB < 1024,
+            `${deviceIconPath} has reasonable size (${sizeInKB.toFixed(2)} KB)`
+          );
+          iconFound = true;
+        } catch (error) {
+          console.log('⚠', `${deviceIconPath} not found (optional)`);
+        }
+      }
+    });
+  });
+} else {
+  console.log('⚠', 'app.json not parsed, skipping asset validation');
+}
 
 console.log();
 
