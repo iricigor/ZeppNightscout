@@ -64,12 +64,17 @@ jobs:
       run: |
         # Update version in app.json to include run number
         node -e "
-          const fs = require('fs');
-          const app = JSON.parse(fs.readFileSync('app.json', 'utf8'));
-          app.app.version.name = '${{ steps.get_version.outputs.VERSION }}';
-          fs.writeFileSync('app.json', JSON.stringify(app, null, 2) + '\n');
+          try {
+            const fs = require('fs');
+            const app = JSON.parse(fs.readFileSync('app.json', 'utf8'));
+            app.app.version.name = '${{ steps.get_version.outputs.VERSION }}';
+            fs.writeFileSync('app.json', JSON.stringify(app, null, 2) + '\n');
+            console.log('Successfully updated app.json version to ${{ steps.get_version.outputs.VERSION }}');
+          } catch (error) {
+            console.error('Failed to update app.json:', error.message);
+            process.exit(1);
+          }
         "
-        echo "Updated app.json version to ${{ steps.get_version.outputs.VERSION }}"
         cat app.json | grep -A2 '"version"'
     
     - name: Update workflow run name with version
@@ -78,11 +83,11 @@ jobs:
     - name: Install Zeus CLI
       run: npm install -g @zeppos/zeus-cli
     
-    # Setup offline device cache to allow zeus build to run without internet
-    # expiredTime is set to far future (year 2286) to prevent cache expiration
     - name: Setup Zeus device cache
       run: |
         mkdir -p ~/.zepp
+        # expiredTime is set to 9999999999999 (year 2286) to prevent cache expiration
+        # This allows zeus build to run offline in CI without fetching device data
         cat > ~/.zepp/.zeus_devices << 'EOF'
         {
           "devices": [
@@ -143,8 +148,8 @@ jobs:
         # Generate download URL
         DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.TAG }}/${{ steps.find_artifacts.outputs.ARTIFACT_NAME }}"
         echo "DOWNLOAD_URL=$DOWNLOAD_URL" >> $GITHUB_OUTPUT
-        
-        # Generate QR code using GitHub's QR code service
+
+        # Generate QR code using api.qrserver.com service
         QR_URL="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${DOWNLOAD_URL}"
         echo "QR_URL=$QR_URL" >> $GITHUB_OUTPUT
     
