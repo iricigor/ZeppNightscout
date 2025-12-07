@@ -25,7 +25,9 @@ const mockApiResponse = [
   }
 ];
 
-// Test data parsing logic (extracted from app-side/index.js)
+// Test data parsing logic
+// Note: This is a duplicate of the function in app-side/index.js for testing purposes.
+// If you modify the production function, update this test copy as well.
 function parseNightscoutData(entries) {
   if (!entries || entries.length === 0) {
     return null;

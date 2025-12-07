@@ -17,6 +17,7 @@ Thank you for your interest in contributing to ZeppNightscout! This document pro
 2. **Clone your fork** locally:
    ```bash
    git clone https://github.com/YOUR_USERNAME/ZeppNightscout.git
+   # Replace YOUR_USERNAME with your GitHub username
    cd ZeppNightscout
    ```
 3. **Install dependencies** (if any):
