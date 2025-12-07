@@ -37,11 +37,13 @@ const TREND_MAP = {
 // State
 let currentState = {
     apiUrl: '',
+    apiToken: '',
     currentBG: '--',
     trend: '--',
     delta: '--',
     lastUpdate: '--',
-    dataPoints: []
+    dataPoints: [],
+    tokenValidationStatus: 'unvalidated' // unvalidated, validating, valid-readonly, valid-admin, invalid
 };
 
 // Initialize
@@ -55,6 +57,7 @@ function setupEventListeners() {
     document.getElementById('verify-btn').addEventListener('click', verifyUrl);
     document.getElementById('fetch-btn').addEventListener('click', fetchData);
     document.getElementById('mock-btn').addEventListener('click', loadMockData);
+    document.getElementById('token-status').addEventListener('click', validateToken);
 }
 
 function log(message, type = 'info') {
@@ -91,11 +94,22 @@ async function verifyUrl() {
         return;
     }
     
+    // Check if URL is HTTPS
+    if (!apiUrl.startsWith('https://')) {
+        showStatus('✗ URL must use HTTPS', 'error');
+        log('Verification failed: URL must use HTTPS', 'error');
+        return;
+    }
+    
     log(`Verifying URL: ${apiUrl}`);
     showStatus('Verifying URL...', 'info');
     
     try {
-        const statusUrl = `${apiUrl}/api/v1/status`;
+        const apiToken = document.getElementById('api-token').value.trim();
+        let statusUrl = `${apiUrl}/api/v1/status`;
+        if (apiToken) {
+            statusUrl += `?token=${apiToken}`;
+        }
         log(`Fetching: ${statusUrl}`);
         
         const response = await fetch(statusUrl);
@@ -133,7 +147,11 @@ async function fetchData() {
     showStatus('Fetching glucose data...', 'info');
     
     try {
-        const entriesUrl = `${apiUrl}/api/v1/entries.json?count=200`;
+        const apiToken = document.getElementById('api-token').value.trim();
+        let entriesUrl = `${apiUrl}/api/v1/entries.json?count=200`;
+        if (apiToken) {
+            entriesUrl += `&token=${apiToken}`;
+        }
         log(`Fetching: ${entriesUrl}`);
         
         const response = await fetch(entriesUrl);
@@ -156,6 +174,92 @@ async function fetchData() {
     } catch (error) {
         log(`Fetch failed: ${error.message}`, 'error');
         showStatus(`✗ Fetch failed: ${error.message}`, 'error');
+    }
+}
+
+async function validateToken() {
+    const apiUrl = document.getElementById('api-url').value.trim();
+    const apiToken = document.getElementById('api-token').value.trim();
+    
+    if (!apiUrl) {
+        showTokenStatus('error', '✗', '✗ Please enter API URL first');
+        log('Token validation failed: No URL provided', 'error');
+        return;
+    }
+    
+    if (!apiToken) {
+        showTokenStatus('error', '✗', '✗ No token provided');
+        log('Token validation failed: No token provided', 'error');
+        return;
+    }
+    
+    log('Validating API token...');
+    showTokenStatus('validating', '⌛', 'Validating token...');
+    
+    try {
+        // Step 1: Test read access with status endpoint
+        const statusUrl = `${apiUrl}/api/v1/status?token=${apiToken}`;
+        log(`Testing read access: ${statusUrl}`);
+        
+        const statusResponse = await fetch(statusUrl);
+        
+        if (!statusResponse.ok) {
+            throw new Error('Token invalid or unauthorized');
+        }
+        
+        log('Token has read access', 'success');
+        
+        // Step 2: Test write access with admin endpoint (treatments)
+        // We're just checking if we have access, not actually writing data
+        const adminUrl = `${apiUrl}/api/v1/treatments.json?count=1&token=${apiToken}`;
+        log(`Testing admin access: ${adminUrl}`);
+        
+        try {
+            const adminResponse = await fetch(adminUrl);
+            
+            if (adminResponse.ok) {
+                // Token has admin access - not recommended!
+                log('Token has admin access - this is not recommended!', 'error');
+                showTokenStatus('error', '❗', '❗ Token has admin access! Use read-only token.');
+                currentState.tokenValidationStatus = 'valid-admin';
+            } else {
+                // Admin access failed - this is the expected behavior for read-only token
+                log('Token is read-only - this is the expected safe state', 'success');
+                showTokenStatus('success', '✅', '✅ Token is read-only (safe)');
+                currentState.tokenValidationStatus = 'valid-readonly';
+            }
+        } catch (adminError) {
+            // Admin request failed (network error or CORS) - assume read-only
+            log('Token appears to be read-only', 'success');
+            showTokenStatus('success', '✅', '✅ Token is read-only (safe)');
+            currentState.tokenValidationStatus = 'valid-readonly';
+        }
+        
+        currentState.apiToken = apiToken;
+        
+    } catch (error) {
+        log(`Token validation failed: ${error.message}`, 'error');
+        showTokenStatus('error', '✗', `✗ ${error.message}`);
+        currentState.tokenValidationStatus = 'invalid';
+    }
+}
+
+function showTokenStatus(type, icon, message) {
+    const tokenStatusIcon = document.getElementById('token-status');
+    const tokenValidationStatus = document.getElementById('token-validation-status');
+    
+    tokenStatusIcon.textContent = icon;
+    tokenValidationStatus.textContent = message;
+    
+    if (type === 'success') {
+        tokenStatusIcon.style.color = '#48bb78';
+        tokenValidationStatus.style.color = '#48bb78';
+    } else if (type === 'error') {
+        tokenStatusIcon.style.color = '#f56565';
+        tokenValidationStatus.style.color = '#f56565';
+    } else {
+        tokenStatusIcon.style.color = '#888';
+        tokenValidationStatus.style.color = '#888';
     }
 }
 

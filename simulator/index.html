@@ -300,6 +300,22 @@
             </div>
             
             <button class="button" id="verify-btn">Verify URL</button>
+            
+            <div class="control-group">
+                <label for="api-token">
+                    API Token (read-only)
+                    <span id="token-status" style="float: right; cursor: pointer; font-size: 20px;">?</span>
+                </label>
+                <input 
+                    type="text" 
+                    id="api-token" 
+                    placeholder="your-token-here"
+                    value=""
+                />
+            </div>
+            
+            <div id="token-validation-status" style="margin-bottom: 15px; font-size: 14px; color: #888;"></div>
+            
             <button class="button secondary" id="fetch-btn">Fetch Data</button>
             <button class="button" id="mock-btn">Load Mock Data</button>
             

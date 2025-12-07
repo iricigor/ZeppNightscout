@@ -16,12 +16,14 @@ const DATA_POINTS_COUNT = 200; // Number of glucose readings to fetch and displa
 Page({
   state: {
     apiUrl: 'https://your-nightscout.herokuapp.com',
+    apiToken: '',
     currentBG: '--',
     trend: '--',
     delta: '--',
     lastUpdate: '--',
     dataPoints: [],
-    verificationStatus: ''
+    verificationStatus: '',
+    tokenValidationStatus: 'unvalidated' // unvalidated, validating, valid-readonly, valid-admin, invalid
   },
 
   onInit() {
@@ -42,6 +44,9 @@ Page({
         if (data.data.verification) {
           // Handle verification result
           this.handleVerificationResult(data.data);
+        } else if (data.data.tokenValidation) {
+          // Handle token validation result
+          this.handleTokenValidationResult(data.data);
         } else if (data.data.error) {
           // Handle error
           this.handleError(data.data);
@@ -65,6 +70,44 @@ Page({
       this.widgets.verificationStatus.setProperty(hmUI.prop.COLOR, 0x00ff00);
     } else {
       this.widgets.verificationStatus.setProperty(hmUI.prop.COLOR, 0xff0000);
+    }
+  },
+
+  /**
+   * Handle token validation result from app-side
+   * @param {Object} result - Token validation result
+   */
+  handleTokenValidationResult(result) {
+    if (result.validating) {
+      this.state.tokenValidationStatus = 'validating';
+      this.widgets.tokenValidationIcon.setProperty(hmUI.prop.TEXT, '⌛');
+      this.widgets.tokenValidationIcon.setProperty(hmUI.prop.COLOR, 0x888888);
+      this.widgets.tokenValidationStatus.setProperty(hmUI.prop.TEXT, 'Validating token...');
+      this.widgets.tokenValidationStatus.setProperty(hmUI.prop.COLOR, 0x888888);
+      return;
+    }
+
+    if (!result.statusSuccess) {
+      // Token is invalid - cannot read status
+      this.state.tokenValidationStatus = 'invalid';
+      this.widgets.tokenValidationIcon.setProperty(hmUI.prop.TEXT, '✗');
+      this.widgets.tokenValidationIcon.setProperty(hmUI.prop.COLOR, 0xff0000);
+      this.widgets.tokenValidationStatus.setProperty(hmUI.prop.TEXT, result.statusError || '✗ Invalid token');
+      this.widgets.tokenValidationStatus.setProperty(hmUI.prop.COLOR, 0xff0000);
+    } else if (result.adminSuccess) {
+      // Token has admin access - this is dangerous!
+      this.state.tokenValidationStatus = 'valid-admin';
+      this.widgets.tokenValidationIcon.setProperty(hmUI.prop.TEXT, '❗');
+      this.widgets.tokenValidationIcon.setProperty(hmUI.prop.COLOR, 0xff0000);
+      this.widgets.tokenValidationStatus.setProperty(hmUI.prop.TEXT, '❗ Token has admin access!');
+      this.widgets.tokenValidationStatus.setProperty(hmUI.prop.COLOR, 0xff0000);
+    } else {
+      // Token is read-only - this is the expected safe state
+      this.state.tokenValidationStatus = 'valid-readonly';
+      this.widgets.tokenValidationIcon.setProperty(hmUI.prop.TEXT, '✅');
+      this.widgets.tokenValidationIcon.setProperty(hmUI.prop.COLOR, 0x00ff00);
+      this.widgets.tokenValidationStatus.setProperty(hmUI.prop.TEXT, '✅ Token is read-only');
+      this.widgets.tokenValidationStatus.setProperty(hmUI.prop.COLOR, 0x00ff00);
     }
   },
 
@@ -104,10 +147,12 @@ Page({
    * Build the user interface
    */
   buildUI() {
+    let yPos = MARGIN; // Track vertical position
+    
     // Title
     const title = hmUI.createWidget(hmUI.widget.TEXT, {
       x: MARGIN,
-      y: MARGIN,
+      y: yPos,
       w: SCREEN_WIDTH - (MARGIN * 2),
       h: 50,
       color: 0xffffff,
@@ -115,34 +160,36 @@ Page({
       align_h: hmUI.align.CENTER_H,
       text: 'Nightscout'
     });
+    yPos += 60;
 
-    // Settings input field (simulated with text display + button)
-    const settingsLabel = hmUI.createWidget(hmUI.widget.TEXT, {
+    // URL input field (simulated with text display + button)
+    const urlLabel = hmUI.createWidget(hmUI.widget.TEXT, {
       x: MARGIN,
-      y: 80,
+      y: yPos,
       w: SCREEN_WIDTH - (MARGIN * 2),
-      h: 30,
+      h: 25,
       color: 0xaaaaaa,
-      text_size: 20,
+      text_size: 18,
       text: 'API URL:'
     });
+    yPos += 30;
 
-    const settingsValue = hmUI.createWidget(hmUI.widget.TEXT, {
+    const urlValue = hmUI.createWidget(hmUI.widget.TEXT, {
       x: MARGIN,
-      y: 110,
+      y: yPos,
       w: SCREEN_WIDTH - (MARGIN * 2) - 100,
-      h: 40,
+      h: 35,
       color: 0x00ff00,
       text_size: 16,
       text: this.state.apiUrl
     });
 
-    this.widgets = { settingsValue };
+    this.widgets = { urlValue };
 
     // Verify URL button
     const verifyButton = hmUI.createWidget(hmUI.widget.BUTTON, {
       x: SCREEN_WIDTH - MARGIN - 90,
-      y: 105,
+      y: yPos - 5,
       w: 90,
       h: 30,
       text: 'Verify',
@@ -154,24 +201,95 @@ Page({
         this.verifyUrl();
       }
     });
+    yPos += 40;
 
-    // Verification status text
+    // URL Verification status text
     const verificationStatus = hmUI.createWidget(hmUI.widget.TEXT, {
       x: MARGIN,
-      y: 150,
+      y: yPos,
       w: SCREEN_WIDTH - (MARGIN * 2),
-      h: 25,
+      h: 20,
       color: 0x888888,
       text_size: 14,
       text: this.state.verificationStatus
     });
 
     this.widgets.verificationStatus = verificationStatus;
+    yPos += 30;
+
+    // API Token input field
+    const tokenLabel = hmUI.createWidget(hmUI.widget.TEXT, {
+      x: MARGIN,
+      y: yPos,
+      w: SCREEN_WIDTH - (MARGIN * 2),
+      h: 25,
+      color: 0xaaaaaa,
+      text_size: 18,
+      text: 'API Token (read-only):'
+    });
+    yPos += 30;
+
+    const tokenValue = hmUI.createWidget(hmUI.widget.TEXT, {
+      x: MARGIN,
+      y: yPos,
+      w: SCREEN_WIDTH - (MARGIN * 2) - 80,
+      h: 35,
+      color: 0x00ff00,
+      text_size: 16,
+      text: this.state.apiToken || '(not set)'
+    });
+
+    this.widgets.tokenValue = tokenValue;
+
+    // Token validation icon (clickable)
+    const tokenValidationIcon = hmUI.createWidget(hmUI.widget.TEXT, {
+      x: SCREEN_WIDTH - MARGIN - 70,
+      y: yPos,
+      w: 35,
+      h: 35,
+      color: 0x888888,
+      text_size: 28,
+      align_h: hmUI.align.CENTER_H,
+      text: '?'
+    });
+
+    this.widgets.tokenValidationIcon = tokenValidationIcon;
+
+    // Make the icon clickable
+    const tokenValidateButton = hmUI.createWidget(hmUI.widget.BUTTON, {
+      x: SCREEN_WIDTH - MARGIN - 75,
+      y: yPos - 5,
+      w: 45,
+      h: 40,
+      text: '',
+      normal_color: 0x000000,
+      press_color: 0x222222,
+      radius: 20,
+      text_size: 1,
+      click_func: () => {
+        this.validateToken();
+      }
+    });
+    yPos += 40;
+
+    // Token validation status text
+    const tokenValidationStatus = hmUI.createWidget(hmUI.widget.TEXT, {
+      x: MARGIN,
+      y: yPos,
+      w: SCREEN_WIDTH - (MARGIN * 2),
+      h: 20,
+      color: 0x888888,
+      text_size: 14,
+      text: ''
+    });
+
+    this.widgets.tokenValidationStatus = tokenValidationStatus;
+    yPos += 30;
 
     // Current BG value (large display)
     const bgValue = hmUI.createWidget(hmUI.widget.TEXT, {
       x: MARGIN,
-      y: 190,
+      y: yPos,
       w: SCREEN_WIDTH - (MARGIN * 2),
       h: 80,
       color: 0x00ff00,
@@ -181,11 +299,12 @@ Page({
     });
 
     this.widgets.bgValue = bgValue;
+    yPos += 90;
 
     // Trend and Delta
     const trendText = hmUI.createWidget(hmUI.widget.TEXT, {
       x: MARGIN,
-      y: 280,
+      y: yPos,
       w: (SCREEN_WIDTH - (MARGIN * 2)) / 2,
       h: 30,
       color: 0xffffff,
@@ -196,7 +315,7 @@ Page({
 
     const deltaText = hmUI.createWidget(hmUI.widget.TEXT, {
       x: SCREEN_WIDTH / 2,
-      y: 280,
+      y: yPos,
       w: (SCREEN_WIDTH - (MARGIN * 2)) / 2,
       h: 30,
       color: 0xffffff,
@@ -207,11 +326,12 @@ Page({
 
     this.widgets.trendText = trendText;
     this.widgets.deltaText = deltaText;
+    yPos += 40;
 
     // Last update time
     const lastUpdateText = hmUI.createWidget(hmUI.widget.TEXT, {
       x: MARGIN,
-      y: 320,
+      y: yPos,
       w: SCREEN_WIDTH - (MARGIN * 2),
       h: 25,
       color: 0x888888,
@@ -221,22 +341,24 @@ Page({
     });
 
     this.widgets.lastUpdateText = lastUpdateText;
+    yPos += 30;
 
     // Graph canvas
     const canvas = hmUI.createWidget(hmUI.widget.CANVAS, {
       x: MARGIN,
-      y: 360,
+      y: yPos,
       w: SCREEN_WIDTH - (MARGIN * 2),
       h: 80
     });
 
     this.widgets.canvas = canvas;
     this.drawGraph();
+    yPos += 90;
 
     // Fetch data button
     const fetchButton = hmUI.createWidget(hmUI.widget.BUTTON, {
       x: SCREEN_WIDTH / 2 - 60,
-      y: 450,
+      y: yPos,
       w: 120,
       h: 40,
       text: 'Fetch Data',
@@ -311,7 +433,8 @@ Page({
     try {
       const message = messageBuilder.request({
         type: MESSAGE_TYPES.FETCH_DATA,
-        apiUrl: this.state.apiUrl
+        apiUrl: this.state.apiUrl,
+        apiToken: this.state.apiToken
       });
       messaging.peerSocket.send(message);
     } catch (error) {
@@ -321,10 +444,20 @@ Page({
   },
 
   /**
-   * Verify Nightscout URL
+   * Verify Nightscout URL format
    */
   verifyUrl() {
     console.log('Verifying Nightscout URL...');
+    
+    const url = this.state.apiUrl.trim();
+    
+    // Check if URL is HTTPS
+    if (!url.startsWith('https://')) {
+      this.state.verificationStatus = '✗ URL must use HTTPS';
+      this.widgets.verificationStatus.setProperty(hmUI.prop.TEXT, this.state.verificationStatus);
+      this.widgets.verificationStatus.setProperty(hmUI.prop.COLOR, 0xff0000);
+      return;
+    }
     
     // Show verification in progress
     this.state.verificationStatus = 'Verifying...';
@@ -335,7 +468,8 @@ Page({
     try {
       const message = messageBuilder.request({
         type: MESSAGE_TYPES.VERIFY_URL,
-        apiUrl: this.state.apiUrl
+        apiUrl: url,
+        apiToken: this.state.apiToken
       });
       messaging.peerSocket.send(message);
     } catch (error) {
@@ -343,6 +477,49 @@ Page({
       this.state.verificationStatus = '✗ Verification failed';
       this.widgets.verificationStatus.setProperty(hmUI.prop.TEXT, this.state.verificationStatus);
       this.widgets.verificationStatus.setProperty(hmUI.prop.COLOR, 0xff0000);
+    }
+  },
+
+  /**
+   * Validate API token
+   */
+  validateToken() {
+    console.log('Validating API token...');
+    
+    const url = this.state.apiUrl.trim();
+    const token = this.state.apiToken.trim();
+    
+    if (!token) {
+      this.state.tokenValidationStatus = 'invalid';
+      this.widgets.tokenValidationIcon.setProperty(hmUI.prop.TEXT, '✗');
+      this.widgets.tokenValidationIcon.setProperty(hmUI.prop.COLOR, 0xff0000);
+      this.widgets.tokenValidationStatus.setProperty(hmUI.prop.TEXT, '✗ No token provided');
+      this.widgets.tokenValidationStatus.setProperty(hmUI.prop.COLOR, 0xff0000);
+      return;
+    }
+    
+    // Show validation in progress
+    this.state.tokenValidationStatus = 'validating';
+    this.widgets.tokenValidationIcon.setProperty(hmUI.prop.TEXT, '⌛');
+    this.widgets.tokenValidationIcon.setProperty(hmUI.prop.COLOR, 0x888888);
+    this.widgets.tokenValidationStatus.setProperty(hmUI.prop.TEXT, 'Validating...');
+    this.widgets.tokenValidationStatus.setProperty(hmUI.prop.COLOR, 0x888888);
+    
+    // Send message to app-side to validate token
+    try {
+      const message = messageBuilder.request({
+        type: MESSAGE_TYPES.VALIDATE_TOKEN,
+        apiUrl: url,
+        apiToken: token
+      });
+      messaging.peerSocket.send(message);
+    } catch (error) {
+      console.error('Error sending token validation request:', error);
+      this.state.tokenValidationStatus = 'invalid';
+      this.widgets.tokenValidationIcon.setProperty(hmUI.prop.TEXT, '✗');
+      this.widgets.tokenValidationIcon.setProperty(hmUI.prop.COLOR, 0xff0000);
+      this.widgets.tokenValidationStatus.setProperty(hmUI.prop.TEXT, '✗ Validation failed');
+      this.widgets.tokenValidationStatus.setProperty(hmUI.prop.COLOR, 0xff0000);
     }
   },
 });

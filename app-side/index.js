@@ -9,6 +9,7 @@ import { messageBuilder, MESSAGE_TYPES } from '../shared/message';
 const DATA_POINTS_COUNT = 200; // Number of glucose readings to fetch
 const STATUS_ENDPOINT = '/api/v1/status';
 const ENTRIES_ENDPOINT = '/api/v1/entries.json';
+const ADMIN_ENDPOINT = '/api/v1/treatments.json'; // Admin endpoint for testing write access
 
 // App-side service
 AppSideService({
@@ -34,11 +35,13 @@ AppSideService({
       console.log('Received message:', data);
       
       if (data.type === MESSAGE_TYPES.FETCH_DATA) {
-        this.fetchNightscoutData(data.apiUrl);
+        this.fetchNightscoutData(data.apiUrl, data.apiToken);
       } else if (data.type === MESSAGE_TYPES.UPDATE_SETTINGS) {
         this.updateSettings(data.settings);
       } else if (data.type === MESSAGE_TYPES.VERIFY_URL) {
-        this.verifyNightscoutUrl(data.apiUrl);
+        this.verifyNightscoutUrl(data.apiUrl, data.apiToken);
+      } else if (data.type === MESSAGE_TYPES.VALIDATE_TOKEN) {
+        this.validateToken(data.apiUrl, data.apiToken);
       }
     });
   },
@@ -46,13 +49,19 @@ AppSideService({
   /**
    * Fetch data from Nightscout API
    * @param {string} apiUrl - The Nightscout API URL
+   * @param {string} apiToken - The Nightscout API token (optional)
    */
-  fetchNightscoutData(apiUrl) {
+  fetchNightscoutData(apiUrl, apiToken) {
     console.log('Fetching from Nightscout:', apiUrl);
 
     const url = apiUrl || 'https://your-nightscout.herokuapp.com';
     // Request DATA_POINTS_COUNT entries for pixel-per-value display (~200px screen width)
-    const endpoint = `${url}${ENTRIES_ENDPOINT}?count=${DATA_POINTS_COUNT}`;
+    let endpoint = `${url}${ENTRIES_ENDPOINT}?count=${DATA_POINTS_COUNT}`;
+    
+    // Add token if provided
+    if (apiToken) {
+      endpoint += `&token=${apiToken}`;
+    }
 
     // Use Zepp OS fetch API
     this.request({
@@ -83,13 +92,19 @@ AppSideService({
   /**
    * Verify Nightscout URL by checking the status endpoint
    * @param {string} apiUrl - The Nightscout API URL
+   * @param {string} apiToken - The Nightscout API token (optional)
    */
-  verifyNightscoutUrl(apiUrl) {
+  verifyNightscoutUrl(apiUrl, apiToken) {
     console.log('Verifying Nightscout URL:', apiUrl);
 
     const url = apiUrl || 'https://your-nightscout.herokuapp.com';
     // Use STATUS_ENDPOINT for verification (doesn't transfer CGM data)
-    const endpoint = `${url}${STATUS_ENDPOINT}`;
+    let endpoint = `${url}${STATUS_ENDPOINT}`;
+    
+    // Add token if provided
+    if (apiToken) {
+      endpoint += `?token=${apiToken}`;
+    }
 
     this.request({
       method: 'GET',
@@ -125,6 +140,69 @@ AppSideService({
       this.sendVerificationResultToDevice({
         success: false,
         message: '✗ Connection failed'
+      });
+    });
+  },
+
+  /**
+   * Validate API token by testing read and write access
+   * @param {string} apiUrl - The Nightscout API URL
+   * @param {string} apiToken - The Nightscout API token
+   */
+  validateToken(apiUrl, apiToken) {
+    console.log('Validating API token');
+
+    const url = apiUrl || 'https://your-nightscout.herokuapp.com';
+    
+    // First, test read access with status endpoint
+    const statusEndpoint = `${url}${STATUS_ENDPOINT}?token=${apiToken}`;
+
+    this.request({
+      method: 'GET',
+      url: statusEndpoint,
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      endpointType: 'status'
+    })
+    .then(statusResponse => {
+      console.log('Token status check passed - token has read access');
+      
+      // Now test write access by trying to query treatments (admin endpoint)
+      // We're just checking if we have access, not actually writing data
+      const adminEndpoint = `${url}${ADMIN_ENDPOINT}?count=1&token=${apiToken}`;
+      
+      return this.request({
+        method: 'GET',
+        url: adminEndpoint,
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        endpointType: 'admin'
+      })
+      .then(adminResponse => {
+        // If we can access admin endpoint, token has write access (not ideal)
+        console.log('Token has admin access - this is not recommended!');
+        this.sendTokenValidationResultToDevice({
+          statusSuccess: true,
+          adminSuccess: true
+        });
+      })
+      .catch(adminError => {
+        // Admin access failed - this is the expected behavior for read-only token
+        console.log('Token is read-only - this is the expected safe state');
+        this.sendTokenValidationResultToDevice({
+          statusSuccess: true,
+          adminSuccess: false
+        });
+      });
+    })
+    .catch(statusError => {
+      // Status check failed - token is invalid
+      console.error('Token validation failed:', statusError);
+      this.sendTokenValidationResultToDevice({
+        statusSuccess: false,
+        statusError: '✗ Invalid token or unauthorized'
       });
     });
   },
@@ -228,6 +306,18 @@ AppSideService({
   },
 
   /**
+   * Send token validation result to device
+   * @param {Object} result - Token validation result
+   */
+  sendTokenValidationResultToDevice(result) {
+    const message = messageBuilder.response({
+      tokenValidation: true,
+      ...result
+    });
+    messaging.peerSocket.send(message);
+  },
+
+  /**
    * Send error message to device
    * @param {string} errorMessage - Error message
    */
@@ -297,6 +387,11 @@ AppSideService({
           resolve({
             body: entries
           });
+        } else if (options.endpointType === 'admin') {
+          // Simulate admin endpoint access check
+          // By default, reject to simulate read-only token (expected behavior)
+          // In real implementation, this would be determined by actual API response
+          reject(new Error('Unauthorized - read-only token'));
         } else {
           reject(new Error('Unknown endpoint type'));
         }
