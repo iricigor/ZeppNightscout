@@ -35,6 +35,8 @@ jobs:
     - name: Install Zeus CLI
       run: npm install -g @zeppos/zeus-cli
       
+    # Setup offline device cache to allow zeus build to run without internet
+    # expiredTime is set to far future (year 2286) to prevent cache expiration
     - name: Setup Zeus device cache
       run: |
         mkdir -p ~/.zepp
