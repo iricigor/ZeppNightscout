@@ -1,0 +1,18 @@
+{
+  "name": "zepp-nightscout",
+  "version": "1.0.0",
+  "description": "An app for Zepp OS that connects to Nightscout instance and displays CGM data",
+  "scripts": {
+    "dev": "echo 'Zepp OS development server'",
+    "build": "echo 'Building Zepp OS app'",
+    "test": "echo 'No tests yet'"
+  },
+  "keywords": [
+    "zeppos",
+    "nightscout",
+    "cgm"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {}
+}
