@@ -39,9 +39,9 @@ const TREND_MAP = {
 
 // UI color constants
 const UI_COLORS = {
-    SUCCESS: '#48bb78',
-    ERROR: '#f56565',
-    NEUTRAL: '#888'
+  SUCCESS: "#48bb78",
+  ERROR: "#f56565",
+  NEUTRAL: "#888",
 };
 
 // State
