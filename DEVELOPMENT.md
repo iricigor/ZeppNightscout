@@ -125,6 +125,18 @@ AppSideService({
 
 ## Testing Strategy
 
+For comprehensive testing instructions, including local development testing, simulator testing, and deployment to your personal watch, see the **[Testing Guide (TESTING.md)](TESTING.md)**.
+
+### Quick Testing
+
+```bash
+# Run data parser tests
+npm test
+
+# Check JavaScript syntax
+npm run test:syntax
+```
+
 ### Manual Testing
 
 1. **UI Testing**: Verify all widgets display correctly
@@ -136,12 +148,14 @@ AppSideService({
 
 Use Zepp OS simulator for testing:
 ```bash
-# Install Zepp OS CLI
-npm install -g zeppos-cli
+# Install Zeus CLI (official Zepp OS tool)
+npm install -g @zeppos/zeus-cli
 
 # Start simulator
-zepp-cli simulator
+zeus dev
 ```
+
+For detailed simulation and device testing steps, refer to [TESTING.md](TESTING.md).
 
 ## Extending the App
 
