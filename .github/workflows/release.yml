@@ -4,6 +4,13 @@ on:
   push:
     tags:
       - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to build from'
+        required: true
+        default: 'main'
+        type: string
 
 jobs:
   release:
@@ -16,18 +23,54 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.inputs.branch || github.ref }}
       
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '20'
     
-    - name: Get version from tag
+    - name: Get version and build number
       id: get_version
       run: |
-        VERSION=${GITHUB_REF#refs/tags/v}
-        echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-        echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        # Read base version from app.json
+        BASE_VERSION=$(node -p "require('./app.json').app.version.name")
+        
+        # Extract major.minor from base version (e.g., "0.1.0" -> "0.1")
+        MAJOR_MINOR=$(echo $BASE_VERSION | cut -d. -f1,2)
+        
+        # Use GitHub run number as patch version
+        BUILD_VERSION="${MAJOR_MINOR}.${{ github.run_number }}"
+        
+        # For tagged releases, extract tag version
+        if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+          TAG_VERSION=${GITHUB_REF#refs/tags/v}
+          TAG=${GITHUB_REF#refs/tags/}
+          echo "VERSION=$BUILD_VERSION" >> $GITHUB_OUTPUT
+          echo "TAG=$TAG" >> $GITHUB_OUTPUT
+          echo "BASE_VERSION=$TAG_VERSION" >> $GITHUB_OUTPUT
+        else
+          # For manual dispatch, use build version
+          TAG="v${BUILD_VERSION}"
+          echo "VERSION=$BUILD_VERSION" >> $GITHUB_OUTPUT
+          echo "TAG=$TAG" >> $GITHUB_OUTPUT
+          echo "BASE_VERSION=$BUILD_VERSION" >> $GITHUB_OUTPUT
+        fi
+        
+        echo "Building version: $BUILD_VERSION"
+    
+    - name: Update app.json with build version
+      run: |
+        # Update version in app.json to include run number
+        node -e "
+          const fs = require('fs');
+          const app = JSON.parse(fs.readFileSync('app.json', 'utf8'));
+          app.app.version.name = '${{ steps.get_version.outputs.VERSION }}';
+          fs.writeFileSync('app.json', JSON.stringify(app, null, 2) + '\n');
+        "
+        echo "Updated app.json version to ${{ steps.get_version.outputs.VERSION }}"
+        cat app.json | grep -A2 '"version"'
     
     - name: Update workflow run name with version
       run: echo "::notice title=Release Version::Building release ${{ steps.get_version.outputs.VERSION }}"
@@ -111,6 +154,8 @@ jobs:
         cat > release_notes.md << 'EOF'
         ## ZeppNightscout ${{ steps.get_version.outputs.VERSION }}
         
+        **Build**: #${{ github.run_number }} | **Base Version**: ${{ steps.get_version.outputs.BASE_VERSION }} | **Branch**: ${{ github.event.inputs.branch || github.ref_name }}
+        
         ### Download
         
         Download the app: [${{ steps.find_artifacts.outputs.ARTIFACT_NAME }}](${{ steps.qr_code.outputs.DOWNLOAD_URL }})
@@ -140,6 +185,7 @@ jobs:
         ### What's Included
         
         - App version: ${{ steps.get_version.outputs.VERSION }}
+        - Build number: ${{ github.run_number }}
         - Compatible with Zepp OS devices
         - Built from commit: ${{ github.sha }}
         
@@ -159,6 +205,6 @@ jobs:
         files: |
           ${{ steps.find_artifacts.outputs.ARTIFACT_PATH }}
         draft: false
-        prerelease: false
+        prerelease: ${{ github.event_name == 'workflow_dispatch' }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
