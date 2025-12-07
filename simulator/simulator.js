@@ -163,7 +163,8 @@ function setupEventListeners() {
 }
 
 function changeWatchModel() {
-  const modelId = document.getElementById("watch-model").value;
+  const modelSelect = document.getElementById("watch-model");
+  const modelId = modelSelect ? modelSelect.value : (currentState.currentModel || "balance");
   const model = WATCH_MODELS[modelId];
 
   if (!model) {
@@ -176,6 +177,11 @@ function changeWatchModel() {
 
   // Update watch screen dimensions and shape
   const watchScreen = document.querySelector(".watch-screen");
+  if (!watchScreen) {
+    log("Watch screen element not found", "error");
+    return;
+  }
+
   watchScreen.style.width = `${model.width}px`;
   watchScreen.style.height = `${model.height}px`;
 
@@ -188,6 +194,11 @@ function changeWatchModel() {
 
   // Reinitialize graph with new dimensions
   const canvas = document.getElementById("glucose-graph");
+  if (!canvas) {
+    log("Canvas element not found", "error");
+    return;
+  }
+
   canvas.width = canvas.offsetWidth;
   canvas.height = canvas.offsetHeight;
 
@@ -463,8 +474,9 @@ function processData(entries) {
   // Format time
   const lastUpdate = formatTimeSince(latest.date || latest.dateString);
 
-  // Update state
+  // Update state - preserve existing properties like currentModel
   currentState = {
+    ...currentState,
     apiUrl: document.getElementById("api-url").value,
     currentBG: latest.sgv ? latest.sgv.toString() : "--",
     trend: trend,
