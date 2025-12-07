@@ -89,8 +89,8 @@ zeus preview
 
 ## 📚 Need More Help?
 
-- **Quick Commands**: See [TESTING-QUICK-REFERENCE.md](TESTING-QUICK-REFERENCE.md)
-- **Detailed Testing**: See [TESTING.md](TESTING.md)
+- **Quick Commands**: See [TESTING-QUICK-REFERENCE.md](docs/TESTING-QUICK-REFERENCE.md)
+- **Detailed Testing**: See [TESTING.md](docs/TESTING.md)
 - **Development**: See [DEVELOPMENT.md](DEVELOPMENT.md)
 - **Project Overview**: See [README.md](README.md)
 
@@ -128,7 +128,7 @@ zeus preview
 - Restart the Zepp App if needed
 
 **More issues?**
-- See the detailed troubleshooting section in [TESTING.md](TESTING.md)
+- See the detailed troubleshooting section in [TESTING.md](docs/TESTING.md)
 
 ---
 

@@ -30,7 +30,7 @@ This project is configured for GitHub Codespaces with GitHub Copilot support:
 
 ## Testing
 
-For detailed testing instructions, see the [Testing Guide](TESTING.md).
+For detailed testing instructions, see the [Testing Guide](docs/TESTING.md).
 
 ### Automated Testing
 
@@ -93,7 +93,7 @@ Then:
 3. Tap "Scan" and scan the QR code shown in your terminal
 4. The app will be installed directly to your watch
 
-For detailed build and deployment instructions, see [TESTING.md](TESTING.md).
+For detailed build and deployment instructions, see [TESTING.md](docs/TESTING.md).
 
 ## API Integration
 

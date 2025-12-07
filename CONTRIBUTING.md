@@ -111,7 +111,7 @@ All contributions must include appropriate tests:
 
 ### Running Tests
 
-See [TESTING.md](TESTING.md) for comprehensive testing instructions.
+See [TESTING.md](docs/TESTING.md) for comprehensive testing instructions.
 
 Quick commands:
 
@@ -208,7 +208,7 @@ and how to view test results in PRs.
 
 ## Questions or Issues?
 
-- **Documentation**: Check [TESTING.md](TESTING.md), [DEVELOPMENT.md](DEVELOPMENT.md), and [README.md](README.md)
+- **Documentation**: Check [TESTING.md](docs/TESTING.md), [DEVELOPMENT.md](DEVELOPMENT.md), and [README.md](README.md)
 - **Bugs**: Open an issue with details and steps to reproduce
 - **Features**: Open an issue to discuss before implementing
 - **Questions**: Open a discussion or issue

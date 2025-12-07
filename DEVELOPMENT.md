@@ -125,7 +125,7 @@ AppSideService({
 
 ## Testing Strategy
 
-For comprehensive testing instructions, including local development testing, simulator testing, and deployment to your personal watch, see the **[Testing Guide (TESTING.md)](TESTING.md)**.
+For comprehensive testing instructions, including local development testing, simulator testing, and deployment to your personal watch, see the **[Testing Guide (TESTING.md)](docs/TESTING.md)**.
 
 ### Quick Testing
 
@@ -155,7 +155,7 @@ npm install -g @zeppos/zeus-cli
 zeus dev
 ```
 
-For detailed simulation and device testing steps, refer to [TESTING.md](TESTING.md).
+For detailed simulation and device testing steps, refer to [TESTING.md](docs/TESTING.md).
 
 ## Extending the App
 
