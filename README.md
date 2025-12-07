@@ -9,32 +9,6 @@ An app for Zepp OS that connects to Nightscout instance and displays CGM data.
 - **Calculated Values**: Display current BG, trend arrow, delta, and last update time
 - **Internet Connectivity**: Fetches real-time data from Nightscout API
 
-## Project Structure
-
-```
-├── .devcontainer/          # GitHub Codespaces configuration
-│   └── devcontainer.json   # Dev container setup for VS Code
-├── app.json                # Zepp OS app manifest
-├── package.json            # Node.js project configuration
-├── page/                   # Device-side UI code
-│   └── index.js           # Main page with UI widgets
-├── app-side/              # App-side service code
-│   └── index.js           # API fetching logic
-├── shared/                # Shared code between device and app-side
-│   └── message.js         # Message communication layer
-└── assets/                # Images, fonts, and resources
-```
-
-## UI Components
-
-1. **Text Display**: Shows Nightscout API URL configuration
-2. **Large BG Value**: Displays current blood glucose reading in large font
-3. **Trend Indicator**: Shows trend arrow (↑, →, ↓, etc.)
-4. **Delta Value**: Shows change from previous reading
-5. **Last Update Time**: Shows how long ago data was fetched
-6. **Canvas Graph**: Visual chart of recent glucose readings
-7. **Fetch Button**: Triggers data refresh from API
-
 ## Development Setup
 
 ### Using GitHub Codespaces
@@ -48,19 +22,6 @@ This project is configured for GitHub Codespaces with GitHub Copilot support:
    - Configure VS Code with ESLint, Prettier, and GitHub Copilot extensions
    - Forward port 8080 for development server
 
-### Local Development
-
-1. Install Node.js 20 or later
-2. Clone the repository:
-   ```bash
-   git clone https://github.com/iricigor/ZeppNightscout.git
-   cd ZeppNightscout
-   ```
-3. Install dependencies:
-   ```bash
-   npm install
-   ```
-
 ## Building for Zepp OS
 
 To build this app for Zepp OS devices, you'll need the Zepp OS development tools. Follow the official [Zepp OS documentation](https://docs.zepp.com/) for setup instructions.
@@ -71,6 +32,19 @@ The app connects to Nightscout API using the following endpoint:
 ```
 GET {nightscout-url}/api/v1/entries.json?count=10
 ```
+
+### Security
+
+**Important**: When configuring your Nightscout URL, ensure you use a token with **read-only access** to protect your data. 
+
+To configure read-only access tokens:
+1. Visit your Nightscout instance admin panel
+2. Create a new token with read-only permissions
+3. Use the token in your API URL: `https://your-nightscout.herokuapp.com?token=YOUR_READ_ONLY_TOKEN`
+
+For more information about Nightscout security and token configuration, see:
+- [Nightscout Security Documentation](http://www.nightscout.info/wiki/welcome/website-features/0-9-features/authentication-roles)
+- [Nightscout Setup Guide](http://www.nightscout.info/)
 
 Expected response format:
 ```json
