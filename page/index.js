@@ -10,6 +10,9 @@ const SCREEN_WIDTH = 480;
 const SCREEN_HEIGHT = 480;
 const MARGIN = 20;
 
+// Data configuration
+const DATA_POINTS_COUNT = 200; // Number of glucose readings to fetch and display
+
 Page({
   state: {
     apiUrl: 'https://your-nightscout.herokuapp.com',
@@ -23,7 +26,78 @@ Page({
 
   onInit() {
     console.log('Nightscout app initialized');
+    this.setupMessageHandlers();
     this.buildUI();
+  },
+
+  /**
+   * Setup message handlers for receiving data from app-side
+   */
+  setupMessageHandlers() {
+    // Listen for messages from app-side
+    messaging.peerSocket.addListener('message', (data) => {
+      console.log('Received message from app-side:', data);
+      
+      if (data.type === 'response') {
+        if (data.data.verification) {
+          // Handle verification result
+          this.handleVerificationResult(data.data);
+        } else if (data.data.error) {
+          // Handle error
+          this.handleError(data.data);
+        } else {
+          // Handle data update
+          this.handleDataUpdate(data.data);
+        }
+      }
+    });
+  },
+
+  /**
+   * Handle verification result from app-side
+   * @param {Object} result - Verification result
+   */
+  handleVerificationResult(result) {
+    this.state.verificationStatus = result.message;
+    this.widgets.verificationStatus.setProperty(hmUI.prop.TEXT, result.message);
+    
+    if (result.success) {
+      this.widgets.verificationStatus.setProperty(hmUI.prop.COLOR, 0x00ff00);
+    } else {
+      this.widgets.verificationStatus.setProperty(hmUI.prop.COLOR, 0xff0000);
+    }
+  },
+
+  /**
+   * Handle data update from app-side
+   * @param {Object} data - Glucose data
+   */
+  handleDataUpdate(data) {
+    this.state.currentBG = data.currentBG || '--';
+    this.state.trend = data.trend || '--';
+    this.state.delta = data.delta || '--';
+    this.state.lastUpdate = data.lastUpdate || '--';
+    this.state.dataPoints = data.dataPoints || [];
+
+    // Update UI
+    this.widgets.bgValue.setProperty(hmUI.prop.TEXT, this.state.currentBG);
+    this.widgets.bgValue.setProperty(hmUI.prop.COLOR, 0x00ff00);
+    this.widgets.trendText.setProperty(hmUI.prop.TEXT, `Trend: ${this.state.trend}`);
+    this.widgets.deltaText.setProperty(hmUI.prop.TEXT, `Δ: ${this.state.delta}`);
+    this.widgets.lastUpdateText.setProperty(hmUI.prop.TEXT, `Last: ${this.state.lastUpdate}`);
+
+    // Redraw graph
+    this.drawGraph();
+  },
+
+  /**
+   * Handle error from app-side
+   * @param {Object} error - Error data
+   */
+  handleError(error) {
+    console.error('Error from app-side:', error.message);
+    this.widgets.bgValue.setProperty(hmUI.prop.TEXT, 'Error');
+    this.widgets.bgValue.setProperty(hmUI.prop.COLOR, 0xff0000);
   },
 
   /**
@@ -235,11 +309,13 @@ Page({
     
     // Send message to app-side to fetch data
     try {
-      // In a real app, this would use the messaging system
-      // For now, simulate with dummy data
-      this.updateWithDummyData();
+      const message = messageBuilder.request({
+        type: MESSAGE_TYPES.FETCH_DATA,
+        apiUrl: this.state.apiUrl
+      });
+      messaging.peerSocket.send(message);
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('Error sending fetch request:', error);
       this.widgets.bgValue.setProperty(hmUI.prop.TEXT, 'Error');
     }
   },
@@ -257,61 +333,16 @@ Page({
     
     // Send message to app-side to verify URL
     try {
-      // In a real app, this would use the messaging system
-      // For now, simulate verification
-      this.simulateVerification();
+      const message = messageBuilder.request({
+        type: MESSAGE_TYPES.VERIFY_URL,
+        apiUrl: this.state.apiUrl
+      });
+      messaging.peerSocket.send(message);
     } catch (error) {
-      console.error('Error verifying URL:', error);
-      this.state.verificationStatus = 'Verification failed';
+      console.error('Error sending verification request:', error);
+      this.state.verificationStatus = '✗ Verification failed';
       this.widgets.verificationStatus.setProperty(hmUI.prop.TEXT, this.state.verificationStatus);
       this.widgets.verificationStatus.setProperty(hmUI.prop.COLOR, 0xff0000);
     }
   },
-
-  /**
-   * Simulate URL verification (to be replaced with real API call)
-   */
-  simulateVerification() {
-    setTimeout(() => {
-      // Simulate successful verification
-      this.state.verificationStatus = '✓ URL verified';
-      this.widgets.verificationStatus.setProperty(hmUI.prop.TEXT, this.state.verificationStatus);
-      this.widgets.verificationStatus.setProperty(hmUI.prop.COLOR, 0x00ff00);
-    }, 1000);
-  },
-
-  /**
-   * Update UI with dummy data for demonstration
-   */
-  updateWithDummyData() {
-    // Simulate API response
-    setTimeout(() => {
-      this.state.currentBG = '120';
-      this.state.trend = '→';
-      this.state.delta = '+2';
-      this.state.lastUpdate = '5 min ago';
-      
-      // Generate 200 data points (one per pixel for screen width)
-      const dataPoints = [];
-      let baseValue = 110;
-      for (let i = 0; i < 200; i++) {
-        // Generate realistic glucose variation
-        baseValue += (Math.random() - 0.5) * 5;
-        // Keep values in reasonable range
-        baseValue = Math.max(70, Math.min(180, baseValue));
-        dataPoints.push(Math.round(baseValue));
-      }
-      this.state.dataPoints = dataPoints;
-
-      // Update UI
-      this.widgets.bgValue.setProperty(hmUI.prop.TEXT, this.state.currentBG);
-      this.widgets.bgValue.setProperty(hmUI.prop.COLOR, 0x00ff00);
-      this.widgets.trendText.setProperty(hmUI.prop.TEXT, `Trend: ${this.state.trend}`);
-      this.widgets.deltaText.setProperty(hmUI.prop.TEXT, `Δ: ${this.state.delta}`);
-      this.widgets.lastUpdateText.setProperty(hmUI.prop.TEXT, `Last: ${this.state.lastUpdate}`);
-
-      // Redraw graph
-      this.drawGraph();
-    }, 1000);
-  }
 });

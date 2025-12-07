@@ -5,6 +5,11 @@
 
 import { messageBuilder, MESSAGE_TYPES } from '../shared/message';
 
+// API configuration
+const DATA_POINTS_COUNT = 200; // Number of glucose readings to fetch
+const STATUS_ENDPOINT = '/api/v1/status';
+const ENTRIES_ENDPOINT = '/api/v1/entries.json';
+
 // App-side service
 AppSideService({
   onInit() {
@@ -46,8 +51,8 @@ AppSideService({
     console.log('Fetching from Nightscout:', apiUrl);
 
     const url = apiUrl || 'https://your-nightscout.herokuapp.com';
-    // Request 200 entries for pixel-per-value display (~200px screen width)
-    const endpoint = `${url}/api/v1/entries.json?count=200`;
+    // Request DATA_POINTS_COUNT entries for pixel-per-value display (~200px screen width)
+    const endpoint = `${url}${ENTRIES_ENDPOINT}?count=${DATA_POINTS_COUNT}`;
 
     // Use Zepp OS fetch API
     this.request({
@@ -55,7 +60,8 @@ AppSideService({
       url: endpoint,
       headers: {
         'Content-Type': 'application/json'
-      }
+      },
+      endpointType: 'entries'
     })
     .then(response => {
       console.log('API response received');
@@ -82,15 +88,16 @@ AppSideService({
     console.log('Verifying Nightscout URL:', apiUrl);
 
     const url = apiUrl || 'https://your-nightscout.herokuapp.com';
-    // Use /api/v1/status endpoint for verification (doesn't transfer CGM data)
-    const endpoint = `${url}/api/v1/status`;
+    // Use STATUS_ENDPOINT for verification (doesn't transfer CGM data)
+    const endpoint = `${url}${STATUS_ENDPOINT}`;
 
     this.request({
       method: 'GET',
       url: endpoint,
       headers: {
         'Content-Type': 'application/json'
-      }
+      },
+      endpointType: 'status'
     })
     .then(response => {
       console.log('Verification response received');
@@ -254,8 +261,8 @@ AppSideService({
       
       // For demonstration, return dummy data
       setTimeout(() => {
-        // Check if this is a status endpoint verification
-        if (options.url.includes('/api/v1/status')) {
+        // Check endpoint type using the explicit parameter instead of string matching
+        if (options.endpointType === 'status') {
           resolve({
             body: {
               status: 'ok',
@@ -265,13 +272,13 @@ AppSideService({
               apiEnabled: true
             }
           });
-        } else {
-          // Generate 200 dummy glucose entries for data fetch
+        } else if (options.endpointType === 'entries') {
+          // Generate DATA_POINTS_COUNT dummy glucose entries for data fetch
           const entries = [];
           let timestamp = Date.now();
           let value = 120;
           
-          for (let i = 0; i < 200; i++) {
+          for (let i = 0; i < DATA_POINTS_COUNT; i++) {
             // Vary the glucose value slightly
             value += (Math.random() - 0.5) * 10;
             value = Math.max(70, Math.min(200, value));
@@ -290,6 +297,8 @@ AppSideService({
           resolve({
             body: entries
           });
+        } else {
+          reject(new Error('Unknown endpoint type'));
         }
       }, 500);
     });
