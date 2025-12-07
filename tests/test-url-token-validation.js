@@ -3,6 +3,17 @@
  * Run with: node test-url-token-validation.js
  */
 
+// Note: MESSAGE_TYPES should ideally be imported from shared/message.js,
+// but since this project uses Zepp OS modules (not CommonJS/ESM),
+// we define the constants here for testing purposes.
+// Keep this in sync with shared/message.js
+const MESSAGE_TYPES = {
+  FETCH_DATA: 'FETCH_DATA',
+  UPDATE_SETTINGS: 'UPDATE_SETTINGS',
+  VERIFY_URL: 'VERIFY_URL',
+  VALIDATE_TOKEN: 'VALIDATE_TOKEN'
+};
+
 // Test URL validation
 console.log('='.repeat(50));
 console.log('Testing URL and Token Validation');
@@ -56,13 +67,6 @@ console.log();
 // Test 3: Message type validation
 console.log('Test 3: Message Type Validation');
 console.log('-'.repeat(50));
-
-const MESSAGE_TYPES = {
-  FETCH_DATA: 'FETCH_DATA',
-  UPDATE_SETTINGS: 'UPDATE_SETTINGS',
-  VERIFY_URL: 'VERIFY_URL',
-  VALIDATE_TOKEN: 'VALIDATE_TOKEN'
-};
 
 assert(MESSAGE_TYPES.VALIDATE_TOKEN === 'VALIDATE_TOKEN', 'VALIDATE_TOKEN message type should exist');
 assert(MESSAGE_TYPES.VERIFY_URL === 'VERIFY_URL', 'VERIFY_URL message type should exist');

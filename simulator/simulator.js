@@ -37,6 +37,13 @@ const TREND_MAP = {
   "RATE OUT OF RANGE": "⇕",
 };
 
+// UI color constants
+const UI_COLORS = {
+    SUCCESS: '#48bb78',
+    ERROR: '#f56565',
+    NEUTRAL: '#888'
+};
+
 // State
 let currentState = {
   apiUrl: "",
