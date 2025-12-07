@@ -13,6 +13,10 @@ An app for Zepp OS that connects to Nightscout instance and displays CGM data.
 
 ## Development Setup
 
+### Quick Start
+
+**New to the project?** See [QUICK-START.md](QUICK-START.md) for the fastest way to get the app running on your watch using `zeus preview`!
+
 ### Using GitHub Codespaces
 
 This project is configured for GitHub Codespaces with GitHub Copilot support:
