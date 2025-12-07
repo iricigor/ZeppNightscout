@@ -567,7 +567,7 @@ If you encounter issues:
 1. **Check Documentation**:
    - [Zepp OS Official Docs](https://docs.zepp.com/)
    - [Zeus CLI Documentation](https://github.com/zepp-health/zeppos-docs)
-   - This repository's README.md and DEVELOPMENT.md
+   - This repository's README.md and docs/DEVELOPMENT.md
 
 2. **Review Logs**:
    - Simulator console logs
@@ -618,7 +618,7 @@ After successful testing:
 
 ## Related Documentation
 
-- [README.md](./README.md) - Project overview and features
+- [README.md](../README.md) - Project overview and features
 - [DEVELOPMENT.md](./DEVELOPMENT.md) - Development setup and workflow
 - [ARCHITECTURE.md](./ARCHITECTURE.md) - Technical architecture details
 - [Zepp OS Documentation](https://docs.zepp.com/) - Official Zepp OS docs

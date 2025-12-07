@@ -7,7 +7,7 @@
     "build": "echo 'Run: zeus build (requires @zeppos/zeus-cli)'",
     "build:prod": "echo 'Run: zeus build --production (requires @zeppos/zeus-cli)'",
     "install:device": "echo 'Run: zeus install (requires @zeppos/zeus-cli and connected device)'",
-    "test": "node test-parser.js",
+    "test": "node tests/test-parser.js",
     "test:syntax": "node --check page/index.js && node --check app-side/index.js && node --check shared/message.js",
     "simulator": "echo 'Run: zeus dev (requires @zeppos/zeus-cli)'",
     "lint": "echo 'Linting not configured yet'",
