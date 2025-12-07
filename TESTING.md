@@ -9,6 +9,7 @@ This guide explains how to test the ZeppNightscout app functionality in both loc
 - [Prerequisites](#prerequisites)
 - [Local Development Testing](#local-development-testing)
 - [Simulator Testing](#simulator-testing)
+- [Quick Testing with QR Code (Recommended)](#quick-testing-with-qr-code-recommended)
 - [Testing on Personal Watch](#testing-on-personal-watch)
 - [Testing Checklist](#testing-checklist)
 - [Troubleshooting](#troubleshooting)
@@ -19,8 +20,9 @@ The ZeppNightscout app can be tested at multiple levels:
 
 1. **Code-level testing**: Verify JavaScript code functions correctly
 2. **Simulator testing**: Test the app in the Zepp OS simulator
-3. **Device testing**: Deploy and test on your actual watch
-4. **Automated CI testing**: GitHub Actions runs tests on every PR
+3. **Quick QR code testing**: Use `zeus preview` to instantly install to your watch (recommended)
+4. **Device testing**: Deploy and test on your actual watch via ADB
+5. **Automated CI testing**: GitHub Actions runs tests on every PR
 
 ## Continuous Integration
 
@@ -75,6 +77,14 @@ npm run help         # Test help command
 - Zepp OS Developer Tools
 - Zeus CLI (Command-line tool for Zepp OS)
 - A Zepp developer account
+
+### For Quick QR Code Testing
+
+- Zeus CLI installed globally
+- A Zepp developer account (register at [developers.zepp.com](https://developers.zepp.com/))
+- Zepp App on your phone (version 6.6.0 or higher)
+- A compatible Zepp OS watch paired to the app
+- Developer mode enabled in Zepp App
 
 ### For Device Testing
 
@@ -313,6 +323,131 @@ The simulator provides debugging capabilities:
 # View console logs
 # Check the simulator console for console.log() output
 ```
+
+## Quick Testing with QR Code (Recommended)
+
+The **easiest and fastest** way to test your app on a real watch is using the `zeus preview` command. This method doesn't require USB cables or ADB connections—just scan a QR code!
+
+### Prerequisites
+
+1. **Zeus CLI installed**:
+   ```bash
+   npm install -g @zeppos/zeus-cli
+   ```
+
+2. **Zeus account** (create at [Zepp Developer Portal](https://developers.zepp.com/))
+
+3. **Zepp App** installed on your phone with:
+   - Your watch paired to the app
+   - Developer mode enabled (see steps below)
+   - Zepp App version 6.6.0 or higher
+
+### Step 1: Enable Developer Mode in Zepp App
+
+Enable developer mode in the Zepp App (one-time setup):
+
+1. Open **Zepp App** on your phone
+2. Go to **Profile** → **Settings** → **About**
+3. Tap the **Zepp icon** 7 times rapidly
+4. You'll see a message confirming Developer Mode is enabled
+
+### Step 2: Login to Zeus (One-Time Setup)
+
+Login to Zeus CLI with your developer account (first time only):
+
+```bash
+zeus login
+```
+
+Enter your Zepp developer account credentials when prompted.
+
+### Step 3: Generate QR Code
+
+Navigate to your project directory and run:
+
+```bash
+# Run preview command
+zeus preview
+
+# Or use the npm script
+npm run preview
+```
+
+The command will:
+1. Build your app automatically
+2. Prompt you to select your watch model (e.g., GTR 3)
+3. Generate and display a QR code in your terminal
+
+### Step 4: Scan QR Code to Install
+
+1. Open **Zepp App** on your phone
+2. Navigate to **Profile** → **[Your Device Name]** → **Developer Mode**
+3. Tap the **Scan** button
+4. Point your phone camera at the QR code in your terminal
+5. The app will be pushed to your watch automatically!
+
+### Step 5: Test on Your Watch
+
+Once installed:
+
+1. Find the **Nightscout** app on your watch
+2. Open it to test functionality
+3. Configure your Nightscout URL (if settings page is available)
+4. Test data fetching and display
+
+### Benefits of `zeus preview`
+
+✅ **No cables needed** - wireless installation  
+✅ **Fast iteration** - quick install for testing changes  
+✅ **Easy to use** - just scan a QR code  
+✅ **Works anywhere** - as long as phone and terminal are visible  
+✅ **Multiple devices** - easy to test on different watches  
+
+### Troubleshooting Preview Issues
+
+#### "Download failed, error code: null"
+
+**Cause:** The app was built for an incompatible device.
+
+**Solution:**
+- Ensure you selected the correct device model when running `zeus preview`
+- Verify `deviceSource` in `app.json` matches your watch
+- Try selecting a different but compatible device model
+- Wait a few moments and try again (may be temporary server issue)
+
+#### "Please login first"
+
+**Solution:**
+```bash
+zeus login
+```
+
+#### "QR code expired"
+
+The QR code is valid for a limited time. Simply run `zeus preview` again to generate a new one.
+
+#### "Cannot find device in Zepp App"
+
+**Solution:**
+1. Verify Developer Mode is enabled in Zepp App
+2. Check that your watch is paired and connected
+3. Restart the Zepp App
+4. Ensure you're looking in Profile → [Your Device] → Developer Mode
+
+#### "Account mismatch"
+
+**Solution:**
+Make sure the account logged in to `zeus login` matches the account used in the Zepp App.
+
+### When to Use Each Method
+
+| Method | Best For | Pros | Cons |
+|--------|----------|------|------|
+| **zeus preview** (QR Code) | Quick testing, frequent updates | Fast, wireless, easy | Requires Zeus account, internet connection |
+| **zeus install** (ADB) | Detailed debugging, offline work | Full control, logs access | Requires USB/WiFi setup, more complex |
+| **zeus dev** (Simulator) | Initial development, UI work | Fast feedback, no device needed | Not same as real device |
+
+**Recommendation:** Use `zeus preview` for most testing, especially when iterating on features. Use ADB connection only when you need detailed logs or are debugging complex issues.
 
 ## Testing on Personal Watch
 
