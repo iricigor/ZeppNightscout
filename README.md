@@ -129,26 +129,51 @@ For detailed build and deployment instructions, see [TESTING.md](docs/TESTING.md
 
 The app connects to Nightscout API using the following endpoints:
 
+### Configuration
+
+The app now supports **separate URL and token configuration** for better security:
+
+1. **API URL**: Enter your Nightscout instance URL (must use HTTPS)
+2. **API Token**: Enter your read-only access token separately
+
 ### URL Verification
 ```
 GET {nightscout-url}/api/v1/status
 ```
-This endpoint is used to verify the Nightscout URL without transferring CGM data. It returns server status information.
+This endpoint is used to verify the Nightscout URL. The URL must use HTTPS for security.
+
+### Token Validation
+
+The app includes a comprehensive token validation system:
+
+- **Click the ? icon** next to the token field to validate your token
+- **Read Access Test**: Verifies the token can access the status endpoint
+- **Admin Access Test**: Checks if the token has write/admin permissions
+
+**Token Validation States:**
+- `?` (Gray): Token not yet validated
+- `⌛` (Gray): Validation in progress
+- `✅` (Green): Token is read-only (safe - recommended)
+- `❗` (Red): Token has admin access (dangerous - not recommended)
+- `✗` (Red): Token is invalid or unauthorized
 
 ### Data Fetching
 ```
-GET {nightscout-url}/api/v1/entries.json?count=200
+GET {nightscout-url}/api/v1/entries.json?count=200&token={api-token}
 ```
 Fetches 200 glucose readings for detailed trend visualization (one value per pixel for ~200px screen width).
 
 ### Security
 
-**Important**: When configuring your Nightscout URL, ensure you use a token with **read-only access** to protect your data. 
+**Important**: Always use a token with **read-only access** to protect your data. 
 
 To configure read-only access tokens:
 1. Visit your Nightscout instance admin panel
 2. Create a new token with read-only permissions
-3. Use the token in your API URL: `https://your-nightscout.herokuapp.com?token=YOUR_READ_ONLY_TOKEN`
+3. Enter the URL and token separately in the app configuration
+4. Click the `?` icon to validate that your token is read-only
+
+The app will warn you if your token has admin/write permissions, which is a security risk.
 
 For more information about Nightscout security and token configuration, see:
 - [Nightscout Security Documentation](http://www.nightscout.info/wiki/welcome/website-features/0-9-features/authentication-roles)
@@ -168,13 +193,23 @@ Expected response format:
 
 ## Configuration
 
-Update the `apiUrl` in `page/index.js` to point to your Nightscout instance:
+The app configuration is now split into two fields for better security:
+
+1. **API URL**: Update `apiUrl` in `page/index.js` to point to your Nightscout instance
+2. **API Token**: Update `apiToken` in `page/index.js` with your read-only access token
+
 ```javascript
 state: {
   apiUrl: 'https://your-nightscout.herokuapp.com',
+  apiToken: 'your-read-only-token-here',
   ...
 }
 ```
+
+**Important**: 
+- The URL must use HTTPS (HTTP URLs will be rejected)
+- Use the token validation feature (click `?` icon) to ensure your token is read-only
+- Never use admin/write tokens in production
 
 ## Technologies Used
 

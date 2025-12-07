@@ -1,317 +1,335 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Zepp Nightscout Simulator</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            padding: 20px;
-        }
-        
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Helvetica, Arial, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      .container {
+        display: flex;
+        gap: 30px;
+        max-width: 1200px;
+        width: 100%;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+
+      .watch-container {
+        background: #222;
+        border-radius: 30px;
+        padding: 20px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      }
+
+      .watch-screen {
+        width: 480px;
+        height: 480px;
+        background: #000;
+        border-radius: 20px;
+        position: relative;
+        overflow: hidden;
+        color: white;
+        font-family: Arial, sans-serif;
+      }
+
+      .watch-content {
+        padding: 20px;
+        height: 100%;
+        overflow-y: auto;
+      }
+
+      .controls {
+        background: white;
+        border-radius: 20px;
+        padding: 30px;
+        min-width: 350px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+      }
+
+      .controls h2 {
+        margin-bottom: 20px;
+        color: #333;
+      }
+
+      .control-group {
+        margin-bottom: 20px;
+      }
+
+      .control-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: #555;
+      }
+
+      .control-group input {
+        width: 100%;
+        padding: 10px;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        font-size: 14px;
+        transition: border-color 0.3s;
+      }
+
+      .control-group input:focus {
+        outline: none;
+        border-color: #667eea;
+      }
+
+      .button {
+        width: 100%;
+        padding: 12px;
+        background: #667eea;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.3s;
+        margin-bottom: 10px;
+      }
+
+      .button:hover {
+        background: #5568d3;
+      }
+
+      .button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+
+      .button.secondary {
+        background: #48bb78;
+      }
+
+      .button.secondary:hover {
+        background: #38a169;
+      }
+
+      .status {
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        font-size: 14px;
+      }
+
+      .status.success {
+        background: #c6f6d5;
+        color: #22543d;
+      }
+
+      .status.error {
+        background: #fed7d7;
+        color: #742a2a;
+      }
+
+      .status.info {
+        background: #bee3f8;
+        color: #2c5282;
+      }
+
+      /* Watch screen specific styles */
+      .header {
+        text-align: center;
+        padding: 10px 0;
+        border-bottom: 1px solid #333;
+        margin-bottom: 20px;
+      }
+
+      .header h1 {
+        font-size: 20px;
+        font-weight: normal;
+      }
+
+      .stats {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        margin-bottom: 20px;
+      }
+
+      .stat {
+        background: #1a1a1a;
+        padding: 15px;
+        border-radius: 10px;
+        text-align: center;
+      }
+
+      .stat-label {
+        font-size: 12px;
+        color: #888;
+        margin-bottom: 5px;
+      }
+
+      .stat-value {
+        font-size: 24px;
+        font-weight: bold;
+        color: #4ade80;
+      }
+
+      .graph-container {
+        background: #1a1a1a;
+        padding: 15px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+      }
+
+      .graph-title {
+        font-size: 12px;
+        color: #888;
+        margin-bottom: 10px;
+      }
+
+      #glucose-graph {
+        width: 100%;
+        height: 150px;
+        background: #0a0a0a;
+        border-radius: 5px;
+      }
+
+      .logs {
+        max-height: 200px;
+        overflow-y: auto;
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 10px;
+        font-family: "Courier New", monospace;
+        font-size: 12px;
+        color: #333;
+      }
+
+      .log-entry {
+        margin-bottom: 5px;
+        padding: 2px 0;
+      }
+
+      .log-entry.error {
+        color: #c53030;
+      }
+
+      .log-entry.success {
+        color: #2f855a;
+      }
+
+      @media (max-width: 900px) {
         .container {
-            display: flex;
-            gap: 30px;
-            max-width: 1200px;
-            width: 100%;
-            flex-wrap: wrap;
-            justify-content: center;
+          flex-direction: column;
         }
-        
-        .watch-container {
-            background: #222;
-            border-radius: 30px;
-            padding: 20px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-        }
-        
+
         .watch-screen {
-            width: 480px;
-            height: 480px;
-            background: #000;
-            border-radius: 20px;
-            position: relative;
-            overflow: hidden;
-            color: white;
-            font-family: Arial, sans-serif;
+          width: 100%;
+          max-width: 480px;
+          height: auto;
+          aspect-ratio: 1;
         }
-        
-        .watch-content {
-            padding: 20px;
-            height: 100%;
-            overflow-y: auto;
-        }
-        
+
         .controls {
-            background: white;
-            border-radius: 20px;
-            padding: 30px;
-            min-width: 350px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+          width: 100%;
         }
-        
-        .controls h2 {
-            margin-bottom: 20px;
-            color: #333;
-        }
-        
-        .control-group {
-            margin-bottom: 20px;
-        }
-        
-        .control-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #555;
-        }
-        
-        .control-group input {
-            width: 100%;
-            padding: 10px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            font-size: 14px;
-            transition: border-color 0.3s;
-        }
-        
-        .control-group input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-        
-        .button {
-            width: 100%;
-            padding: 12px;
-            background: #667eea;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.3s;
-            margin-bottom: 10px;
-        }
-        
-        .button:hover {
-            background: #5568d3;
-        }
-        
-        .button:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-        }
-        
-        .button.secondary {
-            background: #48bb78;
-        }
-        
-        .button.secondary:hover {
-            background: #38a169;
-        }
-        
-        .status {
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-size: 14px;
-        }
-        
-        .status.success {
-            background: #c6f6d5;
-            color: #22543d;
-        }
-        
-        .status.error {
-            background: #fed7d7;
-            color: #742a2a;
-        }
-        
-        .status.info {
-            background: #bee3f8;
-            color: #2c5282;
-        }
-        
-        /* Watch screen specific styles */
-        .header {
-            text-align: center;
-            padding: 10px 0;
-            border-bottom: 1px solid #333;
-            margin-bottom: 20px;
-        }
-        
-        .header h1 {
-            font-size: 20px;
-            font-weight: normal;
-        }
-        
-        .stats {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-        
-        .stat {
-            background: #1a1a1a;
-            padding: 15px;
-            border-radius: 10px;
-            text-align: center;
-        }
-        
-        .stat-label {
-            font-size: 12px;
-            color: #888;
-            margin-bottom: 5px;
-        }
-        
-        .stat-value {
-            font-size: 24px;
-            font-weight: bold;
-            color: #4ade80;
-        }
-        
-        .graph-container {
-            background: #1a1a1a;
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-        }
-        
-        .graph-title {
-            font-size: 12px;
-            color: #888;
-            margin-bottom: 10px;
-        }
-        
-        #glucose-graph {
-            width: 100%;
-            height: 150px;
-            background: #0a0a0a;
-            border-radius: 5px;
-        }
-        
-        .logs {
-            max-height: 200px;
-            overflow-y: auto;
-            background: #f8f9fa;
-            border-radius: 8px;
-            padding: 10px;
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-            color: #333;
-        }
-        
-        .log-entry {
-            margin-bottom: 5px;
-            padding: 2px 0;
-        }
-        
-        .log-entry.error {
-            color: #c53030;
-        }
-        
-        .log-entry.success {
-            color: #2f855a;
-        }
-        
-        @media (max-width: 900px) {
-            .container {
-                flex-direction: column;
-            }
-            
-            .watch-screen {
-                width: 100%;
-                max-width: 480px;
-                height: auto;
-                aspect-ratio: 1;
-            }
-            
-            .controls {
-                width: 100%;
-            }
-        }
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <div class="watch-container">
-            <div class="watch-screen">
-                <div class="watch-content">
-                    <div class="header">
-                        <h1>Nightscout</h1>
-                    </div>
-                    
-                    <div class="stats">
-                        <div class="stat">
-                            <div class="stat-label">Current BG</div>
-                            <div class="stat-value" id="current-bg">--</div>
-                        </div>
-                        <div class="stat">
-                            <div class="stat-label">Trend</div>
-                            <div class="stat-value" id="trend">--</div>
-                        </div>
-                        <div class="stat">
-                            <div class="stat-label">Delta</div>
-                            <div class="stat-value" id="delta">--</div>
-                        </div>
-                        <div class="stat">
-                            <div class="stat-label">Last Update</div>
-                            <div class="stat-value" id="last-update" style="font-size: 14px;">--</div>
-                        </div>
-                    </div>
-                    
-                    <div class="graph-container">
-                        <div class="graph-title">Glucose Trend (Last 200 Readings)</div>
-                        <canvas id="glucose-graph"></canvas>
-                    </div>
-                    
-                    <div id="status-message"></div>
+      <div class="watch-container">
+        <div class="watch-screen">
+          <div class="watch-content">
+            <div class="header">
+              <h1>Nightscout</h1>
+            </div>
+
+            <div class="stats">
+              <div class="stat">
+                <div class="stat-label">Current BG</div>
+                <div class="stat-value" id="current-bg">--</div>
+              </div>
+              <div class="stat">
+                <div class="stat-label">Trend</div>
+                <div class="stat-value" id="trend">--</div>
+              </div>
+              <div class="stat">
+                <div class="stat-label">Delta</div>
+                <div class="stat-value" id="delta">--</div>
+              </div>
+              <div class="stat">
+                <div class="stat-label">Last Update</div>
+                <div
+                  class="stat-value"
+                  id="last-update"
+                  style="font-size: 14px"
+                >
+                  --
                 </div>
+              </div>
             </div>
+
+            <div class="graph-container">
+              <div class="graph-title">Glucose Trend (Last 200 Readings)</div>
+              <canvas id="glucose-graph"></canvas>
+            </div>
+
+            <div id="status-message"></div>
+          </div>
         </div>
-        
-        <div class="controls">
-            <h2>Simulator Controls</h2>
-            
-            <div id="status-container"></div>
-            
-            <div class="control-group">
-                <label for="api-url">Nightscout API URL</label>
-                <input 
-                    type="text" 
-                    id="api-url" 
-                    placeholder="https://your-nightscout-site.com"
-                    value="https://your-nightscout.herokuapp.com"
-                />
-            </div>
-            
-            <button class="button" id="verify-btn">Verify URL</button>
-            <button class="button secondary" id="fetch-btn">Fetch Data</button>
-            <button class="button" id="mock-btn">Load Mock Data</button>
-            
-            <div class="control-group" style="margin-top: 30px;">
-                <label>Console Logs</label>
-                <div class="logs" id="console-logs">
-                    <div class="log-entry">Simulator initialized...</div>
-                </div>
-            </div>
+      </div>
+
+      <div class="controls">
+        <h2>Simulator Controls</h2>
+
+        <div id="status-container"></div>
+
+        <div class="control-group">
+          <label for="api-url">Nightscout API URL</label>
+          <input
+            type="text"
+            id="api-url"
+            placeholder="https://your-nightscout-site.com"
+            value="https://your-nightscout.herokuapp.com"
+          />
         </div>
+
+        <div class="control-group">
+          <label for="api-token"> API Token (read-only) </label>
+          <input
+            type="text"
+            id="api-token"
+            placeholder="your-token-here"
+            value=""
+          />
+        </div>
+
+        <button class="button" id="verify-btn" disabled>Verify Access</button>
+
+        <button class="button secondary" id="fetch-btn">Fetch Data</button>
+        <button class="button" id="mock-btn">Load Mock Data</button>
+
+        <div class="control-group" style="margin-top: 30px">
+          <label>Console Logs</label>
+          <div class="logs" id="console-logs">
+            <div class="log-entry">Simulator initialized...</div>
+          </div>
+        </div>
+      </div>
     </div>
-    
+
     <script src="simulator.js"></script>
-</body>
+  </body>
 </html>
