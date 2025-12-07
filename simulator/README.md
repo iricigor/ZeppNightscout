@@ -2,6 +2,8 @@
 
 Browser-based simulator for quick testing and development of the Zepp Nightscout app.
 
+![Zepp Nightscout Simulator](https://github.com/user-attachments/assets/bb4f4591-4bfc-463a-b7f1-071d6b2bb8f1)
+
 ## Quick Start
 
 ### Using F5 (Recommended)

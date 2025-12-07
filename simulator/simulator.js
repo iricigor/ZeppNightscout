@@ -10,8 +10,11 @@ const MOCK_DATA = Array.from({ length: 200 }, (_, i) => {
     const randomNoise = (Math.random() - 0.5) * 10;
     const timestamp = Date.now() - (199 - i) * 5 * 60 * 1000; // 5 minutes apart
     
+    // Ensure glucose values are within realistic range (40-400 mg/dL)
+    const sgv = Math.max(40, Math.min(400, Math.round(baseValue + variation + randomNoise)));
+    
     return {
-        sgv: Math.round(baseValue + variation + randomNoise),
+        sgv: sgv,
         direction: i > 195 ? 'Flat' : 'FortyFiveUp',
         dateString: new Date(timestamp).toISOString(),
         date: timestamp
@@ -186,6 +189,9 @@ function processData(entries) {
     
     // Map trend arrow
     const trend = TREND_MAP[latest.direction] || '?';
+    if (!TREND_MAP[latest.direction]) {
+        console.warn(`Unknown trend direction: ${latest.direction}`);
+    }
     
     // Extract data points
     const dataPoints = entries.map(entry => entry.sgv || 0).reverse();
@@ -274,6 +280,15 @@ function drawGraph(dataPoints) {
     
     // Find min/max for scaling
     const validPoints = dataPoints.filter(p => p > 0);
+    if (validPoints.length === 0) {
+        // No valid data points, show message
+        ctx.fillStyle = '#888';
+        ctx.font = '14px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('No valid data points', canvas.width / 2, canvas.height / 2);
+        return;
+    }
+    
     const minBG = Math.min(...validPoints);
     const maxBG = Math.max(...validPoints);
     const range = maxBG - minBG || 100;

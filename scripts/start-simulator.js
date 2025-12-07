@@ -6,7 +6,6 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const { exec } = require('child_process');
 
 const PORT = process.env.PORT || 8080;
 const HOST = process.env.CODESPACE_NAME ? '0.0.0.0' : 'localhost';
@@ -30,19 +29,24 @@ const server = http.createServer((req, res) => {
     // Default to index.html
     let filePath = req.url === '/' ? '/simulator/index.html' : req.url;
     
+    // Map root-level simulator.js to simulator directory
+    if (filePath === '/simulator.js') {
+        filePath = '/simulator/simulator.js';
+    }
+    
     // Remove query string
     filePath = filePath.split('?')[0];
     
-    // Security: prevent directory traversal
-    filePath = path.normalize(filePath);
-    if (filePath.includes('..')) {
+    // Security: prevent directory traversal with proper path resolution
+    const baseDir = path.join(__dirname, '..');
+    const fullPath = path.resolve(baseDir, filePath.substring(1));
+    
+    // Ensure the resolved path is within the base directory
+    if (!fullPath.startsWith(baseDir)) {
         res.writeHead(403);
         res.end('Forbidden');
         return;
     }
-    
-    // Construct full path
-    const fullPath = path.join(__dirname, '..', filePath);
     
     // Get file extension
     const extname = String(path.extname(fullPath)).toLowerCase();
@@ -93,24 +97,40 @@ function openBrowser(url) {
     const platform = process.platform;
     let command;
     
+    // Validate URL to prevent injection
+    try {
+        new URL(url);
+    } catch (e) {
+        console.error('Invalid URL, cannot open browser');
+        return;
+    }
+    
     switch (platform) {
         case 'darwin':
-            command = `open "${url}"`;
+            command = 'open';
             break;
         case 'win32':
-            command = `start "" "${url}"`;
+            command = 'cmd';
             break;
         default:
-            command = `xdg-open "${url}"`;
+            command = 'xdg-open';
             break;
     }
     
-    exec(command, (error) => {
-        if (error) {
-            console.error('Could not open browser automatically.');
-            console.log(`Please open: ${url}`);
-        }
+    const args = platform === 'win32' ? ['/c', 'start', '', url] : [url];
+    
+    const { spawn } = require('child_process');
+    const child = spawn(command, args, {
+        detached: true,
+        stdio: 'ignore'
     });
+    
+    child.on('error', (error) => {
+        console.error('Could not open browser automatically.');
+        console.log(`Please open: ${url}`);
+    });
+    
+    child.unref();
 }
 
 // Handle graceful shutdown

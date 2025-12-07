@@ -36,6 +36,8 @@ For detailed testing instructions, see the [Testing Guide](docs/TESTING.md).
 
 **NEW!** Test the app instantly in your browser without any device or Zeus CLI:
 
+![Zepp Nightscout Simulator](https://github.com/user-attachments/assets/bb4f4591-4bfc-463a-b7f1-071d6b2bb8f1)
+
 ```bash
 # Press F5 in VS Code (recommended)
 # or
