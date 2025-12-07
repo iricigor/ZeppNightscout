@@ -13,6 +13,10 @@ An app for Zepp OS that connects to Nightscout instance and displays CGM data.
 
 ## Development Setup
 
+### Quick Start
+
+**New to the project?** See [QUICK-START.md](QUICK-START.md) for the fastest way to get the app running on your watch using `zeus preview`!
+
 ### Using GitHub Codespaces
 
 This project is configured for GitHub Codespaces with GitHub Copilot support:
@@ -67,6 +71,27 @@ zeus build --production
 # Install to connected device
 zeus install
 ```
+
+### Quick Testing with QR Code
+
+The easiest way to test the app on your watch is using `zeus preview`:
+
+```bash
+# Install Zeus CLI (if not already installed)
+npm install -g @zeppos/zeus-cli
+
+# Login to Zeus (one-time setup)
+zeus login
+
+# Generate QR code for quick install
+zeus preview
+```
+
+Then:
+1. Enable Developer Mode in Zepp App (tap Zepp icon 7 times in Profile → Settings → About)
+2. Go to Profile → Your Device → Developer Mode in the Zepp App
+3. Tap "Scan" and scan the QR code shown in your terminal
+4. The app will be installed directly to your watch
 
 For detailed build and deployment instructions, see [TESTING.md](docs/TESTING.md).
 

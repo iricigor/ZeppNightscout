@@ -45,6 +45,26 @@ zeus build
 zeus build --production
 ```
 
+## Quick Testing with QR Code (Easiest!)
+
+```bash
+# Login to Zeus (one-time setup)
+zeus login
+
+# Generate QR code and install to watch
+zeus preview
+```
+
+**Steps:**
+1. Run `zeus preview` in your terminal
+2. Select your watch model (e.g., gtr-3)
+3. A QR code will be displayed in the terminal
+4. Open Zepp App → Profile → Your Device → Developer Mode
+5. Tap "Scan" and scan the QR code
+6. App installs directly to your watch!
+
+**Note:** Developer Mode must be enabled in Zepp App (tap Zepp icon 7 times in Profile → Settings → About).
+
 ## Device Testing
 
 ### Connect Device
