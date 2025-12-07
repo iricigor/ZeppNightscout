@@ -11,7 +11,7 @@
     "test:syntax": "node --check page/index.js && node --check app-side/index.js && node --check shared/message.js",
     "simulator": "echo 'Run: zeus dev (requires @zeppos/zeus-cli)'",
     "lint": "echo 'Linting not configured yet'",
-    "help": "echo 'Available commands:\n  npm run dev - Start dev server\n  npm run build - Build app\n  npm run build:prod - Build for production\n  npm run test - Run tests\n  npm run test:syntax - Check JavaScript syntax\n  npm run simulator - Start simulator\n  npm run install:device - Install to device\n\nFor more info, see TESTING.md'"
+    "help": "node scripts/help.js"
   },
   "keywords": [
     "zeppos",
