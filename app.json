@@ -48,10 +48,10 @@
       "designWidth": 454
     }
   },
-  "defaultLanguage": "en-US",
   "i18n": {
     "en-US": {
       "appName": "Nightscout"
     }
-  }
+  },
+  "defaultLanguage": "en-US"
 }
