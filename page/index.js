@@ -10,6 +10,10 @@ const SCREEN_WIDTH = 480;
 const SCREEN_HEIGHT = 480;
 const MARGIN = 20;
 
+// Graph canvas heights
+const GRAPH_HEIGHT_LARGE = 200;  // For Page 2 (Graph page)
+const GRAPH_HEIGHT_SMALL = 80;   // For legacy or small displays
+
 // Data configuration
 const DATA_POINTS_COUNT = 200; // Number of glucose readings to fetch and display
 
@@ -23,13 +27,72 @@ Page({
     lastUpdate: '--',
     dataPoints: [],
     verificationStatus: '',
-    tokenValidationStatus: 'unvalidated' // unvalidated, validating, valid-readonly, valid-admin, invalid
+    tokenValidationStatus: 'unvalidated', // unvalidated, validating, valid-readonly, valid-admin, invalid
+    currentPage: 0, // 0 = Main (BG/trend/delta), 1 = Graph, 2 = Settings
+    graphZoom: 1.0, // Zoom level for graph page
+    graphOffset: 0 // Pan offset for graph page
   },
 
   onInit() {
     console.log('Nightscout app initialized');
     this.setupMessageHandlers();
+    this.setupGestureHandlers();
     this.buildUI();
+  },
+
+  /**
+   * Setup gesture handlers for page navigation
+   */
+  setupGestureHandlers() {
+    // Create page navigation touch areas using BUTTON widgets
+    // Left side - swipe right / previous page
+    const leftNavArea = hmUI.createWidget(hmUI.widget.BUTTON, {
+      x: 0,
+      y: 60,
+      w: 80,
+      h: SCREEN_HEIGHT - 120,
+      text: '',
+      normal_color: 0x000000,
+      press_color: 0x111111,
+      radius: 0,
+      text_size: 1,
+      color: 0x000000,
+      click_func: () => {
+        this.navigatePage(-1);
+      }
+    });
+
+    // Right side - swipe left / next page
+    const rightNavArea = hmUI.createWidget(hmUI.widget.BUTTON, {
+      x: SCREEN_WIDTH - 80,
+      y: 60,
+      w: 80,
+      h: SCREEN_HEIGHT - 120,
+      text: '',
+      normal_color: 0x000000,
+      press_color: 0x111111,
+      radius: 0,
+      text_size: 1,
+      color: 0x000000,
+      click_func: () => {
+        this.navigatePage(1);
+      }
+    });
+
+    // Store navigation widgets for potential cleanup (though these persist across page refreshes)
+    this.navWidgets = [leftNavArea, rightNavArea];
+  },
+
+  /**
+   * Navigate to a different page
+   * @param {number} direction - -1 for previous, 1 for next
+   */
+  navigatePage(direction) {
+    const newPage = this.state.currentPage + direction;
+    if (newPage >= 0 && newPage <= 2) {
+      this.state.currentPage = newPage;
+      this.refreshUI();
+    }
   },
 
   /**
@@ -122,15 +185,25 @@ Page({
     this.state.lastUpdate = data.lastUpdate || '--';
     this.state.dataPoints = data.dataPoints || [];
 
-    // Update UI
-    this.widgets.bgValue.setProperty(hmUI.prop.TEXT, this.state.currentBG);
-    this.widgets.bgValue.setProperty(hmUI.prop.COLOR, 0x00ff00);
-    this.widgets.trendText.setProperty(hmUI.prop.TEXT, `Trend: ${this.state.trend}`);
-    this.widgets.deltaText.setProperty(hmUI.prop.TEXT, `Δ: ${this.state.delta}`);
-    this.widgets.lastUpdateText.setProperty(hmUI.prop.TEXT, `Last: ${this.state.lastUpdate}`);
+    // Update UI widgets if they exist
+    if (this.widgets.bgValue) {
+      this.widgets.bgValue.setProperty(hmUI.prop.TEXT, this.state.currentBG);
+      this.widgets.bgValue.setProperty(hmUI.prop.COLOR, 0x00ff00);
+    }
+    if (this.widgets.trendText) {
+      this.widgets.trendText.setProperty(hmUI.prop.TEXT, this.state.trend);
+    }
+    if (this.widgets.deltaText) {
+      this.widgets.deltaText.setProperty(hmUI.prop.TEXT, this.state.delta);
+    }
+    if (this.widgets.lastUpdateText) {
+      this.widgets.lastUpdateText.setProperty(hmUI.prop.TEXT, `Last: ${this.state.lastUpdate}`);
+    }
 
-    // Redraw graph
-    this.drawGraph();
+    // Redraw graph if canvas exists
+    if (this.widgets.canvas) {
+      this.drawGraph();
+    }
   },
 
   /**
@@ -139,18 +212,62 @@ Page({
    */
   handleError(error) {
     console.error('Error from app-side:', error.message);
-    this.widgets.bgValue.setProperty(hmUI.prop.TEXT, 'Error');
-    this.widgets.bgValue.setProperty(hmUI.prop.COLOR, 0xff0000);
+    if (this.widgets.bgValue) {
+      this.widgets.bgValue.setProperty(hmUI.prop.TEXT, 'Error');
+      this.widgets.bgValue.setProperty(hmUI.prop.COLOR, 0xff0000);
+    }
   },
 
   /**
    * Build the user interface
    */
   buildUI() {
-    let yPos = MARGIN; // Track vertical position
+    this.widgets = {};
+    this.allWidgets = [];
+    this.refreshUI();
+  },
+
+  /**
+   * Refresh the UI to show the current page
+   */
+  refreshUI() {
+    // Clear all existing widgets by deleting them individually
+    if (this.allWidgets && Array.isArray(this.allWidgets)) {
+      this.allWidgets.forEach(widget => {
+        try {
+          hmUI.deleteWidget(widget);
+        } catch (e) {
+          console.log('Error deleting widget:', e);
+        }
+      });
+    }
+    this.allWidgets = [];
     
+    // Render current page
+    switch (this.state.currentPage) {
+      case 0:
+        this.buildPage1_MainMetrics();
+        break;
+      case 1:
+        this.buildPage2_Graph();
+        break;
+      case 2:
+        this.buildPage3_Settings();
+        break;
+    }
+
+    // Add page indicator at the bottom
+    this.buildPageIndicator();
+  },
+
+  /**
+   * Build Page 1: Main Metrics (BG, Trend, Delta)
+   */
+  buildPage1_MainMetrics() {
+    let yPos = MARGIN;
+
     // Title
-    const title = hmUI.createWidget(hmUI.widget.TEXT, {
+    hmUI.createWidget(hmUI.widget.TEXT, {
       x: MARGIN,
       y: yPos,
       w: SCREEN_WIDTH - (MARGIN * 2),
@@ -160,10 +277,282 @@ Page({
       align_h: hmUI.align.CENTER_H,
       text: 'Nightscout'
     });
+    yPos += 80;
+
+    // Page navigation arrows
+    hmUI.createWidget(hmUI.widget.TEXT, {
+      x: MARGIN,
+      y: yPos,
+      w: 50,
+      h: 30,
+      color: 0x444444,
+      text_size: 24,
+      text: ''
+    });
+
+    hmUI.createWidget(hmUI.widget.TEXT, {
+      x: SCREEN_WIDTH - MARGIN - 50,
+      y: yPos,
+      w: 50,
+      h: 30,
+      color: 0x888888,
+      text_size: 24,
+      text: '→'
+    });
+    yPos += 10;
+
+    // Current BG value (large display)
+    const bgValue = hmUI.createWidget(hmUI.widget.TEXT, {
+      x: MARGIN,
+      y: yPos,
+      w: SCREEN_WIDTH - (MARGIN * 2),
+      h: 120,
+      color: 0x00ff00,
+      text_size: 96,
+      align_h: hmUI.align.CENTER_H,
+      align_v: hmUI.align.CENTER_V,
+      text: this.state.currentBG
+    });
+    this.widgets.bgValue = bgValue;
+    yPos += 140;
+
+    // Trend and Delta side by side
+    const trendText = hmUI.createWidget(hmUI.widget.TEXT, {
+      x: MARGIN,
+      y: yPos,
+      w: (SCREEN_WIDTH - (MARGIN * 2)) / 2,
+      h: 50,
+      color: 0xffffff,
+      text_size: 36,
+      align_h: hmUI.align.CENTER_H,
+      text: this.state.trend
+    });
+    this.widgets.trendText = trendText;
+
+    const deltaText = hmUI.createWidget(hmUI.widget.TEXT, {
+      x: SCREEN_WIDTH / 2,
+      y: yPos,
+      w: (SCREEN_WIDTH - (MARGIN * 2)) / 2,
+      h: 50,
+      color: 0xffffff,
+      text_size: 36,
+      align_h: hmUI.align.CENTER_H,
+      text: this.state.delta
+    });
+    this.widgets.deltaText = deltaText;
+    yPos += 70;
+
+    // Last update time
+    const lastUpdateText = hmUI.createWidget(hmUI.widget.TEXT, {
+      x: MARGIN,
+      y: yPos,
+      w: SCREEN_WIDTH - (MARGIN * 2),
+      h: 30,
+      color: 0x888888,
+      text_size: 20,
+      align_h: hmUI.align.CENTER_H,
+      text: `Last: ${this.state.lastUpdate}`
+    });
+    this.widgets.lastUpdateText = lastUpdateText;
+    yPos += 50;
+
+    // Fetch data button
+    hmUI.createWidget(hmUI.widget.BUTTON, {
+      x: SCREEN_WIDTH / 2 - 80,
+      y: yPos,
+      w: 160,
+      h: 50,
+      text: 'Fetch Data',
+      normal_color: 0x0000ff,
+      press_color: 0x000088,
+      radius: 25,
+      click_func: () => {
+        this.fetchData();
+      }
+    });
+
+    // Swipe instruction
+    hmUI.createWidget(hmUI.widget.TEXT, {
+      x: MARGIN,
+      y: SCREEN_HEIGHT - 60,
+      w: SCREEN_WIDTH - (MARGIN * 2),
+      h: 30,
+      color: 0x666666,
+      text_size: 16,
+      align_h: hmUI.align.CENTER_H,
+      text: 'Tap edges to navigate'
+    });
+  },
+
+  /**
+   * Build Page 2: Graph (Scrollable to zoom/pan)
+   */
+  buildPage2_Graph() {
+    let yPos = MARGIN;
+
+    // Title
+    hmUI.createWidget(hmUI.widget.TEXT, {
+      x: MARGIN,
+      y: yPos,
+      w: SCREEN_WIDTH - (MARGIN * 2),
+      h: 40,
+      color: 0xffffff,
+      text_size: 28,
+      align_h: hmUI.align.CENTER_H,
+      text: 'Glucose Graph'
+    });
+    yPos += 50;
+
+    // Page navigation arrows
+    hmUI.createWidget(hmUI.widget.TEXT, {
+      x: MARGIN,
+      y: yPos,
+      w: 50,
+      h: 30,
+      color: 0x888888,
+      text_size: 24,
+      text: '←'
+    });
+
+    hmUI.createWidget(hmUI.widget.TEXT, {
+      x: SCREEN_WIDTH - MARGIN - 50,
+      y: yPos,
+      w: 50,
+      h: 30,
+      color: 0x888888,
+      text_size: 24,
+      text: '→'
+    });
+    yPos += 10;
+
+    // Current BG (smaller display)
+    hmUI.createWidget(hmUI.widget.TEXT, {
+      x: MARGIN,
+      y: yPos,
+      w: SCREEN_WIDTH - (MARGIN * 2),
+      h: 50,
+      color: 0x00ff00,
+      text_size: 40,
+      align_h: hmUI.align.CENTER_H,
+      text: `${this.state.currentBG} ${this.state.trend}`
+    });
     yPos += 60;
 
-    // URL input field (simulated with text display + button)
-    const urlLabel = hmUI.createWidget(hmUI.widget.TEXT, {
+    // Graph canvas - larger for this page
+    const canvas = hmUI.createWidget(hmUI.widget.CANVAS, {
+      x: MARGIN,
+      y: yPos,
+      w: SCREEN_WIDTH - (MARGIN * 2),
+      h: 200
+    });
+    this.widgets.canvas = canvas;
+    this.drawGraph();
+    yPos += 220;
+
+    // Zoom controls
+    const zoomLabel = hmUI.createWidget(hmUI.widget.TEXT, {
+      x: MARGIN,
+      y: yPos,
+      w: 100,
+      h: 30,
+      color: 0xaaaaaa,
+      text_size: 18,
+      text: `Zoom: ${this.state.graphZoom.toFixed(1)}x`
+    });
+    this.widgets.zoomLabel = zoomLabel;
+
+    // Zoom In button
+    hmUI.createWidget(hmUI.widget.BUTTON, {
+      x: SCREEN_WIDTH - MARGIN - 180,
+      y: yPos - 5,
+      w: 80,
+      h: 40,
+      text: 'Zoom +',
+      normal_color: 0x444444,
+      press_color: 0x222222,
+      radius: 20,
+      text_size: 16,
+      click_func: () => {
+        this.state.graphZoom = Math.min(3.0, this.state.graphZoom + 0.5);
+        this.widgets.zoomLabel.setProperty(hmUI.prop.TEXT, `Zoom: ${this.state.graphZoom.toFixed(1)}x`);
+        this.drawGraph();
+      }
+    });
+
+    // Zoom Out button
+    hmUI.createWidget(hmUI.widget.BUTTON, {
+      x: SCREEN_WIDTH - MARGIN - 90,
+      y: yPos - 5,
+      w: 80,
+      h: 40,
+      text: 'Zoom -',
+      normal_color: 0x444444,
+      press_color: 0x222222,
+      radius: 20,
+      text_size: 16,
+      click_func: () => {
+        this.state.graphZoom = Math.max(0.5, this.state.graphZoom - 0.5);
+        this.widgets.zoomLabel.setProperty(hmUI.prop.TEXT, `Zoom: ${this.state.graphZoom.toFixed(1)}x`);
+        this.drawGraph();
+      }
+    });
+
+    // Swipe instruction
+    hmUI.createWidget(hmUI.widget.TEXT, {
+      x: MARGIN,
+      y: SCREEN_HEIGHT - 60,
+      w: SCREEN_WIDTH - (MARGIN * 2),
+      h: 30,
+      color: 0x666666,
+      text_size: 16,
+      align_h: hmUI.align.CENTER_H,
+      text: 'Tap edges to navigate'
+    });
+  },
+
+  /**
+   * Build Page 3: Settings/History
+   */
+  buildPage3_Settings() {
+    let yPos = MARGIN;
+
+    // Title
+    hmUI.createWidget(hmUI.widget.TEXT, {
+      x: MARGIN,
+      y: yPos,
+      w: SCREEN_WIDTH - (MARGIN * 2),
+      h: 40,
+      color: 0xffffff,
+      text_size: 28,
+      align_h: hmUI.align.CENTER_H,
+      text: 'Settings'
+    });
+    yPos += 50;
+
+    // Page navigation arrows
+    hmUI.createWidget(hmUI.widget.TEXT, {
+      x: MARGIN,
+      y: yPos,
+      w: 50,
+      h: 30,
+      color: 0x888888,
+      text_size: 24,
+      text: '←'
+    });
+
+    hmUI.createWidget(hmUI.widget.TEXT, {
+      x: SCREEN_WIDTH - MARGIN - 50,
+      y: yPos,
+      w: 50,
+      h: 30,
+      color: 0x444444,
+      text_size: 24,
+      text: ''
+    });
+    yPos += 10;
+
+    // URL section
+    hmUI.createWidget(hmUI.widget.TEXT, {
       x: MARGIN,
       y: yPos,
       w: SCREEN_WIDTH - (MARGIN * 2),
@@ -183,11 +572,10 @@ Page({
       text_size: 16,
       text: this.state.apiUrl
     });
-
-    this.widgets = { urlValue };
+    this.widgets.urlValue = urlValue;
 
     // Verify URL button
-    const verifyButton = hmUI.createWidget(hmUI.widget.BUTTON, {
+    hmUI.createWidget(hmUI.widget.BUTTON, {
       x: SCREEN_WIDTH - MARGIN - 90,
       y: yPos - 5,
       w: 90,
@@ -203,7 +591,7 @@ Page({
     });
     yPos += 40;
 
-    // URL Verification status text
+    // URL Verification status
     const verificationStatus = hmUI.createWidget(hmUI.widget.TEXT, {
       x: MARGIN,
       y: yPos,
@@ -213,12 +601,11 @@ Page({
       text_size: 14,
       text: this.state.verificationStatus
     });
-
     this.widgets.verificationStatus = verificationStatus;
     yPos += 30;
 
-    // API Token input field
-    const tokenLabel = hmUI.createWidget(hmUI.widget.TEXT, {
+    // Token section
+    hmUI.createWidget(hmUI.widget.TEXT, {
       x: MARGIN,
       y: yPos,
       w: SCREEN_WIDTH - (MARGIN * 2),
@@ -238,10 +625,9 @@ Page({
       text_size: 16,
       text: this.state.apiToken || '(not set)'
     });
-
     this.widgets.tokenValue = tokenValue;
 
-    // Token validation icon (clickable)
+    // Token validation icon
     const tokenValidationIcon = hmUI.createWidget(hmUI.widget.TEXT, {
       x: SCREEN_WIDTH - MARGIN - 70,
       y: yPos,
@@ -252,11 +638,10 @@ Page({
       align_h: hmUI.align.CENTER_H,
       text: '?'
     });
-
     this.widgets.tokenValidationIcon = tokenValidationIcon;
 
-    // Make the icon clickable
-    const tokenValidateButton = hmUI.createWidget(hmUI.widget.BUTTON, {
+    // Token validate button (invisible overlay)
+    hmUI.createWidget(hmUI.widget.BUTTON, {
       x: SCREEN_WIDTH - MARGIN - 75,
       y: yPos - 5,
       w: 45,
@@ -272,7 +657,7 @@ Page({
     });
     yPos += 40;
 
-    // Token validation status text
+    // Token validation status
     const tokenValidationStatus = hmUI.createWidget(hmUI.widget.TEXT, {
       x: MARGIN,
       y: yPos,
@@ -282,93 +667,64 @@ Page({
       text_size: 14,
       text: ''
     });
-
     this.widgets.tokenValidationStatus = tokenValidationStatus;
     yPos += 30;
 
-    // Current BG value (large display)
-    const bgValue = hmUI.createWidget(hmUI.widget.TEXT, {
-      x: MARGIN,
-      y: yPos,
-      w: SCREEN_WIDTH - (MARGIN * 2),
-      h: 80,
-      color: 0x00ff00,
-      text_size: 72,
-      align_h: hmUI.align.CENTER_H,
-      text: this.state.currentBG
-    });
-
-    this.widgets.bgValue = bgValue;
-    yPos += 90;
-
-    // Trend and Delta
-    const trendText = hmUI.createWidget(hmUI.widget.TEXT, {
-      x: MARGIN,
-      y: yPos,
-      w: (SCREEN_WIDTH - (MARGIN * 2)) / 2,
-      h: 30,
-      color: 0xffffff,
-      text_size: 24,
-      align_h: hmUI.align.CENTER_H,
-      text: `Trend: ${this.state.trend}`
-    });
-
-    const deltaText = hmUI.createWidget(hmUI.widget.TEXT, {
-      x: SCREEN_WIDTH / 2,
-      y: yPos,
-      w: (SCREEN_WIDTH - (MARGIN * 2)) / 2,
-      h: 30,
-      color: 0xffffff,
-      text_size: 24,
-      align_h: hmUI.align.CENTER_H,
-      text: `Δ: ${this.state.delta}`
-    });
-
-    this.widgets.trendText = trendText;
-    this.widgets.deltaText = deltaText;
-    yPos += 40;
-
-    // Last update time
-    const lastUpdateText = hmUI.createWidget(hmUI.widget.TEXT, {
+    // History section
+    hmUI.createWidget(hmUI.widget.TEXT, {
       x: MARGIN,
       y: yPos,
       w: SCREEN_WIDTH - (MARGIN * 2),
       h: 25,
-      color: 0x888888,
+      color: 0xaaaaaa,
       text_size: 18,
-      align_h: hmUI.align.CENTER_H,
-      text: `Last: ${this.state.lastUpdate}`
+      text: 'History:'
     });
-
-    this.widgets.lastUpdateText = lastUpdateText;
     yPos += 30;
 
-    // Graph canvas
-    const canvas = hmUI.createWidget(hmUI.widget.CANVAS, {
+    // Show data point count
+    hmUI.createWidget(hmUI.widget.TEXT, {
       x: MARGIN,
       y: yPos,
       w: SCREEN_WIDTH - (MARGIN * 2),
-      h: 80
+      h: 25,
+      color: 0xffffff,
+      text_size: 16,
+      text: `Data points: ${this.state.dataPoints.length}`
     });
 
-    this.widgets.canvas = canvas;
-    this.drawGraph();
-    yPos += 90;
-
-    // Fetch data button
-    const fetchButton = hmUI.createWidget(hmUI.widget.BUTTON, {
-      x: SCREEN_WIDTH / 2 - 60,
-      y: yPos,
-      w: 120,
-      h: 40,
-      text: 'Fetch Data',
-      normal_color: 0x0000ff,
-      press_color: 0x000088,
-      radius: 20,
-      click_func: () => {
-        this.fetchData();
-      }
+    // Swipe instruction
+    hmUI.createWidget(hmUI.widget.TEXT, {
+      x: MARGIN,
+      y: SCREEN_HEIGHT - 60,
+      w: SCREEN_WIDTH - (MARGIN * 2),
+      h: 30,
+      color: 0x666666,
+      text_size: 16,
+      align_h: hmUI.align.CENTER_H,
+      text: 'Tap edges to navigate'
     });
+  },
+
+  /**
+   * Build page indicator (dots at bottom)
+   */
+  buildPageIndicator() {
+    const indicatorY = SCREEN_HEIGHT - 30;
+    const dotSize = 10;
+    const dotSpacing = 25;
+    const startX = SCREEN_WIDTH / 2 - dotSpacing;
+
+    for (let i = 0; i < 3; i++) {
+      const isActive = i === this.state.currentPage;
+      hmUI.createWidget(hmUI.widget.CIRCLE, {
+        center_x: startX + i * dotSpacing,
+        center_y: indicatorY,
+        radius: isActive ? 6 : 4,
+        color: isActive ? 0xffffff : 0x444444,
+        alpha: isActive ? 255 : 128
+      });
+    }
   },
 
   /**
@@ -378,8 +734,9 @@ Page({
     if (!this.widgets.canvas) return;
 
     const canvas = this.widgets.canvas;
+    // Get canvas dimensions - Page 2 has larger graph
     const width = SCREEN_WIDTH - (MARGIN * 2);
-    const height = 80;
+    const height = this.state.currentPage === 1 ? GRAPH_HEIGHT_LARGE : GRAPH_HEIGHT_SMALL;
 
     // Clear canvas
     canvas.clear();
@@ -394,19 +751,38 @@ Page({
       canvas.setStrokeStyle(0x00ff00);
       canvas.setLineWidth(2);
 
-      const pointCount = this.state.dataPoints.length;
+      // Apply zoom - show fewer points when zoomed in
+      const zoom = this.state.graphZoom || 1.0;
+      const totalPoints = this.state.dataPoints.length;
+      const visiblePoints = Math.min(Math.ceil(totalPoints / zoom), totalPoints);
+      const startIdx = Math.max(0, totalPoints - visiblePoints);
+      const visibleData = this.state.dataPoints.slice(startIdx);
+
+      const pointCount = visibleData.length;
+      
+      // Guard against division by zero
+      if (pointCount <= 1) {
+        canvas.setFillStyle(0x888888);
+        canvas.fillText('Not enough data', width / 2 - 40, height / 2);
+        return;
+      }
+      
       const xStep = width / (pointCount - 1);
 
-      // Scale data to fit in canvas
-      const maxBG = Math.max(...this.state.dataPoints);
-      const minBG = Math.min(...this.state.dataPoints);
+      // Scale data to fit in canvas - using loop to avoid stack overflow
+      let maxBG = visibleData[0];
+      let minBG = visibleData[0];
+      for (let i = 1; i < visibleData.length; i++) {
+        if (visibleData[i] > maxBG) maxBG = visibleData[i];
+        if (visibleData[i] < minBG) minBG = visibleData[i];
+      }
       const range = maxBG - minBG || 100;
 
       for (let i = 0; i < pointCount - 1; i++) {
         const x1 = i * xStep;
-        const y1 = height - ((this.state.dataPoints[i] - minBG) / range) * height;
+        const y1 = height - ((visibleData[i] - minBG) / range) * height;
         const x2 = (i + 1) * xStep;
-        const y2 = height - ((this.state.dataPoints[i + 1] - minBG) / range) * height;
+        const y2 = height - ((visibleData[i + 1] - minBG) / range) * height;
 
         canvas.beginPath();
         canvas.moveTo(x1, y1);
@@ -426,8 +802,10 @@ Page({
   fetchData() {
     console.log('Fetching data from Nightscout...');
     
-    // Show loading state
-    this.widgets.bgValue.setProperty(hmUI.prop.TEXT, 'Loading...');
+    // Show loading state - check if widget exists first
+    if (this.widgets.bgValue) {
+      this.widgets.bgValue.setProperty(hmUI.prop.TEXT, 'Loading...');
+    }
     
     // Send message to app-side to fetch data
     try {
@@ -439,7 +817,9 @@ Page({
       messaging.peerSocket.send(message);
     } catch (error) {
       console.error('Error sending fetch request:', error);
-      this.widgets.bgValue.setProperty(hmUI.prop.TEXT, 'Error');
+      if (this.widgets.bgValue) {
+        this.widgets.bgValue.setProperty(hmUI.prop.TEXT, 'Error');
+      }
     }
   },
 
