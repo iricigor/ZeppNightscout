@@ -40,47 +40,38 @@ Page({
    * Setup gesture handlers for page navigation
    */
   setupGestureHandlers() {
-    // Register swipe gestures for page navigation
-    hmUI.createWidget(hmUI.widget.WIDGET_DELEGATE, {
-      resume_call: () => {
-        console.log('Page resumed');
-      },
-      pause_call: () => {
-        console.log('Page paused');
+    // Create page navigation touch areas using BUTTON widgets
+    // Left side - swipe right / previous page
+    const leftNavArea = hmUI.createWidget(hmUI.widget.BUTTON, {
+      x: 0,
+      y: 60,
+      w: 80,
+      h: SCREEN_HEIGHT - 120,
+      text: '',
+      normal_color: 0x000000,
+      press_color: 0x111111,
+      radius: 0,
+      text_size: 1,
+      color: 0x000000,
+      click_func: () => {
+        this.navigatePage(-1);
       }
     });
 
-    // Create invisible touch area for swipe detection
-    const touchArea = hmUI.createWidget(hmUI.widget.IMG, {
-      x: 0,
-      y: 0,
-      w: SCREEN_WIDTH,
-      h: SCREEN_HEIGHT,
-      src: ''
-    });
-
-    let touchStartX = 0;
-    let touchStartY = 0;
-
-    // Use event listener for swipe gestures
-    touchArea.addEventListener(hmUI.event.CLICK_DOWN, (info) => {
-      touchStartX = info.x;
-      touchStartY = info.y;
-    });
-
-    touchArea.addEventListener(hmUI.event.CLICK_UP, (info) => {
-      const deltaX = info.x - touchStartX;
-      const deltaY = info.y - touchStartY;
-
-      // Detect horizontal swipe (at least 100px and mostly horizontal)
-      if (Math.abs(deltaX) > 100 && Math.abs(deltaX) > Math.abs(deltaY) * 2) {
-        if (deltaX > 0) {
-          // Swipe right - go to previous page
-          this.navigatePage(-1);
-        } else {
-          // Swipe left - go to next page
-          this.navigatePage(1);
-        }
+    // Right side - swipe left / next page
+    const rightNavArea = hmUI.createWidget(hmUI.widget.BUTTON, {
+      x: SCREEN_WIDTH - 80,
+      y: 60,
+      w: 80,
+      h: SCREEN_HEIGHT - 120,
+      text: '',
+      normal_color: 0x000000,
+      press_color: 0x111111,
+      radius: 0,
+      text_size: 1,
+      color: 0x000000,
+      click_func: () => {
+        this.navigatePage(1);
       }
     });
   },
@@ -271,6 +262,28 @@ Page({
     });
     yPos += 80;
 
+    // Page navigation arrows
+    hmUI.createWidget(hmUI.widget.TEXT, {
+      x: MARGIN,
+      y: yPos,
+      w: 50,
+      h: 30,
+      color: 0x444444,
+      text_size: 24,
+      text: ''
+    });
+
+    hmUI.createWidget(hmUI.widget.TEXT, {
+      x: SCREEN_WIDTH - MARGIN - 50,
+      y: yPos,
+      w: 50,
+      h: 30,
+      color: 0x888888,
+      text_size: 24,
+      text: '→'
+    });
+    yPos += 10;
+
     // Current BG value (large display)
     const bgValue = hmUI.createWidget(hmUI.widget.TEXT, {
       x: MARGIN,
@@ -350,7 +363,7 @@ Page({
       color: 0x666666,
       text_size: 16,
       align_h: hmUI.align.CENTER_H,
-      text: '← Swipe for Graph →'
+      text: 'Tap edges to navigate'
     });
   },
 
@@ -371,7 +384,29 @@ Page({
       align_h: hmUI.align.CENTER_H,
       text: 'Glucose Graph'
     });
-    yPos += 60;
+    yPos += 50;
+
+    // Page navigation arrows
+    hmUI.createWidget(hmUI.widget.TEXT, {
+      x: MARGIN,
+      y: yPos,
+      w: 50,
+      h: 30,
+      color: 0x888888,
+      text_size: 24,
+      text: '←'
+    });
+
+    hmUI.createWidget(hmUI.widget.TEXT, {
+      x: SCREEN_WIDTH - MARGIN - 50,
+      y: yPos,
+      w: 50,
+      h: 30,
+      color: 0x888888,
+      text_size: 24,
+      text: '→'
+    });
+    yPos += 10;
 
     // Current BG (smaller display)
     hmUI.createWidget(hmUI.widget.TEXT, {
@@ -454,7 +489,7 @@ Page({
       color: 0x666666,
       text_size: 16,
       align_h: hmUI.align.CENTER_H,
-      text: '← Swipe for Settings →'
+      text: 'Tap edges to navigate'
     });
   },
 
@@ -476,6 +511,28 @@ Page({
       text: 'Settings'
     });
     yPos += 50;
+
+    // Page navigation arrows
+    hmUI.createWidget(hmUI.widget.TEXT, {
+      x: MARGIN,
+      y: yPos,
+      w: 50,
+      h: 30,
+      color: 0x888888,
+      text_size: 24,
+      text: '←'
+    });
+
+    hmUI.createWidget(hmUI.widget.TEXT, {
+      x: SCREEN_WIDTH - MARGIN - 50,
+      y: yPos,
+      w: 50,
+      h: 30,
+      color: 0x444444,
+      text_size: 24,
+      text: ''
+    });
+    yPos += 10;
 
     // URL section
     hmUI.createWidget(hmUI.widget.TEXT, {
@@ -628,7 +685,7 @@ Page({
       color: 0x666666,
       text_size: 16,
       align_h: hmUI.align.CENTER_H,
-      text: '← Swipe to Main Page'
+      text: 'Tap edges to navigate'
     });
   },
 
