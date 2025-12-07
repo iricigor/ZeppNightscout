@@ -45,8 +45,24 @@ jobs:
           "devices": [
             {
               "productName": "gtr-3",
-              "deviceSource": "gtr-3",
+              "deviceSource": 226,
               "code": "gtr-3",
+              "value": {
+                "shape": "round",
+                "screen": {
+                  "size": "454*454"
+                },
+                "os": {
+                  "apiLevel": "1.0.1",
+                  "apiLevelLimitMin": "1.0.0",
+                  "apiLevelLimitMax": "2.0.0"
+                }
+              }
+            },
+            {
+              "productName": "gtr-3w",
+              "deviceSource": 227,
+              "code": "gtr-3w",
               "value": {
                 "shape": "round",
                 "screen": {
