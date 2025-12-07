@@ -411,7 +411,7 @@ Once installed:
 
 **Solution:**
 - Ensure you selected the correct device model when running `zeus preview`
-- Verify the device target in `app.json` matches your watch (e.g., `gtr-3` in the `targets` section)
+- Check that your watch model is listed as a key in the `targets` section of `app.json` (e.g., `gtr-3`)
 - Try selecting a different but compatible device model
 - Wait a few moments and try again (may be temporary server issue)
 

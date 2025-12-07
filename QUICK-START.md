@@ -61,7 +61,7 @@ The terminal will show a QR code after selecting your watch model.
    ```javascript
    apiUrl: 'https://your-nightscout.herokuapp.com',
    ```
-   Change it to your actual Nightscout URL, then rebuild and scan the QR code again.
+   Change it to your actual Nightscout URL, then run `zeus preview` again to generate a new QR code with your changes and scan it to update the app.
 3. Tap "Fetch Data" to load glucose readings
 4. Watch your CGM data appear!
 
