@@ -17,7 +17,8 @@ Page({
     trend: '--',
     delta: '--',
     lastUpdate: '--',
-    dataPoints: []
+    dataPoints: [],
+    verificationStatus: ''
   },
 
   onInit() {
@@ -55,7 +56,7 @@ Page({
     const settingsValue = hmUI.createWidget(hmUI.widget.TEXT, {
       x: MARGIN,
       y: 110,
-      w: SCREEN_WIDTH - (MARGIN * 2),
+      w: SCREEN_WIDTH - (MARGIN * 2) - 100,
       h: 40,
       color: 0x00ff00,
       text_size: 16,
@@ -64,10 +65,39 @@ Page({
 
     this.widgets = { settingsValue };
 
+    // Verify URL button
+    const verifyButton = hmUI.createWidget(hmUI.widget.BUTTON, {
+      x: SCREEN_WIDTH - MARGIN - 90,
+      y: 105,
+      w: 90,
+      h: 30,
+      text: 'Verify',
+      normal_color: 0x666666,
+      press_color: 0x444444,
+      radius: 15,
+      text_size: 16,
+      click_func: () => {
+        this.verifyUrl();
+      }
+    });
+
+    // Verification status text
+    const verificationStatus = hmUI.createWidget(hmUI.widget.TEXT, {
+      x: MARGIN,
+      y: 150,
+      w: SCREEN_WIDTH - (MARGIN * 2),
+      h: 25,
+      color: 0x888888,
+      text_size: 14,
+      text: this.state.verificationStatus
+    });
+
+    this.widgets.verificationStatus = verificationStatus;
+
     // Current BG value (large display)
     const bgValue = hmUI.createWidget(hmUI.widget.TEXT, {
       x: MARGIN,
-      y: 170,
+      y: 190,
       w: SCREEN_WIDTH - (MARGIN * 2),
       h: 80,
       color: 0x00ff00,
@@ -81,7 +111,7 @@ Page({
     // Trend and Delta
     const trendText = hmUI.createWidget(hmUI.widget.TEXT, {
       x: MARGIN,
-      y: 260,
+      y: 280,
       w: (SCREEN_WIDTH - (MARGIN * 2)) / 2,
       h: 30,
       color: 0xffffff,
@@ -92,7 +122,7 @@ Page({
 
     const deltaText = hmUI.createWidget(hmUI.widget.TEXT, {
       x: SCREEN_WIDTH / 2,
-      y: 260,
+      y: 280,
       w: (SCREEN_WIDTH - (MARGIN * 2)) / 2,
       h: 30,
       color: 0xffffff,
@@ -107,7 +137,7 @@ Page({
     // Last update time
     const lastUpdateText = hmUI.createWidget(hmUI.widget.TEXT, {
       x: MARGIN,
-      y: 300,
+      y: 320,
       w: SCREEN_WIDTH - (MARGIN * 2),
       h: 25,
       color: 0x888888,
@@ -121,9 +151,9 @@ Page({
     // Graph canvas
     const canvas = hmUI.createWidget(hmUI.widget.CANVAS, {
       x: MARGIN,
-      y: 340,
+      y: 360,
       w: SCREEN_WIDTH - (MARGIN * 2),
-      h: 100
+      h: 80
     });
 
     this.widgets.canvas = canvas;
@@ -153,7 +183,7 @@ Page({
 
     const canvas = this.widgets.canvas;
     const width = SCREEN_WIDTH - (MARGIN * 2);
-    const height = 100;
+    const height = 80;
 
     // Clear canvas
     canvas.clear();
@@ -215,6 +245,42 @@ Page({
   },
 
   /**
+   * Verify Nightscout URL
+   */
+  verifyUrl() {
+    console.log('Verifying Nightscout URL...');
+    
+    // Show verification in progress
+    this.state.verificationStatus = 'Verifying...';
+    this.widgets.verificationStatus.setProperty(hmUI.prop.TEXT, this.state.verificationStatus);
+    this.widgets.verificationStatus.setProperty(hmUI.prop.COLOR, 0x888888);
+    
+    // Send message to app-side to verify URL
+    try {
+      // In a real app, this would use the messaging system
+      // For now, simulate verification
+      this.simulateVerification();
+    } catch (error) {
+      console.error('Error verifying URL:', error);
+      this.state.verificationStatus = 'Verification failed';
+      this.widgets.verificationStatus.setProperty(hmUI.prop.TEXT, this.state.verificationStatus);
+      this.widgets.verificationStatus.setProperty(hmUI.prop.COLOR, 0xff0000);
+    }
+  },
+
+  /**
+   * Simulate URL verification (to be replaced with real API call)
+   */
+  simulateVerification() {
+    setTimeout(() => {
+      // Simulate successful verification
+      this.state.verificationStatus = '✓ URL verified';
+      this.widgets.verificationStatus.setProperty(hmUI.prop.TEXT, this.state.verificationStatus);
+      this.widgets.verificationStatus.setProperty(hmUI.prop.COLOR, 0x00ff00);
+    }, 1000);
+  },
+
+  /**
    * Update UI with dummy data for demonstration
    */
   updateWithDummyData() {
@@ -224,7 +290,18 @@ Page({
       this.state.trend = '→';
       this.state.delta = '+2';
       this.state.lastUpdate = '5 min ago';
-      this.state.dataPoints = [110, 115, 118, 120, 122, 120, 118, 120];
+      
+      // Generate 200 data points (one per pixel for screen width)
+      const dataPoints = [];
+      let baseValue = 110;
+      for (let i = 0; i < 200; i++) {
+        // Generate realistic glucose variation
+        baseValue += (Math.random() - 0.5) * 5;
+        // Keep values in reasonable range
+        baseValue = Math.max(70, Math.min(180, baseValue));
+        dataPoints.push(Math.round(baseValue));
+      }
+      this.state.dataPoints = dataPoints;
 
       // Update UI
       this.widgets.bgValue.setProperty(hmUI.prop.TEXT, this.state.currentBG);

@@ -32,6 +32,8 @@ AppSideService({
         this.fetchNightscoutData(data.apiUrl);
       } else if (data.type === MESSAGE_TYPES.UPDATE_SETTINGS) {
         this.updateSettings(data.settings);
+      } else if (data.type === MESSAGE_TYPES.VERIFY_URL) {
+        this.verifyNightscoutUrl(data.apiUrl);
       }
     });
   },
@@ -44,7 +46,8 @@ AppSideService({
     console.log('Fetching from Nightscout:', apiUrl);
 
     const url = apiUrl || 'https://your-nightscout.herokuapp.com';
-    const endpoint = `${url}/api/v1/entries.json?count=10`;
+    // Request 200 entries for pixel-per-value display (~200px screen width)
+    const endpoint = `${url}/api/v1/entries.json?count=200`;
 
     // Use Zepp OS fetch API
     this.request({
@@ -68,6 +71,54 @@ AppSideService({
     .catch(error => {
       console.error('Fetch error:', error);
       this.sendErrorToDevice(error.message);
+    });
+  },
+
+  /**
+   * Verify Nightscout URL by checking the status endpoint
+   * @param {string} apiUrl - The Nightscout API URL
+   */
+  verifyNightscoutUrl(apiUrl) {
+    console.log('Verifying Nightscout URL:', apiUrl);
+
+    const url = apiUrl || 'https://your-nightscout.herokuapp.com';
+    // Use /api/v1/status endpoint for verification (doesn't transfer CGM data)
+    const endpoint = `${url}/api/v1/status`;
+
+    this.request({
+      method: 'GET',
+      url: endpoint,
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+    .then(response => {
+      console.log('Verification response received');
+      const data = response.body;
+      
+      // Check if the response contains expected Nightscout status fields
+      if (data && (data.status || data.name || data.version)) {
+        this.sendVerificationResultToDevice({
+          success: true,
+          message: '✓ URL verified',
+          serverInfo: {
+            name: data.name || 'Nightscout',
+            version: data.version || 'unknown'
+          }
+        });
+      } else {
+        this.sendVerificationResultToDevice({
+          success: false,
+          message: '✗ Invalid response'
+        });
+      }
+    })
+    .catch(error => {
+      console.error('Verification error:', error);
+      this.sendVerificationResultToDevice({
+        success: false,
+        message: '✗ Connection failed'
+      });
     });
   },
 
@@ -158,6 +209,18 @@ AppSideService({
   },
 
   /**
+   * Send verification result to device
+   * @param {Object} result - Verification result
+   */
+  sendVerificationResultToDevice(result) {
+    const message = messageBuilder.response({
+      verification: true,
+      ...result
+    });
+    messaging.peerSocket.send(message);
+  },
+
+  /**
    * Send error message to device
    * @param {string} errorMessage - Error message
    */
@@ -191,22 +254,43 @@ AppSideService({
       
       // For demonstration, return dummy data
       setTimeout(() => {
-        resolve({
-          body: [
-            {
-              sgv: 120,
-              direction: 'Flat',
-              dateString: new Date().toISOString(),
-              date: Date.now()
-            },
-            {
-              sgv: 118,
-              direction: 'Flat',
-              dateString: new Date(Date.now() - 300000).toISOString(),
-              date: Date.now() - 300000
+        // Check if this is a status endpoint verification
+        if (options.url.includes('/api/v1/status')) {
+          resolve({
+            body: {
+              status: 'ok',
+              name: 'Nightscout',
+              version: '14.2.6',
+              serverTime: new Date().toISOString(),
+              apiEnabled: true
             }
-          ]
-        });
+          });
+        } else {
+          // Generate 200 dummy glucose entries for data fetch
+          const entries = [];
+          let timestamp = Date.now();
+          let value = 120;
+          
+          for (let i = 0; i < 200; i++) {
+            // Vary the glucose value slightly
+            value += (Math.random() - 0.5) * 10;
+            value = Math.max(70, Math.min(200, value));
+            
+            entries.push({
+              sgv: Math.round(value),
+              direction: 'Flat',
+              dateString: new Date(timestamp).toISOString(),
+              date: timestamp
+            });
+            
+            // Go back 5 minutes per entry
+            timestamp -= 300000;
+          }
+          
+          resolve({
+            body: entries
+          });
+        }
       }, 500);
     });
   }

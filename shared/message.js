@@ -22,5 +22,6 @@ export const messageBuilder = {
 // Message types
 export const MESSAGE_TYPES = {
   FETCH_DATA: 'FETCH_DATA',
-  UPDATE_SETTINGS: 'UPDATE_SETTINGS'
+  UPDATE_SETTINGS: 'UPDATE_SETTINGS',
+  VERIFY_URL: 'VERIFY_URL'
 };
