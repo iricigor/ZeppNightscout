@@ -9,6 +9,7 @@ Quick reference for common testing commands and workflows.
 - ✅ JavaScript syntax validation
 - ✅ Unit tests (26 assertions)
 - ✅ Build validation (31 assertions)
+- ✅ Actual app build with Zeus CLI
 - ✅ Command verification
 
 View results in PR → Checks section.
