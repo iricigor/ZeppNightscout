@@ -4,12 +4,20 @@ An app for Zepp OS that connects to Nightscout instance and displays CGM data.
 
 ## Features
 
+### Three-Page Navigation System
+- **Page 1: Main Metrics** - Large BG display, trend arrow, delta, and last update
+- **Page 2: Glucose Graph** - Detailed graph with zoom controls (displays 200 data points)
+- **Page 3: Settings/History** - API configuration, token validation, and data history
+- **Tap Navigation** - Tap left/right edges to navigate between pages
+
+### Core Features
 - **Settings Text Field**: Configure your Nightscout API URL
 - **URL Verification**: Verify your Nightscout URL before fetching data (uses `/api/v1/status` endpoint)
-- **Glucose Graph**: Visual representation of recent glucose readings (displays 200 data points)
+- **Token Validation**: Validate API tokens with security status indicators
+- **Glucose Graph**: Visual representation of recent glucose readings with zoom (0.5x to 3.0x)
 - **Calculated Values**: Display current BG, trend arrow, delta, and last update time
 - **Internet Connectivity**: Fetches real-time data from Nightscout API
-- **Pixel-Perfect Display**: 200 values for ~200px screen width (one pixel per value)
+- **Pixel-Perfect Display**: 200 values for detailed trend visualization
 
 ## Development Setup
 
