@@ -5,6 +5,11 @@
 
 import { messageBuilder, MESSAGE_TYPES } from '../shared/message';
 
+// API configuration
+const DATA_POINTS_COUNT = 200; // Number of glucose readings to fetch
+const STATUS_ENDPOINT = '/api/v1/status';
+const ENTRIES_ENDPOINT = '/api/v1/entries.json';
+
 // App-side service
 AppSideService({
   onInit() {
@@ -32,6 +37,8 @@ AppSideService({
         this.fetchNightscoutData(data.apiUrl);
       } else if (data.type === MESSAGE_TYPES.UPDATE_SETTINGS) {
         this.updateSettings(data.settings);
+      } else if (data.type === MESSAGE_TYPES.VERIFY_URL) {
+        this.verifyNightscoutUrl(data.apiUrl);
       }
     });
   },
@@ -44,7 +51,8 @@ AppSideService({
     console.log('Fetching from Nightscout:', apiUrl);
 
     const url = apiUrl || 'https://your-nightscout.herokuapp.com';
-    const endpoint = `${url}/api/v1/entries.json?count=10`;
+    // Request DATA_POINTS_COUNT entries for pixel-per-value display (~200px screen width)
+    const endpoint = `${url}${ENTRIES_ENDPOINT}?count=${DATA_POINTS_COUNT}`;
 
     // Use Zepp OS fetch API
     this.request({
@@ -52,7 +60,8 @@ AppSideService({
       url: endpoint,
       headers: {
         'Content-Type': 'application/json'
-      }
+      },
+      endpointType: 'entries'
     })
     .then(response => {
       console.log('API response received');
@@ -68,6 +77,55 @@ AppSideService({
     .catch(error => {
       console.error('Fetch error:', error);
       this.sendErrorToDevice(error.message);
+    });
+  },
+
+  /**
+   * Verify Nightscout URL by checking the status endpoint
+   * @param {string} apiUrl - The Nightscout API URL
+   */
+  verifyNightscoutUrl(apiUrl) {
+    console.log('Verifying Nightscout URL:', apiUrl);
+
+    const url = apiUrl || 'https://your-nightscout.herokuapp.com';
+    // Use STATUS_ENDPOINT for verification (doesn't transfer CGM data)
+    const endpoint = `${url}${STATUS_ENDPOINT}`;
+
+    this.request({
+      method: 'GET',
+      url: endpoint,
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      endpointType: 'status'
+    })
+    .then(response => {
+      console.log('Verification response received');
+      const data = response.body;
+      
+      // Check if the response contains expected Nightscout status fields
+      if (data && (data.status || data.name || data.version)) {
+        this.sendVerificationResultToDevice({
+          success: true,
+          message: '✓ URL verified',
+          serverInfo: {
+            name: data.name || 'Nightscout',
+            version: data.version || 'unknown'
+          }
+        });
+      } else {
+        this.sendVerificationResultToDevice({
+          success: false,
+          message: '✗ Invalid response'
+        });
+      }
+    })
+    .catch(error => {
+      console.error('Verification error:', error);
+      this.sendVerificationResultToDevice({
+        success: false,
+        message: '✗ Connection failed'
+      });
     });
   },
 
@@ -158,6 +216,18 @@ AppSideService({
   },
 
   /**
+   * Send verification result to device
+   * @param {Object} result - Verification result
+   */
+  sendVerificationResultToDevice(result) {
+    const message = messageBuilder.response({
+      verification: true,
+      ...result
+    });
+    messaging.peerSocket.send(message);
+  },
+
+  /**
    * Send error message to device
    * @param {string} errorMessage - Error message
    */
@@ -191,22 +261,45 @@ AppSideService({
       
       // For demonstration, return dummy data
       setTimeout(() => {
-        resolve({
-          body: [
-            {
-              sgv: 120,
-              direction: 'Flat',
-              dateString: new Date().toISOString(),
-              date: Date.now()
-            },
-            {
-              sgv: 118,
-              direction: 'Flat',
-              dateString: new Date(Date.now() - 300000).toISOString(),
-              date: Date.now() - 300000
+        // Check endpoint type using the explicit parameter instead of string matching
+        if (options.endpointType === 'status') {
+          resolve({
+            body: {
+              status: 'ok',
+              name: 'Nightscout',
+              version: '14.2.6',
+              serverTime: new Date().toISOString(),
+              apiEnabled: true
             }
-          ]
-        });
+          });
+        } else if (options.endpointType === 'entries') {
+          // Generate DATA_POINTS_COUNT dummy glucose entries for data fetch
+          const entries = [];
+          let timestamp = Date.now();
+          let value = 120;
+          
+          for (let i = 0; i < DATA_POINTS_COUNT; i++) {
+            // Vary the glucose value slightly
+            value += (Math.random() - 0.5) * 10;
+            value = Math.max(70, Math.min(200, value));
+            
+            entries.push({
+              sgv: Math.round(value),
+              direction: 'Flat',
+              dateString: new Date(timestamp).toISOString(),
+              date: timestamp
+            });
+            
+            // Go back 5 minutes per entry
+            timestamp -= 300000;
+          }
+          
+          resolve({
+            body: entries
+          });
+        } else {
+          reject(new Error('Unknown endpoint type'));
+        }
       }, 500);
     });
   }

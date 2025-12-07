@@ -10,6 +10,9 @@ const SCREEN_WIDTH = 480;
 const SCREEN_HEIGHT = 480;
 const MARGIN = 20;
 
+// Data configuration
+const DATA_POINTS_COUNT = 200; // Number of glucose readings to fetch and display
+
 Page({
   state: {
     apiUrl: 'https://your-nightscout.herokuapp.com',
@@ -17,12 +20,84 @@ Page({
     trend: '--',
     delta: '--',
     lastUpdate: '--',
-    dataPoints: []
+    dataPoints: [],
+    verificationStatus: ''
   },
 
   onInit() {
     console.log('Nightscout app initialized');
+    this.setupMessageHandlers();
     this.buildUI();
+  },
+
+  /**
+   * Setup message handlers for receiving data from app-side
+   */
+  setupMessageHandlers() {
+    // Listen for messages from app-side
+    messaging.peerSocket.addListener('message', (data) => {
+      console.log('Received message from app-side:', data);
+      
+      if (data.type === 'response') {
+        if (data.data.verification) {
+          // Handle verification result
+          this.handleVerificationResult(data.data);
+        } else if (data.data.error) {
+          // Handle error
+          this.handleError(data.data);
+        } else {
+          // Handle data update
+          this.handleDataUpdate(data.data);
+        }
+      }
+    });
+  },
+
+  /**
+   * Handle verification result from app-side
+   * @param {Object} result - Verification result
+   */
+  handleVerificationResult(result) {
+    this.state.verificationStatus = result.message;
+    this.widgets.verificationStatus.setProperty(hmUI.prop.TEXT, result.message);
+    
+    if (result.success) {
+      this.widgets.verificationStatus.setProperty(hmUI.prop.COLOR, 0x00ff00);
+    } else {
+      this.widgets.verificationStatus.setProperty(hmUI.prop.COLOR, 0xff0000);
+    }
+  },
+
+  /**
+   * Handle data update from app-side
+   * @param {Object} data - Glucose data
+   */
+  handleDataUpdate(data) {
+    this.state.currentBG = data.currentBG || '--';
+    this.state.trend = data.trend || '--';
+    this.state.delta = data.delta || '--';
+    this.state.lastUpdate = data.lastUpdate || '--';
+    this.state.dataPoints = data.dataPoints || [];
+
+    // Update UI
+    this.widgets.bgValue.setProperty(hmUI.prop.TEXT, this.state.currentBG);
+    this.widgets.bgValue.setProperty(hmUI.prop.COLOR, 0x00ff00);
+    this.widgets.trendText.setProperty(hmUI.prop.TEXT, `Trend: ${this.state.trend}`);
+    this.widgets.deltaText.setProperty(hmUI.prop.TEXT, `Δ: ${this.state.delta}`);
+    this.widgets.lastUpdateText.setProperty(hmUI.prop.TEXT, `Last: ${this.state.lastUpdate}`);
+
+    // Redraw graph
+    this.drawGraph();
+  },
+
+  /**
+   * Handle error from app-side
+   * @param {Object} error - Error data
+   */
+  handleError(error) {
+    console.error('Error from app-side:', error.message);
+    this.widgets.bgValue.setProperty(hmUI.prop.TEXT, 'Error');
+    this.widgets.bgValue.setProperty(hmUI.prop.COLOR, 0xff0000);
   },
 
   /**
@@ -55,7 +130,7 @@ Page({
     const settingsValue = hmUI.createWidget(hmUI.widget.TEXT, {
       x: MARGIN,
       y: 110,
-      w: SCREEN_WIDTH - (MARGIN * 2),
+      w: SCREEN_WIDTH - (MARGIN * 2) - 100,
       h: 40,
       color: 0x00ff00,
       text_size: 16,
@@ -64,10 +139,39 @@ Page({
 
     this.widgets = { settingsValue };
 
+    // Verify URL button
+    const verifyButton = hmUI.createWidget(hmUI.widget.BUTTON, {
+      x: SCREEN_WIDTH - MARGIN - 90,
+      y: 105,
+      w: 90,
+      h: 30,
+      text: 'Verify',
+      normal_color: 0x666666,
+      press_color: 0x444444,
+      radius: 15,
+      text_size: 16,
+      click_func: () => {
+        this.verifyUrl();
+      }
+    });
+
+    // Verification status text
+    const verificationStatus = hmUI.createWidget(hmUI.widget.TEXT, {
+      x: MARGIN,
+      y: 150,
+      w: SCREEN_WIDTH - (MARGIN * 2),
+      h: 25,
+      color: 0x888888,
+      text_size: 14,
+      text: this.state.verificationStatus
+    });
+
+    this.widgets.verificationStatus = verificationStatus;
+
     // Current BG value (large display)
     const bgValue = hmUI.createWidget(hmUI.widget.TEXT, {
       x: MARGIN,
-      y: 170,
+      y: 190,
       w: SCREEN_WIDTH - (MARGIN * 2),
       h: 80,
       color: 0x00ff00,
@@ -81,7 +185,7 @@ Page({
     // Trend and Delta
     const trendText = hmUI.createWidget(hmUI.widget.TEXT, {
       x: MARGIN,
-      y: 260,
+      y: 280,
       w: (SCREEN_WIDTH - (MARGIN * 2)) / 2,
       h: 30,
       color: 0xffffff,
@@ -92,7 +196,7 @@ Page({
 
     const deltaText = hmUI.createWidget(hmUI.widget.TEXT, {
       x: SCREEN_WIDTH / 2,
-      y: 260,
+      y: 280,
       w: (SCREEN_WIDTH - (MARGIN * 2)) / 2,
       h: 30,
       color: 0xffffff,
@@ -107,7 +211,7 @@ Page({
     // Last update time
     const lastUpdateText = hmUI.createWidget(hmUI.widget.TEXT, {
       x: MARGIN,
-      y: 300,
+      y: 320,
       w: SCREEN_WIDTH - (MARGIN * 2),
       h: 25,
       color: 0x888888,
@@ -121,9 +225,9 @@ Page({
     // Graph canvas
     const canvas = hmUI.createWidget(hmUI.widget.CANVAS, {
       x: MARGIN,
-      y: 340,
+      y: 360,
       w: SCREEN_WIDTH - (MARGIN * 2),
-      h: 100
+      h: 80
     });
 
     this.widgets.canvas = canvas;
@@ -153,7 +257,7 @@ Page({
 
     const canvas = this.widgets.canvas;
     const width = SCREEN_WIDTH - (MARGIN * 2);
-    const height = 100;
+    const height = 80;
 
     // Clear canvas
     canvas.clear();
@@ -205,36 +309,40 @@ Page({
     
     // Send message to app-side to fetch data
     try {
-      // In a real app, this would use the messaging system
-      // For now, simulate with dummy data
-      this.updateWithDummyData();
+      const message = messageBuilder.request({
+        type: MESSAGE_TYPES.FETCH_DATA,
+        apiUrl: this.state.apiUrl
+      });
+      messaging.peerSocket.send(message);
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('Error sending fetch request:', error);
       this.widgets.bgValue.setProperty(hmUI.prop.TEXT, 'Error');
     }
   },
 
   /**
-   * Update UI with dummy data for demonstration
+   * Verify Nightscout URL
    */
-  updateWithDummyData() {
-    // Simulate API response
-    setTimeout(() => {
-      this.state.currentBG = '120';
-      this.state.trend = '→';
-      this.state.delta = '+2';
-      this.state.lastUpdate = '5 min ago';
-      this.state.dataPoints = [110, 115, 118, 120, 122, 120, 118, 120];
-
-      // Update UI
-      this.widgets.bgValue.setProperty(hmUI.prop.TEXT, this.state.currentBG);
-      this.widgets.bgValue.setProperty(hmUI.prop.COLOR, 0x00ff00);
-      this.widgets.trendText.setProperty(hmUI.prop.TEXT, `Trend: ${this.state.trend}`);
-      this.widgets.deltaText.setProperty(hmUI.prop.TEXT, `Δ: ${this.state.delta}`);
-      this.widgets.lastUpdateText.setProperty(hmUI.prop.TEXT, `Last: ${this.state.lastUpdate}`);
-
-      // Redraw graph
-      this.drawGraph();
-    }, 1000);
-  }
+  verifyUrl() {
+    console.log('Verifying Nightscout URL...');
+    
+    // Show verification in progress
+    this.state.verificationStatus = 'Verifying...';
+    this.widgets.verificationStatus.setProperty(hmUI.prop.TEXT, this.state.verificationStatus);
+    this.widgets.verificationStatus.setProperty(hmUI.prop.COLOR, 0x888888);
+    
+    // Send message to app-side to verify URL
+    try {
+      const message = messageBuilder.request({
+        type: MESSAGE_TYPES.VERIFY_URL,
+        apiUrl: this.state.apiUrl
+      });
+      messaging.peerSocket.send(message);
+    } catch (error) {
+      console.error('Error sending verification request:', error);
+      this.state.verificationStatus = '✗ Verification failed';
+      this.widgets.verificationStatus.setProperty(hmUI.prop.TEXT, this.state.verificationStatus);
+      this.widgets.verificationStatus.setProperty(hmUI.prop.COLOR, 0xff0000);
+    }
+  },
 });
