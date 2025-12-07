@@ -335,7 +335,7 @@ The **easiest and fastest** way to test your app on a real watch is using the `z
    npm install -g @zeppos/zeus-cli
    ```
 
-2. **Zeus account** (create at [Zepp Developer Portal](https://developers.zepp.com/))
+2. **Zeus account** (create at [developers.zepp.com](https://developers.zepp.com/))
 
 3. **Zepp App** installed on your phone with:
    - Your watch paired to the app
