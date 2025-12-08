@@ -143,8 +143,10 @@ jobs:
         # Run zeus preview and capture output
         echo "Running zeus preview to generate QR code..."
         
+        # Use timeout wrapper to prevent indefinite hanging (45 seconds max)
+        # This provides a hard limit even if expect script itself hangs
         # Use expect to automate the device selection and capture all output
-        PREVIEW_OUTPUT=$(expect -c "
+        PREVIEW_OUTPUT=$(timeout 45 expect -c "
           # Set timeout to 30 seconds - sufficient for device selection and URL generation
           set timeout 30
           log_user 1
@@ -196,6 +198,12 @@ jobs:
           catch wait result
           exit 0
         " 2>&1) || true
+        
+        # Check if the command timed out (timeout command returns exit code 124)
+        EXPECT_EXIT_CODE=$?
+        if [ $EXPECT_EXIT_CODE -eq 124 ]; then
+          echo "::warning::Zeus preview command timed out after 45 seconds"
+        fi
         
         echo "Preview output:"
         echo "$PREVIEW_OUTPUT"
