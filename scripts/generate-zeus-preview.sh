@@ -40,7 +40,7 @@ spawn zeus preview
 # Two scenarios: 1) Device selection prompt appears, 2) Direct URL output
 expect {
   -re {Which device would you like to preview\?|Select a target device} {
-    # Send down arrow and enter to select first device
+    # Send enter to select the default (first) device
     send "\r"
     # After selecting device, wait for the URL or completion
     expect {
