@@ -97,8 +97,8 @@ jobs:
           exit 0
         fi
         
-        # Configure Zeus CLI with authentication tokens using zeus config
-        # Zeus CLI supports setting multiple config values in a single command
+        # Configure Zeus CLI with authentication tokens using zeus config set
+        # Verified: zeus config set supports multiple key=value pairs in a single command
         zeus config set \
           "____user_zepp_com__token=$ZEPP_APP_TOKEN" \
           "____user_zepp_com__userid=$ZEPP_USER_ID" \
@@ -166,11 +166,11 @@ jobs:
       id: zeus_preview
       if: env.ZEUS_LOGIN_SUCCESS == 'true'
       run: |
-        # Install tools for QR code generation
+        # Install tools: qrencode/imagemagick for QR generation, expect for device selection automation
         sudo apt-get update && sudo apt-get install -y qrencode imagemagick expect
         
-        # Note: expect is needed to automate device selection in 'zeus preview'
-        # Zeus CLI doesn't provide a command-line option for device selection
+        # Note: expect automates the interactive device selection in 'zeus preview'
+        # (Zeus CLI doesn't provide a command-line option for this)
         
         # Run zeus preview and capture output
         echo "Running zeus preview to generate QR code..."
