@@ -146,6 +146,7 @@ jobs:
         # Use timeout wrapper to prevent indefinite hanging (45 seconds max)
         # This provides a hard limit even if expect script itself hangs
         # Use expect to automate the device selection and capture all output
+        set +e  # Temporarily disable exit-on-error to capture exit code
         PREVIEW_OUTPUT=$(timeout 45 expect -c "
           # Set timeout to 30 seconds - sufficient for device selection and URL generation
           set timeout 30
@@ -154,9 +155,6 @@ jobs:
           
           spawn zeus preview
           
-          # Variable to track if we found the URL
-          set url_found 0
-          
           # Handle device selection and URL generation
           expect {
             \"Select a target device\" {
@@ -164,7 +162,6 @@ jobs:
               # After selecting device, wait for the URL or completion
               expect {
                 -re \"(zepp://|https://)\" {
-                  set url_found 1
                   # Give it a moment to output the full URL
                   sleep 1
                   puts \"\\nURL detected, exiting...\"
@@ -178,7 +175,6 @@ jobs:
               }
             }
             -re \"(zepp://|https://)\" {
-              set url_found 1
               sleep 1
               puts \"\\nURL detected without device selection, exiting...\"
             }
@@ -197,10 +193,11 @@ jobs:
           }
           catch wait result
           exit 0
-        " 2>&1) || true
+        " 2>&1)
+        EXPECT_EXIT_CODE=$?
+        set -e  # Re-enable exit-on-error
         
         # Check if the command timed out (timeout command returns exit code 124)
-        EXPECT_EXIT_CODE=$?
         if [ $EXPECT_EXIT_CODE -eq 124 ]; then
           echo "::warning::Zeus preview command timed out after 45 seconds"
         fi
