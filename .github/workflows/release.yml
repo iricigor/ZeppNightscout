@@ -359,15 +359,24 @@ jobs:
         
         cat release_notes.md
     
+    - name: Prepare release files list
+      id: release_files
+      run: |
+        FILES="${{ steps.find_artifacts.outputs.ARTIFACT_PATH }}"
+        if [ "${{ steps.zeus_preview.outputs.ZEUS_QR_GENERATED }}" == "true" ]; then
+          FILES="$FILES"$'\n'"zeus_preview_qr.png"
+        fi
+        echo "files<<EOF" >> $GITHUB_OUTPUT
+        echo "$FILES" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+    
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ steps.get_version.outputs.TAG }}
         name: Release ${{ steps.get_version.outputs.VERSION }}
         body_path: release_notes.md
-        files: |
-          ${{ steps.find_artifacts.outputs.ARTIFACT_PATH }}
-          ${{ steps.zeus_preview.outputs.ZEUS_QR_GENERATED == 'true' && 'zeus_preview_qr.png' || '' }}
+        files: ${{ steps.release_files.outputs.files }}
         draft: false
         prerelease: ${{ github.event_name == 'workflow_dispatch' }}
       env:
