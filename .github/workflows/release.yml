@@ -130,6 +130,8 @@ jobs:
         
         # Use expect to automate the device selection and capture all output
         PREVIEW_OUTPUT=$(expect -c "
+          # Set timeout to 60 seconds - sufficient for device selection and URL generation
+          # Command typically completes in 10-20 seconds; 60s provides ample buffer
           set timeout 60
           log_user 1
           log_file -noappend /tmp/zeus_preview.log
