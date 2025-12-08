@@ -83,6 +83,54 @@ jobs:
     - name: Install Zeus CLI
       run: npm install -g @zeppos/zeus-cli
     
+    - name: Install expect for automated login
+      run: sudo apt-get update && sudo apt-get install -y expect
+    
+    - name: Login to Zeus CLI
+      env:
+        ZEPP_USERNAME: ${{ secrets.ZEPP_USERNAME }}
+        ZEPP_PASSWORD: ${{ secrets.ZEPP_PASSWORD }}
+      run: |
+        # Check if credentials are available
+        if [ -z "$ZEPP_USERNAME" ] || [ -z "$ZEPP_PASSWORD" ]; then
+          echo "::warning::ZEPP_USERNAME or ZEPP_PASSWORD secrets not set. Skipping Zeus login."
+          echo "::warning::Zeus preview QR code will not be generated."
+          echo "ZEUS_LOGIN_SUCCESS=false" >> $GITHUB_ENV
+          exit 0
+        fi
+        
+        # Use expect to automate zeus login
+        expect -c "
+          set timeout 30
+          spawn zeus login
+          expect {
+            \"email\" {
+              send \"$ZEPP_USERNAME\r\"
+              exp_continue
+            }
+            \"password\" {
+              send \"$ZEPP_PASSWORD\r\"
+              exp_continue
+            }
+            \"successfully\" {
+              exit 0
+            }
+            timeout {
+              puts \"Login timeout\"
+              exit 1
+            }
+            eof
+          }
+        "
+        
+        if [ $? -eq 0 ]; then
+          echo "ZEUS_LOGIN_SUCCESS=true" >> $GITHUB_ENV
+          echo "✅ Successfully logged in to Zeus CLI"
+        else
+          echo "ZEUS_LOGIN_SUCCESS=false" >> $GITHUB_ENV
+          echo "::warning::Zeus login failed. Preview QR code will not be generated."
+        fi
+    
     - name: Setup Zeus device cache
       run: |
         mkdir -p ~/.zepp
@@ -133,6 +181,74 @@ jobs:
     - name: Build app with Zeus
       run: zeus build
     
+    - name: Generate Zeus Preview QR Code
+      id: zeus_preview
+      if: env.ZEUS_LOGIN_SUCCESS == 'true'
+      run: |
+        # Install qrencode to generate QR code from URL if needed
+        sudo apt-get install -y qrencode imagemagick
+        
+        # Run zeus preview and capture output
+        # The preview command will generate a QR code in terminal
+        # We need to capture the preview URL from the output
+        echo "Running zeus preview to generate QR code..."
+        
+        # Use expect to automate the device selection and capture QR code
+        PREVIEW_OUTPUT=$(expect -c "
+          set timeout 60
+          log_user 0
+          spawn zeus preview
+          expect {
+            \"Select a target device\" {
+              send \"1\r\"
+              exp_continue
+            }
+            \"preview url\" {
+              set output \$expect_out(buffer)
+              puts \$output
+              exp_continue
+            }
+            \"https://\" {
+              set output \$expect_out(buffer)
+              puts \$output
+              exp_continue
+            }
+            timeout {
+              puts \"Preview timeout\"
+              exit 1
+            }
+            eof
+          }
+        " 2>&1) || true
+        
+        echo "Preview output:"
+        echo "$PREVIEW_OUTPUT"
+        
+        # Try to extract the preview URL from output
+        # Use a more specific regex to avoid capturing trailing punctuation
+        PREVIEW_URL=$(echo "$PREVIEW_OUTPUT" | grep -oP 'https://[a-zA-Z0-9./?&=_-]+' | head -1 || echo "")
+        
+        if [ -n "$PREVIEW_URL" ]; then
+          echo "PREVIEW_URL=$PREVIEW_URL" >> $GITHUB_OUTPUT
+          echo "✅ Zeus preview URL generated: $PREVIEW_URL"
+          
+          # Generate QR code image from the preview URL
+          qrencode -s 10 -o zeus_preview_qr.png "$PREVIEW_URL"
+          echo "ZEUS_QR_GENERATED=true" >> $GITHUB_OUTPUT
+          echo "✅ QR code image saved to zeus_preview_qr.png"
+        else
+          echo "::warning::Could not extract preview URL from zeus preview output"
+          echo "ZEUS_QR_GENERATED=false" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Upload Zeus QR Code as artifact
+      if: env.ZEUS_LOGIN_SUCCESS == 'true' && steps.zeus_preview.outputs.ZEUS_QR_GENERATED == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: zeus-preview-qr
+        path: zeus_preview_qr.png
+        retention-days: 90
+    
     - name: Find build artifacts
       id: find_artifacts
       run: |
@@ -182,25 +298,51 @@ jobs:
         
         Download the app: [${{ steps.find_artifacts.outputs.ARTIFACT_NAME }}](${{ steps.qr_code.outputs.DOWNLOAD_URL }})
         
-        ### Quick Install via QR Code
+        EOF
         
-        Scan this QR code with your phone to download the app directly:
+        # Add Zeus Preview QR Code section if available
+        if [ "${{ steps.zeus_preview.outputs.ZEUS_QR_GENERATED }}" == "true" ]; then
+          # Generate URL for the uploaded QR code artifact
+          QR_IMAGE_URL="https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.TAG }}/zeus_preview_qr.png"
+          cat >> release_notes.md << EOF
+        ### 🚀 Quick Install via Zepp App (Recommended)
         
-        ![QR Code](${{ steps.qr_code.outputs.QR_URL }})
+        **Scan this QR code with the Zepp App on your phone to install directly to your watch:**
+        
+        ![Zeus Preview QR Code](${QR_IMAGE_URL})
+        
+        > **Note:** This QR code connects directly to the Zepp platform for instant installation via the Zepp App's Developer Mode.
+        > Make sure Developer Mode is enabled in your Zepp App (Profile → Settings → About → tap Zepp icon 7 times).
+        
+        EOF
+        fi
+        
+        cat >> release_notes.md << 'EOF'
+        ### Alternative: Download QR Code
+        
+        Scan this QR code with your phone to download the `.zab` file:
+        
+        ![Download QR Code](${{ steps.qr_code.outputs.QR_URL }})
         
         ### Installation Instructions
         
-        1. **Option 1 - QR Code (Recommended)**
-           - Scan the QR code above with your phone
+        1. **Option 1 - Zeus Preview QR Code (Fastest)** ⭐
+           - Enable Developer Mode in Zepp App (Profile → Settings → About → tap Zepp icon 7 times)
+           - Open Zepp App → Profile → Your Device → Developer Mode
+           - Tap "Scan" and scan the Zeus Preview QR code above
+           - App installs directly to your watch!
+        
+        2. **Option 2 - Download QR Code**
+           - Scan the Download QR code above with your phone
            - Download the `.zab` file
            - Use the Zepp app to install it on your watch
         
-        2. **Option 2 - Direct Download**
+        3. **Option 3 - Direct Download**
            - Click the download link above
            - Transfer the `.zab` file to your phone
            - Use the Zepp app to install it on your watch
         
-        3. **Option 3 - Zeus CLI**
+        4. **Option 4 - Zeus CLI**
            - Download the release artifact
            - Use `zeus preview` or `zeus install` commands
         
@@ -218,14 +360,24 @@ jobs:
         
         cat release_notes.md
     
+    - name: Prepare release files list
+      id: release_files
+      run: |
+        FILES="${{ steps.find_artifacts.outputs.ARTIFACT_PATH }}"
+        if [ "${{ steps.zeus_preview.outputs.ZEUS_QR_GENERATED }}" == "true" ]; then
+          FILES="$FILES"$'\n'"zeus_preview_qr.png"
+        fi
+        echo "files<<EOF" >> $GITHUB_OUTPUT
+        echo "$FILES" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+    
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ steps.get_version.outputs.TAG }}
         name: Release ${{ steps.get_version.outputs.VERSION }}
         body_path: release_notes.md
-        files: |
-          ${{ steps.find_artifacts.outputs.ARTIFACT_PATH }}
+        files: ${{ steps.release_files.outputs.files }}
         draft: false
         prerelease: ${{ github.event_name == 'workflow_dispatch' }}
       env:
