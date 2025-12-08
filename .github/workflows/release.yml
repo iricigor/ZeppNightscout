@@ -120,7 +120,7 @@ jobs:
       if: env.ZEUS_LOGIN_SUCCESS == 'true'
       run: |
         # Install tools: qrencode/imagemagick for QR generation, expect for device selection automation
-        sudo apt-get update && sudo apt-get install -y qrencode imagemagick expect
+        sudo apt-get update -qq && sudo apt-get install -y -q qrencode imagemagick expect
         
         # Note: expect automates the interactive device selection in 'zeus preview'
         # (Zeus CLI doesn't provide a command-line option for this)
