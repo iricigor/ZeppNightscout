@@ -117,8 +117,8 @@ To enable Zeus preview QR code generation, add these secrets to your repository:
 
 ### For Developers
 
-- **Non-interactive**: Uses command-line configuration instead of interactive login
-- **No external dependencies**: Removed need for `expect` package
+- **Non-interactive authentication**: Uses command-line configuration instead of interactive login
+- **Minimal dependencies**: Uses `expect` only for device selection (Zeus CLI limitation)
 - **Automated**: No manual QR code generation needed
 - **Consistent**: Same QR code for all users
 - **Flexible**: Works with or without Zeus credentials
@@ -245,6 +245,6 @@ This feature was implemented to provide automated Zeus preview QR code generatio
 Implementation details:
 - Uses `zeus config set` for non-interactive authentication
 - Uses `qrencode` for QR code image generation
+- Uses `expect` for automating device selection in `zeus preview` (Zeus CLI limitation)
 - Graceful fallback when secrets unavailable
 - Comprehensive error handling and logging
-- No external dependencies (removed `expect` requirement)

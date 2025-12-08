@@ -164,8 +164,10 @@ jobs:
       id: zeus_preview
       if: env.ZEUS_LOGIN_SUCCESS == 'true'
       run: |
-        # Install qrencode to generate QR code from URL if needed
-        sudo apt-get install -y qrencode imagemagick
+        # Install tools for QR code generation and device selection automation
+        sudo apt-get update && sudo apt-get install -y qrencode imagemagick expect
+        # Note: expect is needed to automate device selection in 'zeus preview'
+        # as Zeus CLI doesn't provide a command-line option for device selection
         
         # Run zeus preview and capture output
         # The preview command will generate a QR code in terminal

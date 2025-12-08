@@ -10,22 +10,22 @@
 
 ## What Was Implemented
 
-### 1. Non-Interactive Zeus Authentication (Requirement: "login to Zepp using repo secrets")
+### 1. Non-Interactive Zeus Authentication (Requirement: "provide arguments in commandline")
 
 **Location**: `.github/workflows/release.yml` lines 86-111
 
 **Implementation**:
 - Uses repository secrets `ZEPP_APP_TOKEN`, `ZEPP_USER_ID`, and `ZEPP_CNAME`
 - Configures Zeus CLI authentication using `zeus config set` command
-- Non-interactive authentication suitable for CI/CD
+- Non-interactive authentication suitable for CI/CD (command-line arguments)
 - Includes graceful fallback if secrets are not configured
 - Sets environment variable `ZEUS_LOGIN_SUCCESS` for subsequent steps
 
 **Key Features**:
-- Command-line based configuration (no interactive prompts)
-- No external dependencies (removed `expect` requirement)
+- Command-line based configuration (no interactive prompts for authentication)
 - Clear success/failure logging
 - Secure credential handling (never exposed in logs)
+- Still uses `expect` for device selection in `zeus preview` (Zeus CLI has no CLI option for this)
 
 ### 2. Zeus Preview QR Code Generation (Requirement: "build using zeus preview command")
 
@@ -251,14 +251,13 @@ Testing requires actual Zepp authentication tokens to be configured:
 ## Conclusion
 
 ✅ **All requirements met**:
-- Zeus authentication automated using repository secrets (non-interactive)
+- Zeus authentication now uses command-line arguments (non-interactive)
 - Zeus preview command generates QR code
 - Release includes newly generated QR code
 - Maintains existing functionality
 - Comprehensive documentation provided
 - Security best practices followed
-- Removed dependency on `expect` package
 
-**Key Improvement**: Replaced interactive login with direct command-line token configuration, making the pipeline truly non-interactive and eliminating external dependencies.
+**Key Improvement**: Replaced interactive login with direct command-line token configuration, addressing the issue's requirement to "provide arguments in commandline" instead of using interactive login. The device selection in `zeus preview` still uses `expect` for automation as Zeus CLI doesn't provide a command-line option for device selection, but the main authentication issue has been resolved.
 
 The implementation is **production-ready** and waiting for token configuration to enable full functionality.
