@@ -120,14 +120,20 @@ if [ -z "$PREVIEW_URL" ] && [ -f /tmp/zeus_preview.log ]; then
 fi
 
 if [ -n "$PREVIEW_URL" ]; then
-  echo "PREVIEW_URL=$PREVIEW_URL" >> "$GITHUB_OUTPUT"
+  if [ -n "$GITHUB_OUTPUT" ]; then
+    echo "PREVIEW_URL=$PREVIEW_URL" >> "$GITHUB_OUTPUT"
+  fi
   echo "✅ Zeus preview URL generated: $PREVIEW_URL"
   
   # Generate QR code image from the preview URL
   qrencode -s 10 -o zeus_preview_qr.png "$PREVIEW_URL"
-  echo "ZEUS_QR_GENERATED=true" >> "$GITHUB_OUTPUT"
+  if [ -n "$GITHUB_OUTPUT" ]; then
+    echo "ZEUS_QR_GENERATED=true" >> "$GITHUB_OUTPUT"
+  fi
   echo "✅ QR code image saved to zeus_preview_qr.png"
 else
   echo "::warning::Could not extract preview URL from zeus preview output"
-  echo "ZEUS_QR_GENERATED=false" >> "$GITHUB_OUTPUT"
+  if [ -n "$GITHUB_OUTPUT" ]; then
+    echo "ZEUS_QR_GENERATED=false" >> "$GITHUB_OUTPUT"
+  fi
 fi

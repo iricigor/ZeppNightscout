@@ -40,12 +40,10 @@ runs:
         
         # Configure Zeus CLI with authentication tokens using zeus config set
         # Verified: zeus config set supports multiple key=value pairs in a single command
-        zeus config set \
+        if zeus config set \
           "____user_zepp_com__token=$ZEPP_APP_TOKEN" \
           "____user_zepp_com__userid=$ZEPP_USER_ID" \
-          "____user_zepp_com__cname=$ZEPP_CNAME"
-        
-        if [ $? -eq 0 ]; then
+          "____user_zepp_com__cname=$ZEPP_CNAME"; then
           echo "ZEUS_LOGIN_SUCCESS=true" >> $GITHUB_OUTPUT
           echo "✅ Successfully configured Zeus CLI authentication"
         else

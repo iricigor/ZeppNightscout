@@ -15,6 +15,12 @@ QR_URL="$8"
 ZEUS_QR_GENERATED="$9"
 QR_IMAGE_URL="${10}"
 
+# Check if release_notes.md already exists and create backup
+if [ -f release_notes.md ]; then
+  echo "::warning::release_notes.md already exists, creating backup"
+  cp release_notes.md release_notes.md.backup
+fi
+
 cat > release_notes.md << EOF
 ## ZeppNightscout ${VERSION}
 
