@@ -128,40 +128,60 @@ jobs:
         # Run zeus preview and capture output
         echo "Running zeus preview to generate QR code..."
         
-        # Use expect to automate the device selection and capture QR code
+        # Use expect to automate the device selection and capture all output
         PREVIEW_OUTPUT=$(expect -c "
-          set timeout 60
-          log_user 0
+          set timeout 120
+          log_user 1
+          log_file -noappend /tmp/zeus_preview.log
+          
           spawn zeus preview
+          
           expect {
             \"Select a target device\" {
               send \"1\r\"
               exp_continue
             }
-            \"preview url\" {
-              set output \$expect_out(buffer)
-              puts \$output
-              exp_continue
-            }
-            \"https://\" {
-              set output \$expect_out(buffer)
-              puts \$output
+            -re \"(zepp://[^\r\n\s\"]+|https://[^\r\n\s\"]+)\" {
               exp_continue
             }
             timeout {
-              puts \"Preview timeout\"
-              exit 1
+              puts \"Preview timeout after 120 seconds\"
             }
             eof
           }
+          
+          # Capture any remaining output
+          catch wait result
         " 2>&1) || true
         
         echo "Preview output:"
         echo "$PREVIEW_OUTPUT"
         
+        # Also show the log file if it exists
+        if [ -f /tmp/zeus_preview.log ]; then
+          echo "Full log file contents:"
+          cat /tmp/zeus_preview.log
+        fi
+        
+        # Helper function to extract URL from text
+        extract_url() {
+          local text="$1"
+          # First try zepp:// deep link format (preferred)
+          local url=$(echo "$text" | grep -oP 'zepp://[^\s\r\n"]+' | head -1 || echo "")
+          # If no zepp:// URL found, try https:// format
+          if [ -z "$url" ]; then
+            url=$(echo "$text" | grep -oP 'https://[a-zA-Z0-9./?&=_-]+' | head -1 || echo "")
+          fi
+          echo "$url"
+        }
+        
         # Try to extract the preview URL from output
-        # Use a more specific regex to avoid capturing trailing punctuation
-        PREVIEW_URL=$(echo "$PREVIEW_OUTPUT" | grep -oP 'https://[a-zA-Z0-9./?&=_-]+' | head -1 || echo "")
+        PREVIEW_URL=$(extract_url "$PREVIEW_OUTPUT")
+        
+        # Also check the log file if URL not found in stdout
+        if [ -z "$PREVIEW_URL" ] && [ -f /tmp/zeus_preview.log ]; then
+          PREVIEW_URL=$(extract_url "$(cat /tmp/zeus_preview.log)")
+        fi
         
         if [ -n "$PREVIEW_URL" ]; then
           echo "PREVIEW_URL=$PREVIEW_URL" >> $GITHUB_OUTPUT

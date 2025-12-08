@@ -26,6 +26,10 @@ This document describes the new Zeus login and QR code generation feature added 
 
 1. **Zeus Authentication**: The workflow uses `zeus config set` to configure authentication tokens directly
 2. **Zeus Preview**: After successful configuration, `zeus preview` is run to generate a preview URL
+   - Uses `expect` to automate interactive device selection
+   - Captures output with full logging enabled for diagnostics
+   - Supports both `zepp://` deep links and `https://` URLs
+   - 120-second timeout to allow for network delays
 3. **QR Code Generation**: The preview URL is converted to a QR code image using `qrencode`
 4. **Release Publishing**: The QR code image is uploaded as a release artifact and displayed in release notes
 
@@ -38,8 +42,9 @@ This document describes the new Zeus login and QR code generation feature added 
    └─ Failure: Skip preview, continue with download QR only
 3. Build app (zeus build)
 4. Generate Zeus Preview QR Code (if authentication successful)
-   ├─ Run zeus preview
-   ├─ Extract preview URL
+   ├─ Run zeus preview with expect automation
+   ├─ Capture full output to log file
+   ├─ Extract preview URL (zepp:// or https://)
    ├─ Generate QR code image
    └─ Upload as artifact
 5. Generate Download QR Code (always)
@@ -162,13 +167,17 @@ To enable Zeus preview QR code generation, add these secrets to your repository:
 ### Zeus Preview Times Out
 
 **Symptoms:**
-- "Preview timeout" in logs
+- "Preview timeout after 120 seconds" in logs
 - No QR code generated
 
 **Solutions:**
 1. Check Zepp service availability
-2. Retry the workflow
-3. Increase timeout if needed (currently 60 seconds)
+2. Review the full preview output logs in the workflow run
+3. Retry the workflow
+4. Check for network connectivity issues
+5. Verify Zeus CLI version is up to date
+
+**Note:** The timeout has been increased to 120 seconds and full logging is enabled for better diagnostics.
 
 ### QR Code Not Displayed in Release
 
@@ -177,10 +186,12 @@ To enable Zeus preview QR code generation, add these secrets to your repository:
 - "Could not extract preview URL" warning
 
 **Solutions:**
-1. Check that `zeus preview` output format hasn't changed
-2. Review workflow logs for preview command output
-3. Manually test `zeus preview` locally
-4. Open an issue if Zeus CLI behavior changed
+1. Check the workflow logs for the full `zeus preview` output
+2. Look for both `zepp://` and `https://` URLs in the output
+3. Check the log file contents displayed in the workflow output
+4. Verify that `zeus preview` output format hasn't changed
+5. Manually test `zeus preview` locally to see the actual output
+6. Open an issue with the full workflow logs if the problem persists
 
 ### Secrets Not Working
 
