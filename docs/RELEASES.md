@@ -2,6 +2,26 @@
 
 This document describes how to create and publish new releases of ZeppNightscout.
 
+## Prerequisites
+
+### Required GitHub Secrets
+
+To enable Zeus preview QR code generation in releases, you need to configure the following repository secrets:
+
+1. **ZEPP_USERNAME**: Your Zepp developer account email/username
+2. **ZEPP_PASSWORD**: Your Zepp developer account password
+
+**To add these secrets:**
+
+1. Go to your repository's **Settings** → **Secrets and variables** → **Actions**
+2. Click **New repository secret**
+3. Add `ZEPP_USERNAME` with your Zepp account email
+4. Add `ZEPP_PASSWORD` with your Zepp account password
+
+**Note:** If these secrets are not configured, the release workflow will still work but will skip the Zeus preview QR code generation step. You'll see a warning in the workflow logs.
+
+**Security:** These credentials are encrypted and only accessible to GitHub Actions workflows. They are never exposed in logs or publicly visible.
+
 ## Version Numbering
 
 ZeppNightscout uses a versioning scheme that combines semantic versioning with build numbers:
@@ -112,18 +132,30 @@ The release workflow (`.github/workflows/release.yml`) performs these steps:
    
 3. **Setup**: Installs Node.js and Zeus CLI
 
-4. **Build**: Compiles the app using `zeus build` with the updated version
+4. **Zeus Login** (if credentials configured):
+   - Uses expect script to automate `zeus login`
+   - Authenticates with ZEPP_USERNAME and ZEPP_PASSWORD secrets
+   - Enables Zeus preview QR code generation
 
-5. **Artifacts**: Locates the generated `.zab` file
+5. **Build**: Compiles the app using `zeus build` with the updated version
 
-6. **QR Code**: Generates a QR code pointing to the download URL
+6. **Zeus Preview QR Code** (if login successful):
+   - Runs `zeus preview` to generate a preview URL
+   - Creates a QR code image from the preview URL
+   - This QR code allows direct installation via Zepp App
 
-7. **Release**: Creates a GitHub release with:
+7. **Artifacts**: Locates the generated `.zab` file
+
+8. **Download QR Code**: Generates a QR code pointing to the GitHub release download URL
+
+9. **Release**: Creates a GitHub release with:
    - Version number including build number (e.g., "0.1.5")
    - Build metadata (run number, branch, base version)
    - Comprehensive release notes
-   - QR code embedded in the notes
+   - Zeus preview QR code (for direct installation via Zepp App)
+   - Download QR code (for downloading .zab file)
    - The `.zab` file attached as an artifact
+   - Zeus QR code image attached as an artifact
    - Marked as pre-release for manual triggers, regular release for tags
 
 ## Release Types
@@ -140,38 +172,72 @@ The release workflow (`.github/workflows/release.yml`) performs these steps:
 - Recommended for production/user-facing releases
 - Version includes run number (e.g., 0.2.42)
 
-## QR Code Feature
+## QR Code Features
 
-The release includes a QR code that users can scan to download the app directly to their phone:
+The release includes two types of QR codes:
 
-- The QR code encodes the direct download URL
-- Users can scan it with any QR code reader
-- It points to the `.zab` file in the GitHub release
-- Makes installation easier for end users
+### 1. Zeus Preview QR Code (Recommended)
+- Generated from `zeus preview` command
+- **Direct installation**: Scan with Zepp App to install directly to your watch
+- **Fastest method**: No need to download files manually
+- **Requirement**: Zepp developer credentials must be configured in repository secrets
+- **How to use**: 
+  1. Enable Developer Mode in Zepp App
+  2. Open Profile → Your Device → Developer Mode
+  3. Tap "Scan" and scan the Zeus Preview QR code
+  4. App installs automatically to your watch
+
+### 2. Download QR Code (Fallback)
+- Points to the GitHub release download URL
+- **For downloading**: Scan to download the `.zab` file to your phone
+- **Always available**: Generated even if Zeus credentials are not configured
+- **How to use**:
+  1. Scan the QR code with any QR reader
+  2. Download the `.zab` file
+  3. Use Zepp App to install the file
 
 ## Installation for End Users
 
-After a release is published, users can install the app in three ways:
+After a release is published, users can install the app in four ways:
 
-### Option 1: QR Code (Recommended)
+### Option 1: Zeus Preview QR Code (Fastest) ⭐
 1. Go to the [Releases page](https://github.com/iricigor/ZeppNightscout/releases)
 2. Open the latest release
-3. Scan the QR code with your phone
+3. Enable Developer Mode in Zepp App (Profile → Settings → About → tap Zepp icon 7 times)
+4. Open Zepp App → Profile → Your Device → Developer Mode
+5. Tap "Scan" and scan the Zeus Preview QR code
+6. App installs directly to your watch!
+
+### Option 2: Download QR Code
+1. Go to the [Releases page](https://github.com/iricigor/ZeppNightscout/releases)
+2. Open the latest release
+3. Scan the Download QR code with your phone
 4. Download the `.zab` file
 5. Use the Zepp app to install it on your watch
 
-### Option 2: Direct Download
+### Option 3: Direct Download
 1. Go to the [Releases page](https://github.com/iricigor/ZeppNightscout/releases)
 2. Download the `.zab` file from the latest release
 3. Transfer it to your phone
 4. Use the Zepp app to install it on your watch
 
-### Option 3: Zeus CLI
+### Option 4: Zeus CLI
 1. Download the `.zab` file from the release
 2. Use `zeus preview` to generate a QR code
 3. Or use `zeus install` to install directly to a connected device
 
 ## Troubleshooting
+
+### Zeus login failed
+
+If you see warnings about Zeus login failing:
+
+1. **Check secrets are configured**: Verify that `ZEPP_USERNAME` and `ZEPP_PASSWORD` are set in repository secrets
+2. **Verify credentials**: Make sure the credentials are correct for your Zepp developer account
+3. **Third-party login users**: If you registered with Google/Facebook, you need to bind an email and set a password at [user.huami.com](https://user.huami.com/privacy2/#/bindEmail)
+4. **Network issues**: Check if the workflow can access Zepp servers
+
+**Note:** If Zeus login fails, the release will still succeed but without the Zeus Preview QR code. Users can still use the Download QR code.
 
 ### Release workflow fails
 
@@ -184,6 +250,7 @@ If the release workflow fails:
    - Artifact not found: Zeus may have changed output directory
    - QR code generation failed: Check network connectivity
    - Version update failed: Check Node.js is available
+   - Zeus login failed: Check ZEPP_USERNAME and ZEPP_PASSWORD secrets
 
 ### Tag already exists
 
