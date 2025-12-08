@@ -13,6 +13,9 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 
+// Directories to skip when searching for YAML files
+const SKIP_DIRECTORIES = ['node_modules', '.git', 'dist', '.vscode', '.devcontainer'];
+
 // Colors for terminal output
 const colors = {
   reset: '\x1b[0m',
@@ -46,7 +49,7 @@ function findYamlFiles(dir, fileList = []) {
     
     // Skip node_modules, .git, and other directories we don't want to search
     if (stat.isDirectory()) {
-      if (!['node_modules', '.git', 'dist', '.vscode', '.devcontainer'].includes(file)) {
+      if (!SKIP_DIRECTORIES.includes(file)) {
         findYamlFiles(filePath, fileList);
       }
     } else if (file.endsWith('.yml') || file.endsWith('.yaml')) {
@@ -116,6 +119,7 @@ function validateWithYamllint(filePath) {
  */
 function validateWithJsYaml(filePath) {
   try {
+    // Conditionally require js-yaml only when needed
     const yaml = require('js-yaml');
     const content = fs.readFileSync(filePath, 'utf8');
     
@@ -133,6 +137,15 @@ function validateWithJsYaml(filePath) {
       return { 
         valid: false, 
         error: `YAML syntax error: ${error.message}`,
+        warnings: []
+      };
+    }
+    
+    // Handle module not found error
+    if (error.code === 'MODULE_NOT_FOUND' && error.message.includes('js-yaml')) {
+      return {
+        valid: false,
+        error: 'js-yaml module not found. Please run: npm install',
         warnings: []
       };
     }
