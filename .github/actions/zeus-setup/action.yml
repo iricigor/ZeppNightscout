@@ -1,0 +1,54 @@
+name: 'Zeus CLI Setup'
+description: 'Install and configure Zeus CLI with authentication'
+inputs:
+  zepp_app_token:
+    description: 'Zepp app token'
+    required: false
+  zepp_user_id:
+    description: 'Zepp user ID'
+    required: false
+  zepp_cname:
+    description: 'Zepp cname'
+    required: false
+outputs:
+  zeus_login_success:
+    description: 'Whether Zeus authentication was successful'
+    value: ${{ steps.configure.outputs.ZEUS_LOGIN_SUCCESS }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install Zeus CLI
+      shell: bash
+      run: npm install -g @zeppos/zeus-cli
+    
+    - name: Configure Zeus CLI authentication
+      id: configure
+      shell: bash
+      env:
+        ZEPP_APP_TOKEN: ${{ inputs.zepp_app_token }}
+        ZEPP_USER_ID: ${{ inputs.zepp_user_id }}
+        ZEPP_CNAME: ${{ inputs.zepp_cname }}
+      run: |
+        # Check if authentication tokens are available
+        if [ -z "$ZEPP_APP_TOKEN" ] || [ -z "$ZEPP_USER_ID" ] || [ -z "$ZEPP_CNAME" ]; then
+          echo "::warning::ZEPP_APP_TOKEN, ZEPP_USER_ID, or ZEPP_CNAME secrets not set. Skipping Zeus authentication."
+          echo "::warning::Zeus preview QR code will not be generated."
+          echo "ZEUS_LOGIN_SUCCESS=false" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+        
+        # Configure Zeus CLI with authentication tokens using zeus config set
+        # Verified: zeus config set supports multiple key=value pairs in a single command
+        zeus config set \
+          "____user_zepp_com__token=$ZEPP_APP_TOKEN" \
+          "____user_zepp_com__userid=$ZEPP_USER_ID" \
+          "____user_zepp_com__cname=$ZEPP_CNAME"
+        
+        if [ $? -eq 0 ]; then
+          echo "ZEUS_LOGIN_SUCCESS=true" >> $GITHUB_OUTPUT
+          echo "✅ Successfully configured Zeus CLI authentication"
+        else
+          echo "ZEUS_LOGIN_SUCCESS=false" >> $GITHUB_OUTPUT
+          echo "::warning::Zeus authentication configuration failed. Preview QR code will not be generated."
+        fi
