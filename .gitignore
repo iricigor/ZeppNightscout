@@ -35,3 +35,4 @@ temp/
 
 # QR code temp files
 qr_temp.png
+__pycache__/
