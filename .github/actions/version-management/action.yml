@@ -1,0 +1,78 @@
+name: 'Version Management'
+description: 'Get version information and update app.json'
+inputs:
+  run_number:
+    description: 'GitHub run number'
+    required: true
+  github_ref:
+    description: 'GitHub ref'
+    required: true
+outputs:
+  version:
+    description: 'Build version'
+    value: ${{ steps.get_version.outputs.VERSION }}
+  tag:
+    description: 'Release tag'
+    value: ${{ steps.get_version.outputs.TAG }}
+  base_version:
+    description: 'Base version'
+    value: ${{ steps.get_version.outputs.BASE_VERSION }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Get version and build number
+      id: get_version
+      shell: bash
+      run: |
+        # Last modification done in PR iricigor/ZeppNightscout#54
+        echo "Last modification to release pipeline: PR #54"
+        
+        # Read base version from app.json
+        BASE_VERSION=$(node -p "require('./app.json').app.version.name")
+        
+        # Extract major.minor from base version (e.g., "0.1.0" -> "0.1")
+        MAJOR_MINOR=$(echo $BASE_VERSION | cut -d. -f1,2)
+        
+        # Use GitHub run number as patch version
+        BUILD_VERSION="${MAJOR_MINOR}.${{ inputs.run_number }}"
+        
+        # For tagged releases, extract tag version
+        if [[ "${{ inputs.github_ref }}" == refs/tags/* ]]; then
+          GITHUB_REF="${{ inputs.github_ref }}"
+          TAG_VERSION=${GITHUB_REF#refs/tags/v}
+          TAG=${GITHUB_REF#refs/tags/}
+          echo "VERSION=$BUILD_VERSION" >> $GITHUB_OUTPUT
+          echo "TAG=$TAG" >> $GITHUB_OUTPUT
+          echo "BASE_VERSION=$TAG_VERSION" >> $GITHUB_OUTPUT
+        else
+          # For manual dispatch, use build version
+          TAG="v${BUILD_VERSION}"
+          echo "VERSION=$BUILD_VERSION" >> $GITHUB_OUTPUT
+          echo "TAG=$TAG" >> $GITHUB_OUTPUT
+          echo "BASE_VERSION=$BUILD_VERSION" >> $GITHUB_OUTPUT
+        fi
+        
+        echo "Building version: $BUILD_VERSION"
+    
+    - name: Update app.json with build version
+      shell: bash
+      run: |
+        # Update version in app.json to include run number
+        node -e "
+          try {
+            const fs = require('fs');
+            const app = JSON.parse(fs.readFileSync('app.json', 'utf8'));
+            app.app.version.name = '${{ steps.get_version.outputs.VERSION }}';
+            fs.writeFileSync('app.json', JSON.stringify(app, null, 2) + '\n');
+            console.log('Successfully updated app.json version to ${{ steps.get_version.outputs.VERSION }}');
+          } catch (error) {
+            console.error('Failed to update app.json:', error.message);
+            process.exit(1);
+          }
+        "
+        cat app.json | grep -A2 '"version"'
+    
+    - name: Update workflow run name with version
+      shell: bash
+      run: echo "::notice title=Release Version::Building release ${{ steps.get_version.outputs.VERSION }}"

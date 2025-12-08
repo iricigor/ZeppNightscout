@@ -1,0 +1,87 @@
+name: 🚀 Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to build from'
+        required: true
+        default: 'main'
+        type: string
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: write
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.inputs.branch || github.ref }}
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+    
+    - name: Version Management
+      id: version
+      uses: ./.github/actions/version-management
+      with:
+        run_number: ${{ github.run_number }}
+        github_ref: ${{ github.ref }}
+    
+    - name: Zeus CLI Setup
+      id: zeus_setup
+      uses: ./.github/actions/zeus-setup
+      with:
+        zepp_app_token: ${{ secrets.ZEPP_APP_TOKEN }}
+        zepp_user_id: ${{ secrets.ZEPP_USER_ID }}
+        zepp_cname: ${{ secrets.ZEPP_CNAME }}
+    
+    - name: Zeus Build and Preview
+      id: zeus_build
+      uses: ./.github/actions/zeus-build-preview
+      with:
+        zeus_login_success: ${{ steps.zeus_setup.outputs.zeus_login_success }}
+    
+    - name: Upload Zeus QR Code as artifact
+      if: steps.zeus_setup.outputs.zeus_login_success == 'true' && steps.zeus_build.outputs.zeus_qr_generated == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: zeus-preview-qr
+        path: zeus_preview_qr.png
+        retention-days: 90
+    
+    - name: Release Preparation
+      id: release_prep
+      uses: ./.github/actions/release-preparation
+      with:
+        version: ${{ steps.version.outputs.version }}
+        base_version: ${{ steps.version.outputs.base_version }}
+        tag: ${{ steps.version.outputs.tag }}
+        build_number: ${{ github.run_number }}
+        branch: ${{ github.event.inputs.branch || github.ref_name }}
+        zeus_qr_generated: ${{ steps.zeus_build.outputs.zeus_qr_generated }}
+        repository: ${{ github.repository }}
+        github_sha: ${{ github.sha }}
+        github_server_url: ${{ github.server_url }}
+    
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ steps.version.outputs.tag }}
+        name: Release ${{ steps.version.outputs.version }}
+        body_path: release_notes.md
+        files: ${{ steps.release_prep.outputs.release_files }}
+        draft: false
+        prerelease: ${{ github.event_name == 'workflow_dispatch' }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

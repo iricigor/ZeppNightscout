@@ -1,0 +1,127 @@
+name: 'Release Preparation'
+description: 'Find artifacts, generate QR codes, and create release notes'
+inputs:
+  version:
+    description: 'Release version'
+    required: true
+  base_version:
+    description: 'Base version'
+    required: true
+  tag:
+    description: 'Release tag'
+    required: true
+  build_number:
+    description: 'Build number'
+    required: true
+  branch:
+    description: 'Branch name'
+    required: true
+  zeus_qr_generated:
+    description: 'Whether Zeus QR was generated'
+    required: true
+  repository:
+    description: 'GitHub repository'
+    required: true
+  github_sha:
+    description: 'GitHub commit SHA'
+    required: true
+  github_server_url:
+    description: 'GitHub server URL'
+    required: true
+outputs:
+  artifact_path:
+    description: 'Path to artifact'
+    value: ${{ steps.find_artifacts.outputs.ARTIFACT_PATH }}
+  artifact_name:
+    description: 'Name of artifact'
+    value: ${{ steps.find_artifacts.outputs.ARTIFACT_NAME }}
+  download_url:
+    description: 'Download URL'
+    value: ${{ steps.qr_code.outputs.DOWNLOAD_URL }}
+  qr_url:
+    description: 'QR code URL'
+    value: ${{ steps.qr_code.outputs.QR_URL }}
+  release_files:
+    description: 'Files to include in release'
+    value: ${{ steps.release_files.outputs.files }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Find build artifacts
+      id: find_artifacts
+      shell: bash
+      run: |
+        # Find all .zab files (Zepp App Bundle)
+        # Zeus CLI outputs to dist/ directory
+        if [ -f "dist/com.nightscout.zepp.zab" ]; then
+          echo "ARTIFACT_PATH=dist/com.nightscout.zepp.zab" >> $GITHUB_OUTPUT
+          echo "ARTIFACT_NAME=com.nightscout.zepp.zab" >> $GITHUB_OUTPUT
+        elif [ -d "dist" ]; then
+          ZAB_FILE=$(find dist -name "*.zab" | head -n 1)
+          if [ -n "$ZAB_FILE" ]; then
+            echo "ARTIFACT_PATH=$ZAB_FILE" >> $GITHUB_OUTPUT
+            echo "ARTIFACT_NAME=$(basename $ZAB_FILE)" >> $GITHUB_OUTPUT
+          else
+            echo "::error::No .zab file found in dist directory"
+            exit 1
+          fi
+        else
+          echo "::error::Build output directory (dist/) not found"
+          exit 1
+        fi
+        
+        # List what we have
+        echo "Build artifacts:"
+        ls -la dist/ || echo "No dist directory"
+    
+    - name: Generate QR code for download
+      id: qr_code
+      shell: bash
+      run: |
+        # Generate download URL
+        DOWNLOAD_URL="https://github.com/${{ inputs.repository }}/releases/download/${{ inputs.tag }}/${{ steps.find_artifacts.outputs.ARTIFACT_NAME }}"
+        echo "DOWNLOAD_URL=$DOWNLOAD_URL" >> $GITHUB_OUTPUT
+
+        # Generate QR code using api.qrserver.com service
+        QR_URL="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${DOWNLOAD_URL}"
+        echo "QR_URL=$QR_URL" >> $GITHUB_OUTPUT
+    
+    - name: Create Release Notes
+      id: release_notes
+      shell: bash
+      env:
+        GITHUB_SHA: ${{ inputs.github_sha }}
+        GITHUB_SERVER_URL: ${{ inputs.github_server_url }}
+        GITHUB_REPOSITORY: ${{ inputs.repository }}
+      run: |
+        # Generate URL for the uploaded QR code artifact if available
+        QR_IMAGE_URL=""
+        if [ "${{ inputs.zeus_qr_generated }}" == "true" ]; then
+          QR_IMAGE_URL="https://github.com/${{ inputs.repository }}/releases/download/${{ inputs.tag }}/zeus_preview_qr.png"
+        fi
+        
+        # Run the release notes generation script
+        bash scripts/generate-release-notes.sh \
+          "${{ inputs.version }}" \
+          "${{ inputs.base_version }}" \
+          "${{ inputs.build_number }}" \
+          "${{ inputs.tag }}" \
+          "${{ inputs.branch }}" \
+          "${{ steps.find_artifacts.outputs.ARTIFACT_NAME }}" \
+          "${{ steps.qr_code.outputs.DOWNLOAD_URL }}" \
+          "${{ steps.qr_code.outputs.QR_URL }}" \
+          "${{ inputs.zeus_qr_generated }}" \
+          "$QR_IMAGE_URL"
+    
+    - name: Prepare release files list
+      id: release_files
+      shell: bash
+      run: |
+        FILES="${{ steps.find_artifacts.outputs.ARTIFACT_PATH }}"
+        if [ "${{ inputs.zeus_qr_generated }}" == "true" ]; then
+          FILES="$FILES"$'\n'"zeus_preview_qr.png"
+        fi
+        echo "files<<EOF" >> $GITHUB_OUTPUT
+        echo "$FILES" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
