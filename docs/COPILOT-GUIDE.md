@@ -383,3 +383,10 @@ GitHub Copilot is configured and ready to use in this project:
 - ✅ Integrated in Codespaces
 
 Start coding and let Copilot assist you! Remember to review all suggestions and test thoroughly.
+
+## Important: Release Pipeline Maintenance
+
+When modifying the release workflow (`.github/workflows/release.yml`):
+1. **Always update the PR tracking comment** in the "Get version and build number" step
+2. Change `# Last modification done in PR iricigor/ZeppNightscout#XX` to your current PR number
+3. This helps track which PR last modified the release pipeline and prevents confusion when debugging pipeline issues

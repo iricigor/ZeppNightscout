@@ -19,6 +19,11 @@ Automated build and release pipeline that creates GitHub releases with Zeus prev
 - GitHub release creation with comprehensive notes
 - Multiple installation options via QR codes
 
+**Important: When modifying this workflow:**
+- Update the PR number in the "Get version and build number" step
+- Change the comment `# Last modification done in PR iricigor/ZeppNightscout#XX` to reflect your PR number
+- This helps track which PR last modified the release pipeline
+
 #### Required Secrets
 
 To enable Zeus preview QR code generation, configure these repository secrets:

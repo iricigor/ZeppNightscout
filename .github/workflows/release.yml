@@ -34,6 +34,9 @@ jobs:
     - name: Get version and build number
       id: get_version
       run: |
+        # Last modification done in PR iricigor/ZeppNightscout#49
+        echo "Last modification to release pipeline: PR #49"
+        
         # Read base version from app.json
         BASE_VERSION=$(node -p "require('./app.json').app.version.name")
         
