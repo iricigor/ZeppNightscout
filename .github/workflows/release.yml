@@ -122,6 +122,9 @@ jobs:
       id: zeus_preview
       if: env.ZEUS_LOGIN_SUCCESS == 'true'
       run: |
+        # Last modification done in PR iricigor/ZeppNightscout#50
+        echo "Last modification to Zeus Preview QR Code generation: PR #50"
+        
         # Install tools: qrencode/imagemagick for QR generation, expect for device selection automation
         echo "Installing required tools (qrencode, imagemagick, expect)..."
         if ! sudo DEBIAN_FRONTEND=noninteractive apt-get update -qq > /dev/null 2>&1; then
