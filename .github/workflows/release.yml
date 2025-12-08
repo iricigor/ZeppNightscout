@@ -112,53 +112,6 @@ jobs:
           echo "::warning::Zeus authentication configuration failed. Preview QR code will not be generated."
         fi
     
-    - name: Setup Zeus device cache
-      run: |
-        mkdir -p ~/.zepp
-        # expiredTime is set to 9999999999999 (year 2286) to prevent cache expiration
-        # This allows zeus build to run offline in CI without fetching device data
-        cat > ~/.zepp/.zeus_devices << 'EOF'
-        {
-          "devices": [
-            {
-              "productName": "gtr-3",
-              "deviceSource": 226,
-              "code": "gtr-3",
-              "value": {
-                "shape": "round",
-                "screen": {
-                  "size": "454*454"
-                },
-                "os": {
-                  "apiLevel": "1.0.1",
-                  "apiLevelLimitMin": "1.0.0",
-                  "apiLevelLimitMax": "2.0.0"
-                }
-              }
-            },
-            {
-              "productName": "gtr-3w",
-              "deviceSource": 227,
-              "code": "gtr-3w",
-              "value": {
-                "shape": "round",
-                "screen": {
-                  "size": "454*454"
-                },
-                "os": {
-                  "apiLevel": "1.0.1",
-                  "apiLevelLimitMin": "1.0.0",
-                  "apiLevelLimitMax": "2.0.0"
-                }
-              }
-            }
-          ],
-          "devices_beta": [],
-          "expiredTime": 9999999999999,
-          "version": "1.8.1"
-        }
-        EOF
-    
     - name: Build app with Zeus
       run: zeus build
     
