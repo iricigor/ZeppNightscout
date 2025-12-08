@@ -145,38 +145,56 @@ jobs:
         
         # Use expect to automate the device selection and capture all output
         PREVIEW_OUTPUT=$(expect -c "
-          # Set timeout to 60 seconds - sufficient for device selection and URL generation
-          # Command typically completes in 10-20 seconds; 60s provides ample buffer
-          set timeout 60
+          # Set timeout to 30 seconds - sufficient for device selection and URL generation
+          set timeout 30
           log_user 1
           log_file -noappend /tmp/zeus_preview.log
           
           spawn zeus preview
           
-          # Handle device selection, then wait for completion
+          # Variable to track if we found the URL
+          set url_found 0
+          
+          # Handle device selection and URL generation
           expect {
             \"Select a target device\" {
               send \"1\r\"
-              # After selecting device, wait for command to complete
+              # After selecting device, wait for the URL or completion
               expect {
+                -re \"(zepp://|https://)\" {
+                  set url_found 1
+                  # Give it a moment to output the full URL
+                  sleep 1
+                  puts \"\\nURL detected, exiting...\"
+                }
                 timeout {
-                  puts \"Command completed (timeout reached)\"
+                  puts \"\\nTimeout after device selection\"
                 }
                 eof {
-                  puts \"Command completed successfully\"
+                  puts \"\\nCommand completed (EOF)\"
                 }
               }
             }
+            -re \"(zepp://|https://)\" {
+              set url_found 1
+              sleep 1
+              puts \"\\nURL detected without device selection, exiting...\"
+            }
             timeout {
-              puts \"Timeout waiting for device selection prompt\"
+              puts \"\\nTimeout waiting for device selection prompt\"
             }
             eof {
-              puts \"Command completed (no device selection needed)\"
+              puts \"\\nCommand completed (no device selection needed)\"
             }
           }
           
-          # Capture any remaining output
+          # Force exit to prevent hanging
+          catch {
+            # Try to close the spawned process gracefully
+            close
+          }
           catch wait result
+          exit 0
         " 2>&1) || true
         
         echo "Preview output:"
