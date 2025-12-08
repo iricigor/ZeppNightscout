@@ -1,6 +1,6 @@
 {
   "name": "zepp-nightscout",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "An app for Zepp OS that connects to Nightscout instance and displays CGM data",
   "scripts": {
     "dev": "echo 'Run: zeus dev (requires @zeppos/zeus-cli)'",
