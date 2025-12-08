@@ -149,7 +149,8 @@ jobs:
         set +e  # Temporarily disable exit-on-error to capture exit code
         
         # Write expect script to temp file to avoid bash interpretation issues
-        cat > /tmp/zeus_expect.exp << 'EXPECT_SCRIPT'
+        EXPECT_SCRIPT=$(mktemp)
+        cat > "$EXPECT_SCRIPT" << 'EXPECT_HEREDOC'
 # Set timeout to 30 seconds - sufficient for device selection and URL generation
 set timeout 30
 log_user 1
@@ -199,10 +200,11 @@ catch {
   wait
 }
 exit 0
-EXPECT_SCRIPT
+EXPECT_HEREDOC
         
-        PREVIEW_OUTPUT=$(timeout 45 expect /tmp/zeus_expect.exp 2>&1)
+        PREVIEW_OUTPUT=$(timeout 45 expect "$EXPECT_SCRIPT" 2>&1)
         EXPECT_EXIT_CODE=$?
+        rm -f "$EXPECT_SCRIPT"  # Clean up temp file
         set -e  # Re-enable exit-on-error
         
         # Check if the command timed out (timeout command returns exit code 124)
