@@ -141,7 +141,7 @@ jobs:
               send \"1\r\"
               exp_continue
             }
-            -re \"(zepp://[^\r\n\s\"]+|https://[^\r\n\s\"]+)\" {
+            -re \"(zepp://\[^\\\\r\\\\n\\\\s\]+|https://\[^\\\\r\\\\n\\\\s\]+)\" {
               exp_continue
             }
             timeout {
