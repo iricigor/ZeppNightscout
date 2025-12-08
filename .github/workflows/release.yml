@@ -141,7 +141,7 @@ jobs:
               send \"1\r\"
               exp_continue
             }
-            -re \"(zepp://[^\r\n ]+|https://[^\r\n ]+)\" {
+            -re \"(zepp://[^\r\n\s\"]+|https://[^\r\n\s\"]+)\" {
               exp_continue
             }
             timeout {
@@ -163,21 +163,24 @@ jobs:
           cat /tmp/zeus_preview.log
         fi
         
-        # Try to extract the preview URL from output
-        # First try zepp:// deep link format (preferred)
-        PREVIEW_URL=$(echo "$PREVIEW_OUTPUT" | grep -oP 'zepp://[^\s\r\n"]+' | head -1 || echo "")
-        
-        # If no zepp:// URL found, try https:// format
-        if [ -z "$PREVIEW_URL" ]; then
-          PREVIEW_URL=$(echo "$PREVIEW_OUTPUT" | grep -oP 'https://[a-zA-Z0-9./?&=_-]+' | head -1 || echo "")
-        fi
-        
-        # Also check the log file
-        if [ -z "$PREVIEW_URL" ] && [ -f /tmp/zeus_preview.log ]; then
-          PREVIEW_URL=$(cat /tmp/zeus_preview.log | grep -oP 'zepp://[^\s\r\n"]+' | head -1 || echo "")
-          if [ -z "$PREVIEW_URL" ]; then
-            PREVIEW_URL=$(cat /tmp/zeus_preview.log | grep -oP 'https://[a-zA-Z0-9./?&=_-]+' | head -1 || echo "")
+        # Helper function to extract URL from text
+        extract_url() {
+          local text="$1"
+          # First try zepp:// deep link format (preferred)
+          local url=$(echo "$text" | grep -oP 'zepp://[^\s\r\n"]+' | head -1 || echo "")
+          # If no zepp:// URL found, try https:// format
+          if [ -z "$url" ]; then
+            url=$(echo "$text" | grep -oP 'https://[a-zA-Z0-9./?&=_-]+' | head -1 || echo "")
           fi
+          echo "$url"
+        }
+        
+        # Try to extract the preview URL from output
+        PREVIEW_URL=$(extract_url "$PREVIEW_OUTPUT")
+        
+        # Also check the log file if URL not found in stdout
+        if [ -z "$PREVIEW_URL" ] && [ -f /tmp/zeus_preview.log ]; then
+          PREVIEW_URL=$(extract_url "$(cat /tmp/zeus_preview.log)")
         fi
         
         if [ -n "$PREVIEW_URL" ]; then
