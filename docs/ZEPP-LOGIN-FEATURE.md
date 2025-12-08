@@ -208,7 +208,7 @@ Potential enhancements for future versions:
 
 Related documentation:
 - [Release Process](RELEASES.md) - Complete release workflow documentation
-- [Workflow README](.github/workflows/README.md) - GitHub Actions workflow details
+- [Workflow README](../.github/workflows/README.md) - GitHub Actions workflow details
 - [Quick Start](../QUICK-START.md) - Getting started with zeus preview
 
 ## Support
@@ -222,7 +222,7 @@ If you encounter issues:
 
 ## Credits
 
-This feature was implemented to address Issue #[number]: "QR code must point out to Zepp website"
+This feature was implemented to address the issue: "Zepp login - QR code must point out to Zepp website"
 
 Implementation details:
 - Uses `expect` for automated login

@@ -182,8 +182,8 @@ The release includes two types of QR codes:
 - **Fastest method**: No need to download files manually
 - **Requirement**: Zepp developer credentials must be configured in repository secrets
 - **How to use**: 
-  1. Enable Developer Mode in Zepp App
-  2. Open Profile → Your Device → Developer Mode
+  1. Enable Developer Mode in Zepp App (Profile → Settings → About → tap Zepp icon 7 times)
+  2. Open Zepp App → Profile → Your Device → Developer Mode
   3. Tap "Scan" and scan the Zeus Preview QR code
   4. App installs automatically to your watch
 

@@ -211,7 +211,7 @@ jobs:
             \"https://\" {
               set output \$expect_out(buffer)
               puts \$output
-              exp_continue  
+              exp_continue
             }
             timeout {
               puts \"Preview timeout\"
@@ -225,7 +225,8 @@ jobs:
         echo "$PREVIEW_OUTPUT"
         
         # Try to extract the preview URL from output
-        PREVIEW_URL=$(echo "$PREVIEW_OUTPUT" | grep -oP 'https://[^\s]+' | head -1 || echo "")
+        # Use a more specific regex to avoid capturing trailing punctuation
+        PREVIEW_URL=$(echo "$PREVIEW_OUTPUT" | grep -oP 'https://[a-zA-Z0-9./?&=_-]+' | head -1 || echo "")
         
         if [ -n "$PREVIEW_URL" ]; then
           echo "PREVIEW_URL=$PREVIEW_URL" >> $GITHUB_OUTPUT
