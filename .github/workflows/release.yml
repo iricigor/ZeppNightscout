@@ -162,7 +162,7 @@ jobs:
               send \"1\r\"
               # After selecting device, wait for the URL or completion
               expect {
-                -re \"(zepp://[^\\s\\r\\n\\\"]+|https://[a-zA-Z0-9./?&=_-]+)\" {
+                -re {(zepp://[^ \t\r\n"]+|https://[a-zA-Z0-9./?&=_-]+)} {
                   # Give it a moment to output the full URL
                   sleep 1
                   puts \"\\nURL detected, exiting...\"
@@ -175,7 +175,7 @@ jobs:
                 }
               }
             }
-            -re \"(zepp://[^\\s\\r\\n\\\"]+|https://[a-zA-Z0-9./?&=_-]+)\" {
+            -re {(zepp://[^ \t\r\n"]+|https://[a-zA-Z0-9./?&=_-]+)} {
               # URL appeared without device selection prompt
               sleep 1
               puts \"\\nURL detected without device selection, exiting...\"
@@ -322,6 +322,15 @@ jobs:
         > Make sure Developer Mode is enabled in your Zepp App (Profile → Settings → About → tap Zepp icon 7 times).
         
         EOF
+        else
+          cat >> release_notes.md << 'EOF'
+        ### ⚠️ Zeus Preview QR Code Not Available
+        
+        > **Note:** The Zeus Preview QR code for direct installation is not included in this release.
+        > This typically occurs when Zeus authentication tokens are not configured or when the preview generation failed.
+        > Please use one of the alternative installation methods below.
+        
+        EOF
         fi
         
         cat >> release_notes.md << 'EOF'
@@ -333,6 +342,11 @@ jobs:
         
         ### Installation Instructions
         
+        EOF
+        
+        # Conditional installation instructions based on Zeus QR availability
+        if [ "${{ steps.zeus_preview.outputs.ZEUS_QR_GENERATED }}" == "true" ]; then
+          cat >> release_notes.md << 'EOF'
         1. **Option 1 - Zeus Preview QR Code (Fastest)** ⭐
            - Enable Developer Mode in Zepp App (Profile → Settings → About → tap Zepp icon 7 times)
            - Open Zepp App → Profile → Your Device → Developer Mode
@@ -353,6 +367,27 @@ jobs:
            - Download the release artifact
            - Use `zeus preview` or `zeus install` commands
         
+        EOF
+        else
+          cat >> release_notes.md << 'EOF'
+        1. **Option 1 - Download QR Code** ⭐
+           - Scan the Download QR code above with your phone
+           - Download the `.zab` file
+           - Use the Zepp app to install it on your watch
+        
+        2. **Option 2 - Direct Download**
+           - Click the download link above
+           - Transfer the `.zab` file to your phone
+           - Use the Zepp app to install it on your watch
+        
+        3. **Option 3 - Zeus CLI**
+           - Download the release artifact
+           - Use `zeus preview` or `zeus install` commands
+        
+        EOF
+        fi
+        
+        cat >> release_notes.md << 'EOF'
         ### What's Included
         
         - App version: ${{ steps.get_version.outputs.VERSION }}
