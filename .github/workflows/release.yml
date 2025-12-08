@@ -34,8 +34,8 @@ jobs:
     - name: Get version and build number
       id: get_version
       run: |
-        # Last modification done in PR iricigor/ZeppNightscout#49
-        echo "Last modification to release pipeline: PR #49"
+        # Last modification done in PR iricigor/ZeppNightscout#52
+        echo "Last modification to release pipeline: PR #52"
         
         # Read base version from app.json
         BASE_VERSION=$(node -p "require('./app.json').app.version.name")
@@ -122,8 +122,8 @@ jobs:
       id: zeus_preview
       if: env.ZEUS_LOGIN_SUCCESS == 'true'
       run: |
-        # Last modification done in PR iricigor/ZeppNightscout#50
-        echo "Last modification to Zeus Preview QR Code generation: PR #50"
+        # Last modification done in PR iricigor/ZeppNightscout#52
+        echo "Last modification to Zeus Preview QR Code generation: PR #52"
         
         # Install tools: qrencode/imagemagick for QR generation, expect for device selection automation
         echo "Installing required tools (qrencode, imagemagick, expect)..."
@@ -143,41 +143,68 @@ jobs:
         # Run zeus preview and capture output
         echo "Running zeus preview to generate QR code..."
         
+        # Use timeout wrapper to prevent indefinite hanging (45 seconds max)
+        # This provides a hard limit even if expect script itself hangs
         # Use expect to automate the device selection and capture all output
-        PREVIEW_OUTPUT=$(expect -c "
-          # Set timeout to 60 seconds - sufficient for device selection and URL generation
-          # Command typically completes in 10-20 seconds; 60s provides ample buffer
-          set timeout 60
+        set +e  # Temporarily disable exit-on-error to capture exit code
+        PREVIEW_OUTPUT=$(timeout 45 expect -c "
+          # Set timeout to 30 seconds - sufficient for device selection and URL generation
+          set timeout 30
           log_user 1
           log_file -noappend /tmp/zeus_preview.log
           
           spawn zeus preview
           
-          # Handle device selection, then wait for completion
+          # Handle device selection and URL generation
+          # Two scenarios: 1) Device selection prompt appears, 2) Direct URL output
           expect {
             \"Select a target device\" {
               send \"1\r\"
-              # After selecting device, wait for command to complete
+              # After selecting device, wait for the URL or completion
               expect {
+                -re \"(zepp://[^\\s\\r\\n\\\"]+|https://[a-zA-Z0-9./?&=_-]+)\" {
+                  # Give it a moment to output the full URL
+                  sleep 1
+                  puts \"\\nURL detected, exiting...\"
+                }
                 timeout {
-                  puts \"Command completed (timeout reached)\"
+                  puts \"\\nTimeout after device selection\"
                 }
                 eof {
-                  puts \"Command completed successfully\"
+                  puts \"\\nCommand completed (EOF)\"
                 }
               }
             }
+            -re \"(zepp://[^\\s\\r\\n\\\"]+|https://[a-zA-Z0-9./?&=_-]+)\" {
+              # URL appeared without device selection prompt
+              sleep 1
+              puts \"\\nURL detected without device selection, exiting...\"
+            }
             timeout {
-              puts \"Timeout waiting for device selection prompt\"
+              puts \"\\nTimeout waiting for device selection prompt\"
             }
             eof {
-              puts \"Command completed (no device selection needed)\"
+              puts \"\\nCommand completed (no device selection needed)\"
             }
           }
           
-          # Capture any remaining output
-          catch wait result
-        " 2>&1) || true
+          # Force exit to prevent hanging
+          catch {
+            # Try to close the spawned process gracefully
+            close
+          }
+          catch {
+            wait
+          }
+          exit 0
+        " 2>&1)
+        EXPECT_EXIT_CODE=$?
+        set -e  # Re-enable exit-on-error
+        
+        # Check if the command timed out (timeout command returns exit code 124)
+        if [ $EXPECT_EXIT_CODE -eq 124 ]; then
+          echo "::warning::Zeus preview command timed out after 45 seconds"
+        fi
         
         echo "Preview output:"
         echo "$PREVIEW_OUTPUT"
