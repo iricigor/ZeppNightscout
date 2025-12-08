@@ -98,9 +98,11 @@ jobs:
         fi
         
         # Configure Zeus CLI with authentication tokens using zeus config
-        zeus config set "____user_zepp_com__token=$ZEPP_APP_TOKEN" \
-                        "____user_zepp_com__userid=$ZEPP_USER_ID" \
-                        "____user_zepp_com__cname=$ZEPP_CNAME"
+        # Zeus CLI supports setting multiple config values in a single command
+        zeus config set \
+          "____user_zepp_com__token=$ZEPP_APP_TOKEN" \
+          "____user_zepp_com__userid=$ZEPP_USER_ID" \
+          "____user_zepp_com__cname=$ZEPP_CNAME"
         
         if [ $? -eq 0 ]; then
           echo "ZEUS_LOGIN_SUCCESS=true" >> $GITHUB_ENV
@@ -164,14 +166,13 @@ jobs:
       id: zeus_preview
       if: env.ZEUS_LOGIN_SUCCESS == 'true'
       run: |
-        # Install tools for QR code generation and device selection automation
+        # Install tools for QR code generation
         sudo apt-get update && sudo apt-get install -y qrencode imagemagick expect
+        
         # Note: expect is needed to automate device selection in 'zeus preview'
-        # as Zeus CLI doesn't provide a command-line option for device selection
+        # Zeus CLI doesn't provide a command-line option for device selection
         
         # Run zeus preview and capture output
-        # The preview command will generate a QR code in terminal
-        # We need to capture the preview URL from the output
         echo "Running zeus preview to generate QR code..."
         
         # Use expect to automate the device selection and capture QR code

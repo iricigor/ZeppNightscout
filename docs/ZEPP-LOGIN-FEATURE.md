@@ -77,7 +77,7 @@ To enable Zeus preview QR code generation, add these secrets to your repository:
    
    # Copy these three values:
    # - ____user_zepp_com__token
-   # - ____user_zepp_com__userid  
+   # - ____user_zepp_com__userid
    # - ____user_zepp_com__cname
    ```
 
