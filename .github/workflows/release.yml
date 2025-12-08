@@ -157,45 +157,45 @@ jobs:
           
           # Handle device selection and URL generation
           # Two scenarios: 1) Device selection prompt appears, 2) Direct URL output
-          expect {
-            \"Select a target device\" {
-              send \"1\r\"
+          expect \{
+            \\\"Select a target device\\\" \{
+              send \\\"1\\r\\\"
               # After selecting device, wait for the URL or completion
-              expect {
-                -re {(zepp://[^ \t\r\n"]+|https://[a-zA-Z0-9./?&=_:#-]+)} {
+              expect \{
+                -re \{(zepp://[^ \\t\\r\\n\"]+|https://[a-zA-Z0-9./?&=_:#-]+)\} \{
                   # Give it a moment to output the full URL
                   sleep 1
-                  puts \"\\nURL detected, exiting...\"
-                }
-                timeout {
-                  puts \"\\nTimeout after device selection\"
-                }
-                eof {
-                  puts \"\\nCommand completed (EOF)\"
-                }
-              }
-            }
-            -re {(zepp://[^ \t\r\n"]+|https://[a-zA-Z0-9./?&=_:#-]+)} {
+                  puts \\\"\\\\nURL detected, exiting...\\\"
+                \}
+                timeout \{
+                  puts \\\"\\\\nTimeout after device selection\\\"
+                \}
+                eof \{
+                  puts \\\"\\\\nCommand completed (EOF)\\\"
+                \}
+              \}
+            \}
+            -re \{(zepp://[^ \\t\\r\\n\"]+|https://[a-zA-Z0-9./?&=_:#-]+)\} \{
               # URL appeared without device selection prompt
               sleep 1
-              puts \"\\nURL detected without device selection, exiting...\"
-            }
-            timeout {
-              puts \"\\nTimeout waiting for device selection prompt\"
-            }
-            eof {
-              puts \"\\nCommand completed (no device selection needed)\"
-            }
-          }
+              puts \\\"\\\\nURL detected without device selection, exiting...\\\"
+            \}
+            timeout \{
+              puts \\\"\\\\nTimeout waiting for device selection prompt\\\"
+            \}
+            eof \{
+              puts \\\"\\\\nCommand completed (no device selection needed)\\\"
+            \}
+          \}
           
           # Force exit to prevent hanging
-          catch {
+          catch \{
             # Try to close the spawned process gracefully
             close
-          }
-          catch {
+          \}
+          catch \{
             wait
-          }
+          \}
           exit 0
         " 2>&1)
         EXPECT_EXIT_CODE=$?
