@@ -130,24 +130,32 @@ jobs:
         
         # Use expect to automate the device selection and capture all output
         PREVIEW_OUTPUT=$(expect -c "
-          set timeout 120
+          set timeout 60
           log_user 1
           log_file -noappend /tmp/zeus_preview.log
           
           spawn zeus preview
           
+          # Handle device selection, then wait for completion
           expect {
             \"Select a target device\" {
               send \"1\r\"
-              exp_continue
-            }
-            -re \"(zepp://\[^\\\\r\\\\n\\\\s\]+|https://\[^\\\\r\\\\n\\\\s\]+)\" {
-              exp_continue
+              # After selecting device, wait for command to complete
+              expect {
+                timeout {
+                  puts \"Command completed (timeout reached)\"
+                }
+                eof {
+                  puts \"Command completed successfully\"
+                }
+              }
             }
             timeout {
-              puts \"Preview timeout after 120 seconds\"
+              puts \"Timeout waiting for device selection prompt\"
             }
-            eof
+            eof {
+              puts \"Command completed (no device selection needed)\"
+            }
           }
           
           # Capture any remaining output
