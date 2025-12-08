@@ -34,8 +34,8 @@ jobs:
     - name: Get version and build number
       id: get_version
       run: |
-        # Last modification done in PR iricigor/ZeppNightscout#49
-        echo "Last modification to release pipeline: PR #49"
+        # Last modification done in PR iricigor/ZeppNightscout#52
+        echo "Last modification to release pipeline: PR #52"
         
         # Read base version from app.json
         BASE_VERSION=$(node -p "require('./app.json').app.version.name")
@@ -122,9 +122,8 @@ jobs:
       id: zeus_preview
       if: env.ZEUS_LOGIN_SUCCESS == 'true'
       run: |
-        # Last modification done in PR iricigor/ZeppNightscout#50
-        echo "Last modification to Zeus Preview QR Code generation: PR #50"
-        echo "Pipeline run number: ${{ github.run_number }}"
+        # Last modification done in PR iricigor/ZeppNightscout#52
+        echo "Last modification to Zeus Preview QR Code generation: PR #52"
         
         # Install tools: qrencode/imagemagick for QR generation, expect for device selection automation
         echo "Installing required tools (qrencode, imagemagick, expect)..."
