@@ -10,29 +10,29 @@
 
 ## What Was Implemented
 
-### 1. Automated Zeus Login (Requirement: "login to Zepp using repo secrets")
+### 1. Non-Interactive Zeus Authentication (Requirement: "provide arguments in commandline")
 
-**Location**: `.github/workflows/release.yml` lines 86-132
+**Location**: `.github/workflows/release.yml` lines 86-111
 
 **Implementation**:
-- Installs `expect` tool for automated CLI interaction
-- Uses repository secrets `ZEPP_USERNAME` and `ZEPP_PASSWORD`
-- Automates the interactive `zeus login` command
+- Uses repository secrets `ZEPP_APP_TOKEN`, `ZEPP_USER_ID`, and `ZEPP_CNAME`
+- Configures Zeus CLI authentication using `zeus config set` command
+- Non-interactive authentication suitable for CI/CD (command-line arguments)
 - Includes graceful fallback if secrets are not configured
 - Sets environment variable `ZEUS_LOGIN_SUCCESS` for subsequent steps
 
 **Key Features**:
-- Non-interactive login suitable for CI/CD
-- 30-second timeout for login process
+- Command-line based configuration (no interactive prompts for authentication)
 - Clear success/failure logging
 - Secure credential handling (never exposed in logs)
+- Still uses `expect` for device selection in `zeus preview` (Zeus CLI has no CLI option for this)
 
 ### 2. Zeus Preview QR Code Generation (Requirement: "build using zeus preview command")
 
 **Location**: `.github/workflows/release.yml` lines 184-241
 
 **Implementation**:
-- Runs `zeus preview` command after successful login
+- Runs `zeus preview` command after successful authentication
 - Uses `expect` to automate device selection
 - Captures preview URL from command output
 - Generates QR code image using `qrencode`
@@ -79,12 +79,15 @@
 ## Files Changed
 
 ### Modified Files
-1. `.github/workflows/release.yml` - Main implementation (150+ lines added)
-2. `docs/RELEASES.md` - Updated with prerequisites and QR code features
+1. `.github/workflows/release.yml` - Replaced interactive login with direct token configuration
+2. `docs/RELEASES.md` - Updated with new token-based authentication approach
+3. `docs/ZEPP-LOGIN-FEATURE.md` - Updated with new authentication method
+4. `.github/workflows/README.md` - Updated secrets documentation
 
 ### New Files
-1. `.github/workflows/README.md` - Workflow documentation (126 lines)
-2. `docs/ZEPP-LOGIN-FEATURE.md` - Feature guide (241 lines)
+1. `.github/workflows/README.md` - Workflow documentation (updated)
+2. `docs/ZEPP-LOGIN-FEATURE.md` - Feature guide (updated)
+3. `IMPLEMENTATION-SUMMARY.md` - This summary (updated)
 
 ## Configuration Required
 
@@ -92,15 +95,24 @@
 
 To enable Zeus preview QR code generation, add these secrets:
 
-1. Go to: **Repository Settings** → **Secrets and variables** → **Actions**
-2. Add secret: `ZEPP_USERNAME` = Your Zepp developer account email
-3. Add secret: `ZEPP_PASSWORD` = Your Zepp developer account password
+1. **Obtain authentication tokens locally:**
+   ```bash
+   zeus login  # Complete browser OAuth flow
+   zeus config list  # View stored tokens
+   ```
+
+2. Go to: **Repository Settings** → **Secrets and variables** → **Actions**
+
+3. Add these three secrets:
+   - `ZEPP_APP_TOKEN` = Value of `____user_zepp_com__token` from config list
+   - `ZEPP_USER_ID` = Value of `____user_zepp_com__userid` from config list
+   - `ZEPP_CNAME` = Value of `____user_zepp_com__cname` from config list
 
 **Important Notes**:
 - Secrets are **optional** - workflow works without them (uses download QR only)
 - Secrets are **encrypted** by GitHub and never exposed
+- Tokens are obtained from Zeus CLI after OAuth login
 - Zepp account can be created at [developers.zepp.com](https://developers.zepp.com/)
-- For third-party login (Google/Facebook), bind email at [user.huami.com](https://user.huami.com/privacy2/#/bindEmail)
 
 ## Testing
 
@@ -110,16 +122,17 @@ To enable Zeus preview QR code generation, add these secrets:
 - ✅ Security scan (CodeQL) - No vulnerabilities found
 
 ### Manual Testing Required
-Testing requires actual Zepp credentials to be configured:
+Testing requires actual Zepp authentication tokens to be configured:
 
-1. **Add secrets** to repository (see above)
-2. **Trigger workflow** manually:
+1. **Obtain tokens** locally (see Configuration section)
+2. **Add secrets** to repository
+3. **Trigger workflow** manually:
    - Go to Actions → Release workflow
    - Click "Run workflow"
    - Select branch
    - Run
-3. **Verify outputs**:
-   - Check workflow logs for successful login
+4. **Verify outputs**:
+   - Check workflow logs for successful authentication
    - Verify Zeus QR code is generated
    - Check release includes both QR codes
    - Test scanning Zeus Preview QR code with Zepp App
@@ -160,15 +173,15 @@ Testing requires actual Zepp credentials to be configured:
 
 ### Common Issues and Solutions
 
-**"ZEPP_USERNAME or ZEPP_PASSWORD secrets not set"**
+**"Authentication tokens not set"**
 - This is a warning, not an error
 - Workflow continues with download QR only
 - Add secrets to enable Zeus preview QR
 
-**"Zeus login failed"**
-- Check credentials are correct
-- Verify third-party login users have bound email
-- Check Zepp service availability
+**"Zeus authentication failed"**
+- Check token values are correct
+- Verify tokens aren't expired (refresh with `zeus login`)
+- Check for extra spaces when copying tokens
 - Workflow continues with download QR only
 
 **"Preview timeout"**
@@ -180,19 +193,26 @@ Testing requires actual Zepp credentials to be configured:
 
 ### For Repository Owner
 
-1. **Add Secrets** (optional but recommended):
-   ```
-   Settings → Secrets → Actions → New repository secret
-   - ZEPP_USERNAME: your-email@example.com
-   - ZEPP_PASSWORD: your-password
+1. **Obtain Tokens** (optional but recommended):
+   ```bash
+   zeus login  # Complete OAuth in browser
+   zeus config list  # View tokens
    ```
 
-2. **Test the Workflow**:
+2. **Add Secrets**:
+   ```
+   Settings → Secrets → Actions → New repository secret
+   - ZEPP_APP_TOKEN: [token value]
+   - ZEPP_USER_ID: [userid value]
+   - ZEPP_CNAME: [cname value]
+   ```
+
+3. **Test the Workflow**:
    ```
    Actions → Release → Run workflow → Select branch → Run
    ```
 
-3. **Verify Release**:
+4. **Verify Release**:
    - Check workflow logs
    - View created release
    - Test Zeus Preview QR code
@@ -206,12 +226,12 @@ Testing requires actual Zepp credentials to be configured:
 ## Maintenance
 
 ### Regular Tasks
-- **Rotate credentials** periodically for security
+- **Refresh tokens** periodically if they expire
 - **Monitor workflow logs** for any issues
 - **Update documentation** if Zeus CLI behavior changes
 
 ### Potential Future Improvements
-- Session caching to avoid repeated logins
+- Token refresh automation if Zeus CLI supports it
 - QR code preview in workflow summary
 - Support for multiple device targets
 - Expiration handling for preview URLs
@@ -231,11 +251,13 @@ Testing requires actual Zepp credentials to be configured:
 ## Conclusion
 
 ✅ **All requirements met**:
-- Zeus login automated using repository secrets
+- Zeus authentication now uses command-line arguments (non-interactive)
 - Zeus preview command generates QR code
 - Release includes newly generated QR code
 - Maintains existing functionality
 - Comprehensive documentation provided
 - Security best practices followed
 
-The implementation is **production-ready** and waiting for credential configuration to enable full functionality.
+**Key Improvement**: Replaced interactive login with direct command-line token configuration, addressing the issue's requirement to "provide arguments in commandline" instead of using interactive login. The device selection in `zeus preview` still uses `expect` for automation as Zeus CLI doesn't provide a command-line option for device selection, but the main authentication issue has been resolved.
+
+The implementation is **production-ready** and waiting for token configuration to enable full functionality.

@@ -24,20 +24,20 @@ This document describes the new Zeus login and QR code generation feature added 
 
 ### Technical Implementation
 
-1. **Zeus Login**: The workflow uses an `expect` script to automate the interactive `zeus login` command
-2. **Zeus Preview**: After successful login, `zeus preview` is run to generate a preview URL
+1. **Zeus Authentication**: The workflow uses `zeus config set` to configure authentication tokens directly
+2. **Zeus Preview**: After successful configuration, `zeus preview` is run to generate a preview URL
 3. **QR Code Generation**: The preview URL is converted to a QR code image using `qrencode`
 4. **Release Publishing**: The QR code image is uploaded as a release artifact and displayed in release notes
 
 ### Workflow Steps
 
 ```
-1. Setup (Node.js, Zeus CLI, expect)
-2. Zeus Login (automated with expect script)
+1. Setup (Node.js, Zeus CLI)
+2. Zeus Authentication (configure via zeus config set)
    ├─ Success: Continue to preview
    └─ Failure: Skip preview, continue with download QR only
 3. Build app (zeus build)
-4. Generate Zeus Preview QR Code (if login successful)
+4. Generate Zeus Preview QR Code (if authentication successful)
    ├─ Run zeus preview
    ├─ Extract preview URL
    ├─ Generate QR code image
@@ -57,25 +57,41 @@ To enable Zeus preview QR code generation, add these secrets to your repository:
 
 | Secret | Description | How to Get |
 |--------|-------------|------------|
-| `ZEPP_USERNAME` | Zepp developer account email/username | Your Zepp developer account credentials |
-| `ZEPP_PASSWORD` | Zepp developer account password | Your Zepp developer account credentials |
+| `ZEPP_APP_TOKEN` | Zepp OAuth application token | Run `zeus login` then `zeus config list`, copy `____user_zepp_com__token` |
+| `ZEPP_USER_ID` | Zepp user ID | Run `zeus login` then `zeus config list`, copy `____user_zepp_com__userid` |
+| `ZEPP_CNAME` | Zepp account display name | Run `zeus login` then `zeus config list`, copy `____user_zepp_com__cname` |
 
 ### Setup Instructions
 
 1. **Get Zepp Developer Account**
    - If you don't have one, register at [developers.zepp.com](https://developers.zepp.com/)
-   - If using third-party login (Google/Facebook), bind email and set password at [user.huami.com](https://user.huami.com/privacy2/#/bindEmail)
+   - Complete the browser-based OAuth login flow
 
-2. **Add Secrets to Repository**
+2. **Obtain Authentication Tokens**
+   ```bash
+   # Login via browser OAuth
+   zeus login
+   
+   # List configuration to get token values
+   zeus config list
+   
+   # Copy these three values:
+   # - ____user_zepp_com__token
+   # - ____user_zepp_com__userid
+   # - ____user_zepp_com__cname
+   ```
+
+3. **Add Secrets to Repository**
    ```
    GitHub Repository → Settings → Secrets and variables → Actions → New repository secret
    
    Add:
-   - Name: ZEPP_USERNAME, Value: your-email@example.com
-   - Name: ZEPP_PASSWORD, Value: your-password
+   - Name: ZEPP_APP_TOKEN, Value: [token from config list]
+   - Name: ZEPP_USER_ID, Value: [userid from config list]
+   - Name: ZEPP_CNAME, Value: [cname from config list]
    ```
 
-3. **Trigger a Release**
+4. **Trigger a Release**
    - Push a tag: `git tag v0.1.0 && git push origin v0.1.0`
    - Or manually trigger via Actions tab
 
@@ -101,6 +117,8 @@ To enable Zeus preview QR code generation, add these secrets to your repository:
 
 ### For Developers
 
+- **Non-interactive authentication**: Uses command-line configuration instead of interactive login
+- **Minimal dependencies**: Uses `expect` only for device selection (Zeus CLI limitation)
 - **Automated**: No manual QR code generation needed
 - **Consistent**: Same QR code for all users
 - **Flexible**: Works with or without Zeus credentials
@@ -119,24 +137,24 @@ To enable Zeus preview QR code generation, add these secrets to your repository:
 ### Best Practices
 
 1. Use a dedicated Zepp developer account for CI/CD
-2. Rotate credentials periodically
+2. Refresh tokens periodically (they may expire)
 3. Review workflow logs to ensure secrets are masked
 4. Limit repository access to trusted collaborators
-5. Use read-only tokens where possible (if Zepp supports)
+5. Keep local Zeus CLI updated to ensure token compatibility
 
 ## Troubleshooting
 
-### Zeus Login Fails
+### Zeus Authentication Fails
 
 **Symptoms:**
-- Warning: "Zeus login failed. Preview QR code will not be generated."
+- Warning: "Zeus authentication configuration failed. Preview QR code will not be generated."
 - No Zeus Preview QR code in release
 
 **Solutions:**
-1. Verify secrets are configured correctly
-2. Check credentials work with manual `zeus login`
-3. For third-party login, ensure email/password are bound
-4. Check workflow logs for detailed error messages
+1. Verify secrets are configured correctly (ZEPP_APP_TOKEN, ZEPP_USER_ID, ZEPP_CNAME)
+2. Refresh tokens by running `zeus login` locally and updating secrets
+3. Check workflow logs for detailed error messages
+4. Ensure token values don't have extra spaces or newlines
 5. Retry the workflow run
 
 **Note:** Releases will still succeed without Zeus preview QR code.
@@ -167,10 +185,10 @@ To enable Zeus preview QR code generation, add these secrets to your repository:
 ### Secrets Not Working
 
 **Symptoms:**
-- "ZEPP_USERNAME or ZEPP_PASSWORD secrets not set" warning
+- "ZEPP_APP_TOKEN, ZEPP_USER_ID, or ZEPP_CNAME secrets not set" warning
 
 **Solutions:**
-1. Verify secrets are named exactly: `ZEPP_USERNAME` and `ZEPP_PASSWORD`
+1. Verify secrets are named exactly: `ZEPP_APP_TOKEN`, `ZEPP_USER_ID`, and `ZEPP_CNAME`
 2. Check they are set as **repository secrets**, not environment variables
 3. Verify repository has access to secrets
 4. Re-add secrets if needed
@@ -181,7 +199,7 @@ To enable Zeus preview QR code generation, add these secrets to your repository:
 
 1. Configure secrets in your fork/branch
 2. Trigger manual workflow dispatch
-3. Check workflow logs for successful login
+3. Check workflow logs for successful authentication
 4. Verify release includes Zeus preview QR code
 5. Test scanning QR code with Zepp App
 
@@ -189,7 +207,7 @@ To enable Zeus preview QR code generation, add these secrets to your repository:
 
 The workflow includes built-in testing:
 - Validates secrets are available (warns if missing)
-- Tests Zeus login success
+- Tests Zeus authentication success
 - Validates QR code generation
 - Uploads artifacts for verification
 - Creates comprehensive release notes
@@ -198,11 +216,11 @@ The workflow includes built-in testing:
 
 Potential enhancements for future versions:
 
-1. **Session Caching**: Save Zeus session between workflow runs to avoid repeated logins
+1. **Token Refresh**: Automatically refresh expired tokens if Zeus CLI supports it
 2. **QR Code Preview**: Display QR code in workflow summary
 3. **Multiple Device Targets**: Generate QR codes for different watch models
 4. **Expiration Handling**: Regenerate QR codes if they expire
-5. **Alternative Auth**: Support token-based auth if Zeus CLI adds it
+5. **Environment Variables**: Support setting tokens via environment variables for local testing
 
 ## Documentation
 
@@ -222,10 +240,11 @@ If you encounter issues:
 
 ## Credits
 
-This feature was implemented to address the issue: "Zepp login - QR code must point out to Zepp website"
+This feature was implemented to provide automated Zeus preview QR code generation in CI/CD pipelines.
 
 Implementation details:
-- Uses `expect` for automated login
+- Uses `zeus config set` for non-interactive authentication
 - Uses `qrencode` for QR code image generation
+- Uses `expect` for automating device selection in `zeus preview` (Zeus CLI limitation)
 - Graceful fallback when secrets unavailable
 - Comprehensive error handling and logging
