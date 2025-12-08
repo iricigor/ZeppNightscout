@@ -45,7 +45,8 @@ expect {
   -re {Which device would you like to preview\?} {
     # Wait a moment for the list to fully render
     sleep 0.5
-    # Send down arrow to move from "Amazfit GTR 3" to "Amazfit Balance"
+    # Send down arrow to move from "Amazfit GTR 3" (default/first) to "Amazfit Balance" (second)
+    # This selects the primary target device for the app
     send "\033\[B"
     sleep 0.5
     # Send enter to confirm selection
@@ -157,6 +158,7 @@ fi
 # If still no URL found, try to decode ASCII QR code
 if [ -z "$PREVIEW_URL" ]; then
   echo "No URL text found in output, attempting to decode ASCII QR code..."
+  echo "::debug::ASCII QR decoding is experimental and may not work reliably"
   
   # Try from stdout first
   PREVIEW_URL=$(extract_qr_from_ascii "$PREVIEW_OUTPUT")
@@ -165,6 +167,13 @@ if [ -z "$PREVIEW_URL" ]; then
   if [ -z "$PREVIEW_URL" ] && [ -f /tmp/zeus_preview.log ]; then
     echo "Trying to decode QR from log file..."
     PREVIEW_URL=$(extract_qr_from_ascii "$(cat /tmp/zeus_preview.log)")
+  fi
+  
+  # If still no URL, provide helpful information
+  if [ -z "$PREVIEW_URL" ]; then
+    echo "::notice::ASCII QR code decoding is experimental and currently unable to extract the URL"
+    echo "::notice::The QR code is displayed above for manual scanning with the Zepp app"
+    echo "::notice::To scan: Open Zepp App → Profile → Your Device → Developer Mode → Scan"
   fi
 fi
 
