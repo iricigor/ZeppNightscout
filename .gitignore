@@ -32,3 +32,6 @@ temp/
 # Zepp OS specific
 .zepp/
 *.zab
+
+# QR code temp files
+qr_temp.png
