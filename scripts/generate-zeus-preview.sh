@@ -39,8 +39,9 @@ spawn zeus preview
 # Handle device selection and URL generation
 # Two scenarios: 1) Device selection prompt appears, 2) Direct URL output
 expect {
-  "Select a target device" {
-    send "1\r"
+  -re {Which device would you like to preview\?|Select a target device} {
+    # Send down arrow and enter to select first device
+    send "\r"
     # After selecting device, wait for the URL or completion
     expect {
       -re {(zepp://[^ \t\r\n"]+|https://[a-zA-Z0-9./?&=_:#-]+)} {
