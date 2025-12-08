@@ -83,52 +83,31 @@ jobs:
     - name: Install Zeus CLI
       run: npm install -g @zeppos/zeus-cli
     
-    - name: Install expect for automated login
-      run: sudo apt-get update && sudo apt-get install -y expect
-    
-    - name: Login to Zeus CLI
+    - name: Configure Zeus CLI authentication
       env:
-        ZEPP_USERNAME: ${{ secrets.ZEPP_USERNAME }}
-        ZEPP_PASSWORD: ${{ secrets.ZEPP_PASSWORD }}
+        ZEPP_APP_TOKEN: ${{ secrets.ZEPP_APP_TOKEN }}
+        ZEPP_USER_ID: ${{ secrets.ZEPP_USER_ID }}
+        ZEPP_CNAME: ${{ secrets.ZEPP_CNAME }}
       run: |
-        # Check if credentials are available
-        if [ -z "$ZEPP_USERNAME" ] || [ -z "$ZEPP_PASSWORD" ]; then
-          echo "::warning::ZEPP_USERNAME or ZEPP_PASSWORD secrets not set. Skipping Zeus login."
+        # Check if authentication tokens are available
+        if [ -z "$ZEPP_APP_TOKEN" ] || [ -z "$ZEPP_USER_ID" ] || [ -z "$ZEPP_CNAME" ]; then
+          echo "::warning::ZEPP_APP_TOKEN, ZEPP_USER_ID, or ZEPP_CNAME secrets not set. Skipping Zeus authentication."
           echo "::warning::Zeus preview QR code will not be generated."
           echo "ZEUS_LOGIN_SUCCESS=false" >> $GITHUB_ENV
           exit 0
         fi
         
-        # Use expect to automate zeus login
-        expect -c "
-          set timeout 30
-          spawn zeus login
-          expect {
-            \"email\" {
-              send \"$ZEPP_USERNAME\r\"
-              exp_continue
-            }
-            \"password\" {
-              send \"$ZEPP_PASSWORD\r\"
-              exp_continue
-            }
-            \"successfully\" {
-              exit 0
-            }
-            timeout {
-              puts \"Login timeout\"
-              exit 1
-            }
-            eof
-          }
-        "
+        # Configure Zeus CLI with authentication tokens using zeus config
+        zeus config set "____user_zepp_com__token=$ZEPP_APP_TOKEN" \
+                        "____user_zepp_com__userid=$ZEPP_USER_ID" \
+                        "____user_zepp_com__cname=$ZEPP_CNAME"
         
         if [ $? -eq 0 ]; then
           echo "ZEUS_LOGIN_SUCCESS=true" >> $GITHUB_ENV
-          echo "✅ Successfully logged in to Zeus CLI"
+          echo "✅ Successfully configured Zeus CLI authentication"
         else
           echo "ZEUS_LOGIN_SUCCESS=false" >> $GITHUB_ENV
-          echo "::warning::Zeus login failed. Preview QR code will not be generated."
+          echo "::warning::Zeus authentication configuration failed. Preview QR code will not be generated."
         fi
     
     - name: Setup Zeus device cache

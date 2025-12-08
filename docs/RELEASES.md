@@ -8,15 +8,26 @@ This document describes how to create and publish new releases of ZeppNightscout
 
 To enable Zeus preview QR code generation in releases, you need to configure the following repository secrets:
 
-1. **ZEPP_USERNAME**: Your Zepp developer account email/username
-2. **ZEPP_PASSWORD**: Your Zepp developer account password
+1. **ZEPP_APP_TOKEN**: Your Zepp OAuth application token
+2. **ZEPP_USER_ID**: Your Zepp user ID
+3. **ZEPP_CNAME**: Your Zepp account display name
 
 **To add these secrets:**
 
 1. Go to your repository's **Settings** → **Secrets and variables** → **Actions**
 2. Click **New repository secret**
-3. Add `ZEPP_USERNAME` with your Zepp account email
-4. Add `ZEPP_PASSWORD` with your Zepp account password
+3. Add the three secrets with their corresponding values
+
+**How to get these values:**
+
+These are OAuth tokens stored by Zeus CLI after login. To obtain them:
+
+1. Run `zeus login` on your local machine and complete the browser OAuth flow
+2. After successful login, run: `zeus config list`
+3. Look for the values:
+   - `____user_zepp_com__token` → use as **ZEPP_APP_TOKEN**
+   - `____user_zepp_com__userid` → use as **ZEPP_USER_ID**
+   - `____user_zepp_com__cname` → use as **ZEPP_CNAME**
 
 **Note:** If these secrets are not configured, the release workflow will still work but will skip the Zeus preview QR code generation step. You'll see a warning in the workflow logs.
 
@@ -132,9 +143,9 @@ The release workflow (`.github/workflows/release.yml`) performs these steps:
    
 3. **Setup**: Installs Node.js and Zeus CLI
 
-4. **Zeus Login** (if credentials configured):
-   - Uses expect script to automate `zeus login`
-   - Authenticates with ZEPP_USERNAME and ZEPP_PASSWORD secrets
+4. **Zeus Authentication** (if tokens configured):
+   - Configures Zeus CLI authentication using `zeus config set`
+   - Uses ZEPP_APP_TOKEN, ZEPP_USER_ID, and ZEPP_CNAME secrets
    - Enables Zeus preview QR code generation
 
 5. **Build**: Compiles the app using `zeus build` with the updated version
@@ -228,16 +239,16 @@ After a release is published, users can install the app in four ways:
 
 ## Troubleshooting
 
-### Zeus login failed
+### Zeus authentication failed
 
-If you see warnings about Zeus login failing:
+If you see warnings about Zeus authentication failing:
 
-1. **Check secrets are configured**: Verify that `ZEPP_USERNAME` and `ZEPP_PASSWORD` are set in repository secrets
-2. **Verify credentials**: Make sure the credentials are correct for your Zepp developer account
-3. **Third-party login users**: If you registered with Google/Facebook, you need to bind an email and set a password at [user.huami.com](https://user.huami.com/privacy2/#/bindEmail)
-4. **Network issues**: Check if the workflow can access Zepp servers
+1. **Check secrets are configured**: Verify that `ZEPP_APP_TOKEN`, `ZEPP_USER_ID`, and `ZEPP_CNAME` are set in repository secrets
+2. **Verify token values**: Make sure the tokens are obtained from a successful `zeus login` on your local machine
+3. **Refresh tokens**: If tokens are old, run `zeus login` again and update the secrets with fresh values
+4. **Check token format**: Ensure no extra spaces or characters were added when copying the token values
 
-**Note:** If Zeus login fails, the release will still succeed but without the Zeus Preview QR code. Users can still use the Download QR code.
+**Note:** If Zeus authentication fails, the release will still succeed but without the Zeus Preview QR code. Users can still use the Download QR code.
 
 ### Release workflow fails
 
@@ -250,7 +261,7 @@ If the release workflow fails:
    - Artifact not found: Zeus may have changed output directory
    - QR code generation failed: Check network connectivity
    - Version update failed: Check Node.js is available
-   - Zeus login failed: Check ZEPP_USERNAME and ZEPP_PASSWORD secrets
+   - Zeus authentication failed: Check ZEPP_APP_TOKEN, ZEPP_USER_ID, and ZEPP_CNAME secrets
 
 ### Tag already exists
 
