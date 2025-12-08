@@ -10,6 +10,7 @@
     "install:device": "echo 'Run: zeus install (requires @zeppos/zeus-cli and connected device)'",
     "test": "node tests/test-parser.js && node tests/test-url-token-validation.js",
     "test:syntax": "node --check page/index.js && node --check app-side/index.js && node --check shared/message.js",
+    "test:yaml": "node tests/test-yaml.js",
     "test:build": "node tests/test-build.js",
     "simulator": "node scripts/start-simulator.js",
     "start": "node scripts/start-simulator.js",
@@ -23,5 +24,8 @@
   ],
   "author": "",
   "license": "MIT",
-  "devDependencies": {}
+  "devDependencies": {
+    "js-yaml": "^4.1.1",
+    "yaml-lint": "^1.7.0"
+  }
 }
