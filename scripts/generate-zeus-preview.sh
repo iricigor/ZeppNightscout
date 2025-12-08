@@ -47,7 +47,7 @@ expect {
     sleep 0.5
     # Send down arrow to move from "Amazfit GTR 3" (default/first) to "Amazfit Balance" (second)
     # This selects the primary target device for the app
-    send "\033\[B"
+    send "\033[B"
     sleep 0.5
     # Send enter to confirm selection
     send "\r"

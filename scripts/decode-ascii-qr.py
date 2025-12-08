@@ -3,7 +3,6 @@
 Decode QR code from ASCII art output by zeus preview command.
 """
 import sys
-import re
 from PIL import Image
 
 def extract_qr_ascii(text):
@@ -48,8 +47,10 @@ def ascii_qr_to_image(qr_lines, output_path='qr_temp.png'):
     # Module size (each QR code module will be this many pixels)
     module_size = 4
     
-    # Find the maximum line length
-    max_width = max(len(line) for line in qr_lines)
+    # Find the maximum line length (with safety check for empty lines)
+    max_width = max((len(line) for line in qr_lines), default=0)
+    if max_width == 0:
+        return None
     
     # Each line represents 2 rows of QR modules (due to half-block characters)
     qr_width = max_width * module_size
@@ -111,7 +112,7 @@ def decode_qr_image(image_path):
         if decoded_objects:
             return decoded_objects[0].data.decode('utf-8')
     except ImportError:
-        print("pyzbar not available, trying alternative method...", file=sys.stderr)
+        print("pyzbar not available, QR decoding failed", file=sys.stderr)
     except Exception as e:
         print(f"Error decoding QR: {e}", file=sys.stderr)
     
