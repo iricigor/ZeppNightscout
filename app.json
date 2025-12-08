@@ -5,8 +5,8 @@
     "appName": "Nightscout",
     "appType": "app",
     "version": {
-      "code": 1,
-      "name": "0.1.0"
+      "code": 2,
+      "name": "0.2.0"
     },
     "icon": "icon.png",
     "vender": "Igor Iric",
@@ -21,6 +21,31 @@
     }
   },
   "targets": {
+    "amazfit-balance": {
+      "module": {
+        "page": {
+          "pages": ["page/index"]
+        },
+        "app-side": {
+          "path": "app-side/index"
+        }
+      },
+      "platforms": [
+        {
+          "name": "amazfit-balance",
+          "deviceSource": 8519936
+        },
+        {
+          "name": "amazfit-balance-w",
+          "deviceSource": 8519937
+        },
+        {
+          "name": "amazfit-balance-meilin",
+          "deviceSource": 8519939
+        }
+      ],
+      "designWidth": 480
+    },
     "gtr-3": {
       "module": {
         "page": {
