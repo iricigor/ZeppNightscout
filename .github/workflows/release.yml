@@ -162,7 +162,7 @@ jobs:
               send \"1\r\"
               # After selecting device, wait for the URL or completion
               expect {
-                -re {(zepp://[^ \t\r\n"]+|https://[a-zA-Z0-9./?&=_-]+)} {
+                -re {(zepp://[^ \t\r\n"]+|https://[a-zA-Z0-9./?&=_:#-]+)} {
                   # Give it a moment to output the full URL
                   sleep 1
                   puts \"\\nURL detected, exiting...\"
@@ -175,7 +175,7 @@ jobs:
                 }
               }
             }
-            -re {(zepp://[^ \t\r\n"]+|https://[a-zA-Z0-9./?&=_-]+)} {
+            -re {(zepp://[^ \t\r\n"]+|https://[a-zA-Z0-9./?&=_:#-]+)} {
               # URL appeared without device selection prompt
               sleep 1
               puts \"\\nURL detected without device selection, exiting...\"
