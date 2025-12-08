@@ -147,58 +147,64 @@ jobs:
         # This provides a hard limit even if expect script itself hangs
         # Use expect to automate the device selection and capture all output
         set +e  # Temporarily disable exit-on-error to capture exit code
-        PREVIEW_OUTPUT=$(timeout 45 expect -c "
-          # Set timeout to 30 seconds - sufficient for device selection and URL generation
-          set timeout 30
-          log_user 1
-          log_file -noappend /tmp/zeus_preview.log
-          
-          spawn zeus preview
-          
-          # Handle device selection and URL generation
-          # Two scenarios: 1) Device selection prompt appears, 2) Direct URL output
-          expect {
-            \"Select a target device\" {
-              send \"1\r\"
-              # After selecting device, wait for the URL or completion
-              expect {
-                -re {(zepp://[^ \t\r\n"]+|https://[a-zA-Z0-9./?&=_:#-]+)} {
-                  # Give it a moment to output the full URL
-                  sleep 1
-                  puts \"\\nURL detected, exiting...\"
-                }
-                timeout {
-                  puts \"\\nTimeout after device selection\"
-                }
-                eof {
-                  puts \"\\nCommand completed (EOF)\"
-                }
-              }
-            }
-            -re {(zepp://[^ \t\r\n"]+|https://[a-zA-Z0-9./?&=_:#-]+)} {
-              # URL appeared without device selection prompt
-              sleep 1
-              puts \"\\nURL detected without device selection, exiting...\"
-            }
-            timeout {
-              puts \"\\nTimeout waiting for device selection prompt\"
-            }
-            eof {
-              puts \"\\nCommand completed (no device selection needed)\"
-            }
-          }
-          
-          # Force exit to prevent hanging
-          catch {
-            # Try to close the spawned process gracefully
-            close
-          }
-          catch {
-            wait
-          }
-          exit 0
-        " 2>&1)
+        
+        # Write expect script to temp file to avoid bash interpretation issues
+        EXPECT_SCRIPT=$(mktemp)
+        cat > "$EXPECT_SCRIPT" << 'EXPECT_HEREDOC'
+# Set timeout to 30 seconds - sufficient for device selection and URL generation
+set timeout 30
+log_user 1
+log_file -noappend /tmp/zeus_preview.log
+
+spawn zeus preview
+
+# Handle device selection and URL generation
+# Two scenarios: 1) Device selection prompt appears, 2) Direct URL output
+expect {
+  "Select a target device" {
+    send "1\r"
+    # After selecting device, wait for the URL or completion
+    expect {
+      -re {(zepp://[^ \t\r\n"]+|https://[a-zA-Z0-9./?&=_:#-]+)} {
+        # Give it a moment to output the full URL
+        sleep 1
+        puts "\nURL detected, exiting..."
+      }
+      timeout {
+        puts "\nTimeout after device selection"
+      }
+      eof {
+        puts "\nCommand completed (EOF)"
+      }
+    }
+  }
+  -re {(zepp://[^ \t\r\n"]+|https://[a-zA-Z0-9./?&=_:#-]+)} {
+    # URL appeared without device selection prompt
+    sleep 1
+    puts "\nURL detected without device selection, exiting..."
+  }
+  timeout {
+    puts "\nTimeout waiting for device selection prompt"
+  }
+  eof {
+    puts "\nCommand completed (no device selection needed)"
+  }
+}
+
+# Force exit to prevent hanging
+catch {
+  # Try to close the spawned process gracefully
+  close
+}
+catch {
+  wait
+}
+exit 0
+EXPECT_HEREDOC
+        
+        PREVIEW_OUTPUT=$(timeout 45 expect "$EXPECT_SCRIPT" 2>&1)
         EXPECT_EXIT_CODE=$?
+        rm -f "$EXPECT_SCRIPT"  # Clean up temp file
         set -e  # Re-enable exit-on-error
         
         # Check if the command timed out (timeout command returns exit code 124)
