@@ -156,12 +156,13 @@ jobs:
           spawn zeus preview
           
           # Handle device selection and URL generation
+          # Two scenarios: 1) Device selection prompt appears, 2) Direct URL output
           expect {
             \"Select a target device\" {
               send \"1\r\"
               # After selecting device, wait for the URL or completion
               expect {
-                -re \"(zepp://|https://)\" {
+                -re \"(zepp://[^\\s\\r\\n\\\"]+|https://[a-zA-Z0-9./?&=_-]+)\" {
                   # Give it a moment to output the full URL
                   sleep 1
                   puts \"\\nURL detected, exiting...\"
@@ -174,7 +175,8 @@ jobs:
                 }
               }
             }
-            -re \"(zepp://|https://)\" {
+            -re \"(zepp://[^\\s\\r\\n\\\"]+|https://[a-zA-Z0-9./?&=_-]+)\" {
+              # URL appeared without device selection prompt
               sleep 1
               puts \"\\nURL detected without device selection, exiting...\"
             }
@@ -191,7 +193,9 @@ jobs:
             # Try to close the spawned process gracefully
             close
           }
-          catch wait result
+          catch {
+            wait
+          }
           exit 0
         " 2>&1)
         EXPECT_EXIT_CODE=$?
