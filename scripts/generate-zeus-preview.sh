@@ -160,13 +160,17 @@ if [ -z "$PREVIEW_URL" ]; then
   echo "No URL text found in output, attempting to decode ASCII QR code..."
   echo "::debug::ASCII QR decoding is experimental and may not work reliably"
   
-  # Try from stdout first
+  # Try from stdout first - disable exit on error temporarily
+  set +e
   PREVIEW_URL=$(extract_qr_from_ascii "$PREVIEW_OUTPUT")
+  set -e
   
   # If not found, try from log file
   if [ -z "$PREVIEW_URL" ] && [ -f /tmp/zeus_preview.log ]; then
     echo "Trying to decode QR from log file..."
+    set +e
     PREVIEW_URL=$(extract_qr_from_ascii "$(cat /tmp/zeus_preview.log)")
+    set -e
   fi
   
   # If still no URL, provide helpful information
