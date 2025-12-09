@@ -155,49 +155,145 @@ if [ -z "$PREVIEW_URL" ] && [ -f /tmp/zeus_preview.log ]; then
   PREVIEW_URL=$(extract_url "$(cat /tmp/zeus_preview.log)")
 fi
 
-# If still no URL found, try to decode ASCII QR code
+# If still no URL found, try to capture and convert ASCII QR code to image
 if [ -z "$PREVIEW_URL" ]; then
-  echo "No URL text found in output, attempting to decode ASCII QR code..."
-  echo "::debug::ASCII QR decoding is experimental and may not work reliably"
+  echo "No URL text found in output, attempting to capture ASCII QR code as image..."
+  echo "::debug::Converting ASCII QR code to PNG image for capture"
   
-  # Try from stdout first - disable exit on error temporarily
+  # Try to convert ASCII QR to image and decode it - disable exit on error temporarily
   set +e
-  PREVIEW_URL=$(extract_qr_from_ascii "$PREVIEW_OUTPUT")
+  
+  # Save output to temp file for Python script
+  TEMP_OUTPUT_FILE=$(mktemp)
+  echo "$PREVIEW_OUTPUT" > "$TEMP_OUTPUT_FILE"
+  
+  # Try from stdout first
+  echo "Converting ASCII QR code to image..."
+  DECODED_URL=$(python3 scripts/decode-ascii-qr.py "$TEMP_OUTPUT_FILE" 2>&1)
+  DECODE_EXIT_CODE=$?
+  
+  # If stdout didn't work, try from log file
+  if [ $DECODE_EXIT_CODE -ne 0 ] && [ -f /tmp/zeus_preview.log ]; then
+    echo "Trying from log file..."
+    cat /tmp/zeus_preview.log > "$TEMP_OUTPUT_FILE"
+    DECODED_URL=$(python3 scripts/decode-ascii-qr.py "$TEMP_OUTPUT_FILE" 2>&1)
+    DECODE_EXIT_CODE=$?
+  fi
+  
+  # Clean up temp file
+  rm -f "$TEMP_OUTPUT_FILE"
+  
+  # Check if we got a URL from the decoding
+  if [ $DECODE_EXIT_CODE -eq 0 ] && [ -n "$DECODED_URL" ]; then
+    # Check if the decoded output looks like a URL
+    if echo "$DECODED_URL" | grep -q "^zepp://\|^https://"; then
+      PREVIEW_URL="$DECODED_URL"
+      echo "✅ Successfully decoded ASCII QR code to URL: $PREVIEW_URL"
+      
+      # Move the generated temp image to the final location
+      if [ -f "qr_temp.png" ]; then
+        mv qr_temp.png zeus_preview_qr.png
+        echo "✅ ASCII QR code converted to image: zeus_preview_qr.png"
+        
+        # Validate the image by decoding it again
+        echo "Validating generated QR code image..."
+        set +e
+        VALIDATION_URL=$(python3 -c "
+from PIL import Image
+from pyzbar.pyzbar import decode
+try:
+    img = Image.open('zeus_preview_qr.png')
+    decoded = decode(img)
+    if decoded:
+        print(decoded[0].data.decode('utf-8'))
+        exit(0)
+    else:
+        exit(1)
+except Exception as e:
+    print(f'Error: {e}', file=__import__('sys').stderr)
+    exit(1)
+" 2>&1)
+        VALIDATION_EXIT_CODE=$?
+        set -e
+        
+        if [ $VALIDATION_EXIT_CODE -eq 0 ] && [ "$VALIDATION_URL" = "$PREVIEW_URL" ]; then
+          echo "✅ QR code image validated successfully - decodes back to same URL"
+          if [ -n "$GITHUB_OUTPUT" ]; then
+            echo "PREVIEW_URL=$PREVIEW_URL" >> "$GITHUB_OUTPUT"
+            echo "ZEUS_QR_GENERATED=true" >> "$GITHUB_OUTPUT"
+          fi
+        else
+          echo "⚠️  Warning: QR code validation failed or URL mismatch"
+          echo "   Original:  $PREVIEW_URL"
+          echo "   Validated: $VALIDATION_URL"
+          if [ -n "$GITHUB_OUTPUT" ]; then
+            echo "ZEUS_QR_GENERATED=false" >> "$GITHUB_OUTPUT"
+          fi
+        fi
+      fi
+    else
+      echo "::debug::Decoded output doesn't look like a URL: $DECODED_URL"
+    fi
+  fi
+  
   set -e
-  
-  # If not found, try from log file
-  if [ -z "$PREVIEW_URL" ] && [ -f /tmp/zeus_preview.log ]; then
-    echo "Trying to decode QR from log file..."
-    set +e
-    PREVIEW_URL=$(extract_qr_from_ascii "$(cat /tmp/zeus_preview.log)")
-    set -e
-  fi
-  
-  # If still no URL, provide helpful information
-  if [ -z "$PREVIEW_URL" ]; then
-    echo "::notice::ASCII QR code decoding is experimental and currently unable to extract the URL"
-    echo "::notice::The QR code is displayed above for manual scanning with the Zepp app"
-    echo "::notice::To scan: Open Zepp App → Profile → Your Device → Developer Mode → Scan"
-  fi
 fi
 
-if [ -n "$PREVIEW_URL" ]; then
-  if [ -n "$GITHUB_OUTPUT" ]; then
-    echo "PREVIEW_URL=$PREVIEW_URL" >> "$GITHUB_OUTPUT"
+# If we still don't have the image or URL after ASCII conversion attempt
+if [ ! -f "zeus_preview_qr.png" ]; then
+  if [ -n "$PREVIEW_URL" ]; then
+    # We have URL but no image - generate it with qrencode
+    if [ -n "$GITHUB_OUTPUT" ]; then
+      echo "PREVIEW_URL=$PREVIEW_URL" >> "$GITHUB_OUTPUT"
+    fi
+    echo "✅ Zeus preview URL: $PREVIEW_URL"
+    
+    echo "Generating QR code image from URL..."
+    qrencode -s 10 -o zeus_preview_qr.png "$PREVIEW_URL"
+    
+    # Validate the generated QR code
+    echo "Validating generated QR code image..."
+    set +e
+    VALIDATION_URL=$(python3 -c "
+from PIL import Image
+from pyzbar.pyzbar import decode
+try:
+    img = Image.open('zeus_preview_qr.png')
+    decoded = decode(img)
+    if decoded:
+        print(decoded[0].data.decode('utf-8'))
+        exit(0)
+    else:
+        exit(1)
+except Exception as e:
+    print(f'Error: {e}', file=__import__('sys').stderr)
+    exit(1)
+" 2>&1)
+    VALIDATION_EXIT_CODE=$?
+    set -e
+    
+    if [ $VALIDATION_EXIT_CODE -eq 0 ]; then
+      echo "✅ QR code image validated successfully"
+      if [ -n "$GITHUB_OUTPUT" ]; then
+        echo "ZEUS_QR_GENERATED=true" >> "$GITHUB_OUTPUT"
+      fi
+    else
+      echo "⚠️  Warning: QR code validation failed"
+      if [ -n "$GITHUB_OUTPUT" ]; then
+        echo "ZEUS_QR_GENERATED=false" >> "$GITHUB_OUTPUT"
+      fi
+    fi
+  else
+    # No URL and no image - provide helpful information
+    echo "::warning::Could not extract preview URL or convert ASCII QR code"
+    echo "::notice::The QR code is displayed above for manual scanning with the Zepp app"
+    echo "::notice::To scan: Open Zepp App → Profile → Your Device → Developer Mode → Scan"
+    if [ -n "$GITHUB_OUTPUT" ]; then
+      echo "ZEUS_QR_GENERATED=false" >> "$GITHUB_OUTPUT"
+    fi
   fi
-  echo "✅ Zeus preview URL generated: $PREVIEW_URL"
-  
-  # Generate QR code image from the preview URL
-  qrencode -s 10 -o zeus_preview_qr.png "$PREVIEW_URL"
-  if [ -n "$GITHUB_OUTPUT" ]; then
-    echo "ZEUS_QR_GENERATED=true" >> "$GITHUB_OUTPUT"
-  fi
-  echo "✅ QR code image saved to zeus_preview_qr.png"
 else
-  echo "::warning::Could not extract preview URL from zeus preview output"
-  if [ -n "$GITHUB_OUTPUT" ]; then
-    echo "ZEUS_QR_GENERATED=false" >> "$GITHUB_OUTPUT"
-  fi
+  echo "✅ QR code image saved to zeus_preview_qr.png"
 fi
 
 # Always exit successfully - QR code decoding is optional

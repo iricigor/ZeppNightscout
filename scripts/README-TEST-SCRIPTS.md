@@ -88,8 +88,18 @@ The release pipeline is considered successful when:
 
 ✅ Zeus CLI is installed and configured  
 ✅ App builds without errors  
-✅ Zeus preview QR code is generated and captured  
-✅ `zeus_preview_qr.png` file exists
+✅ Zeus preview QR code is generated and captured as PNG image  
+✅ `zeus_preview_qr.png` file exists  
+✅ QR code image is validated by decoding it back to verify correctness
+
+## How It Works
+
+The pipeline now:
+1. Runs `zeus preview` to generate the preview and display ASCII QR code
+2. Captures the ASCII QR code from console output
+3. Converts ASCII QR code to PNG image (`zeus_preview_qr.png`)
+4. Validates the PNG by decoding it back to ensure the QR code works correctly
+5. Confirms the decoded URL matches the expected format
 
 ## Troubleshooting
 
@@ -117,7 +127,12 @@ echo $ZEPP_CNAME
 
 **Warning:** `Could not extract preview URL from zeus preview output`
 
-**What this means:** The QR code was displayed in the console as ASCII art, but the script couldn't automatically decode it to create a PNG image. This is not a critical error - the QR code is still usable from the console output.
+**What this means:** The script attempts multiple methods to capture the QR code:
+1. Extract URL from text output
+2. Convert ASCII QR code to image
+3. Decode and validate the image
+
+If all methods fail, the QR code ASCII art is still displayed in console output for manual scanning.
 
 **Solution:** Manually scan the ASCII QR code from the console output using the Zepp app on your phone.
 
@@ -141,6 +156,22 @@ bash scripts/test-zeus-build-preview.sh
 ```
 
 The build will complete successfully, but you'll see warnings that QR code generation was skipped.
+
+## Testing QR Code Validation
+
+To verify that QR code generation and validation works on your system:
+
+```bash
+bash scripts/test-qr-validation.sh
+```
+
+This test script:
+1. Generates a test QR code with qrencode
+2. Decodes the QR code image with pyzbar
+3. Validates that the decoded URL matches the original
+4. Confirms your system can handle QR code image processing
+
+This is the same validation process used by the release pipeline.
 
 ## Integration with GitHub Actions
 
