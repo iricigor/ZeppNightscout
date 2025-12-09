@@ -4,12 +4,12 @@
 
 set -e
 
-echo "Installing required tools (qrencode, imagemagick, expect, python3-pip for QR decoding)..."
+echo "Installing required tools (qrencode, imagemagick, expect, python3-pip, libzbar0 for QR decoding)..."
 if ! sudo DEBIAN_FRONTEND=noninteractive apt-get update -qq > /dev/null 2>&1; then
   echo "::error::Failed to update package lists"
   exit 1
 fi
-if ! sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq qrencode imagemagick expect python3-pip python3-pil > /dev/null 2>&1; then
+if ! sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq qrencode imagemagick expect python3-pip python3-pil libzbar0 > /dev/null 2>&1; then
   echo "::error::Failed to install required tools"
   exit 1
 fi
@@ -195,3 +195,6 @@ else
     echo "ZEUS_QR_GENERATED=false" >> "$GITHUB_OUTPUT"
   fi
 fi
+
+# Always exit successfully - QR code decoding is optional
+exit 0
