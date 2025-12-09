@@ -167,7 +167,7 @@ fi
 
 # If still no URL found, try to capture and convert ASCII QR code to image
 if [ -z "$PREVIEW_URL" ]; then
-  echo "No URL text found in output, attempting to capture ASCII QR code as image..."
+  echo "No URL text found in output, attempting to decode ASCII QR code..."
   echo "::debug::Converting ASCII QR code to PNG image for capture"
   
   # Try to convert ASCII QR to image and decode it - disable exit on error temporarily
@@ -179,19 +179,36 @@ if [ -z "$PREVIEW_URL" ]; then
   
   # Try from stdout first
   echo "Converting ASCII QR code to image..."
-  DECODED_URL=$(python3 scripts/decode-ascii-qr.py "$TEMP_OUTPUT_FILE" 2>&1)
+  python3 scripts/decode-ascii-qr.py "$TEMP_OUTPUT_FILE" > /tmp/decoded_url.txt 2>&1
   DECODE_EXIT_CODE=$?
+  
+  # Read the decoded URL if successful
+  if [ $DECODE_EXIT_CODE -eq 0 ] && [ -f /tmp/decoded_url.txt ]; then
+    DECODED_URL=$(cat /tmp/decoded_url.txt)
+  else
+    echo "First attempt failed, output was:"
+    cat /tmp/decoded_url.txt 2>/dev/null || echo "(no output)"
+    DECODED_URL=""
+  fi
   
   # If stdout didn't work, try from log file
   if [ $DECODE_EXIT_CODE -ne 0 ] && [ -f /tmp/zeus_preview.log ]; then
     echo "Trying from log file..."
     cat /tmp/zeus_preview.log > "$TEMP_OUTPUT_FILE"
-    DECODED_URL=$(python3 scripts/decode-ascii-qr.py "$TEMP_OUTPUT_FILE" 2>&1)
+    python3 scripts/decode-ascii-qr.py "$TEMP_OUTPUT_FILE" > /tmp/decoded_url.txt 2>&1
     DECODE_EXIT_CODE=$?
+    
+    if [ $DECODE_EXIT_CODE -eq 0 ] && [ -f /tmp/decoded_url.txt ]; then
+      DECODED_URL=$(cat /tmp/decoded_url.txt)
+    else
+      echo "Second attempt failed, output was:"
+      cat /tmp/decoded_url.txt 2>/dev/null || echo "(no output)"
+      DECODED_URL=""
+    fi
   fi
   
-  # Clean up temp file
-  rm -f "$TEMP_OUTPUT_FILE"
+  # Clean up temp files
+  rm -f "$TEMP_OUTPUT_FILE" /tmp/decoded_url.txt
   
   # Check if we got a URL from the decoding
   if [ $DECODE_EXIT_CODE -eq 0 ] && [ -n "$DECODED_URL" ]; then
@@ -244,6 +261,8 @@ except Exception as e:
     else
       echo "::debug::Decoded output doesn't look like a URL: $DECODED_URL"
     fi
+  else
+    echo "❌ Failed to decode ASCII QR code (exit code: $DECODE_EXIT_CODE)"
   fi
   
   set -e
