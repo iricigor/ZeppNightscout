@@ -116,9 +116,9 @@ extract_url() {
   # - Other ESC sequences
   local cleaned_text=$(echo "$text" | sed 's/\x1B\[[0-9;]*[mGKHJfABCDsuhl]//g' | sed 's/\x1B[@-_][0-9;]*[ -\/]*[@-~]//g')
   
-  # First try zepp:// deep link format (preferred)
-  local url=$(echo "$cleaned_text" | grep -oP 'zepp://[^\s\r\n"]+' | head -1 || echo "")
-  # If no zepp:// URL found, try https:// format
+  # Try zepp:// or zpkd1:// deep link formats (preferred)
+  local url=$(echo "$cleaned_text" | grep -oP '(zepp|zpkd1)://[^\s\r\n"]+' | head -1 || echo "")
+  # If no deep link URL found, try https:// format
   if [ -z "$url" ]; then
     url=$(echo "$cleaned_text" | grep -oP 'https://[a-zA-Z0-9./?&=_:#-]+' | head -1 || echo "")
   fi
@@ -214,8 +214,8 @@ if [ -z "$PREVIEW_URL" ]; then
   
   # Check if we got a URL from the decoding
   if [ $DECODE_EXIT_CODE -eq 0 ] && [ -n "$DECODED_URL" ]; then
-    # Check if the decoded output looks like a URL
-    if echo "$DECODED_URL" | grep -q "^zepp://\|^https://"; then
+    # Check if the decoded output looks like a URL (zepp://, zpkd1://, or https://)
+    if echo "$DECODED_URL" | grep -q "^zepp://\|^zpkd1://\|^https://"; then
       PREVIEW_URL="$DECODED_URL"
       echo "✅ Successfully decoded ASCII QR code to URL: $PREVIEW_URL"
       
