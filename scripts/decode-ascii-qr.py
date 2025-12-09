@@ -3,7 +3,7 @@
 Decode QR code from ASCII art output by zeus preview command.
 """
 import sys
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 
 def extract_qr_ascii(text):
     """Extract the ASCII QR code block from text."""
@@ -33,75 +33,63 @@ def extract_qr_ascii(text):
     
     return qr_lines
 
+# Character dimensions for rendering terminal text
+# These are tuned to work with typical monospace fonts for QR code recognition
+CHAR_WIDTH = 10
+CHAR_HEIGHT = 20
+
 def ascii_qr_to_image(qr_lines, output_path='qr_temp.png'):
-    """Convert ASCII QR code to an image.
+    """Convert ASCII QR code to an image by rendering as terminal text.
     
-    The QR code uses Unicode block characters where each character represents
-    TWO vertical pixels (rows) using half-blocks:
-    - █ (U+2588) = both pixels black
-    - ▀ (U+2580) = top pixel black, bottom pixel white
-    - ▄ (U+2584) = top pixel white, bottom pixel black
-    - (space) = both pixels white
+    The key insight is that QR decoders can read the ASCII art when it's 
+    rendered as actual text with a monospace font, rather than trying to
+    convert the block characters to pixels manually.
     """
     if not qr_lines:
         return None
     
-    # Module size (each QR code module will be this many pixels)
-    module_size = 4
-    
-    # Find the maximum line length (with safety check for empty lines)
+    # Find the maximum line length
     max_width = max((len(line) for line in qr_lines), default=0)
     if max_width == 0:
         return None
     
-    # Each line represents 2 rows of QR modules (due to half-block characters)
-    qr_width = max_width * module_size
-    qr_height = len(qr_lines) * 2 * module_size  # *2 because each char = 2 vertical modules
+    # Calculate image size with some padding
+    img_width = max_width * CHAR_WIDTH + 20
+    img_height = len(qr_lines) * CHAR_HEIGHT + 20
     
-    # Add quiet zone (white border) - QR codes need this
-    quiet_zone = 4 * module_size
-    img_width = qr_width + 2 * quiet_zone
-    img_height = qr_height + 2 * quiet_zone
+    # Create image with black background (like a terminal)
+    img = Image.new('RGB', (img_width, img_height), color='black')
+    draw = ImageDraw.Draw(img)
     
-    img = Image.new('1', (img_width, img_height), 1)  # Binary image: 1=white, 0=black
+    # Try to use a monospace font for accurate rendering
+    font = None
+    font_paths = [
+        "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf",
+        "/usr/share/fonts/truetype/ubuntu/UbuntuMono-R.ttf",
+        "/System/Library/Fonts/Monaco.dfont",  # macOS
+        "C:\\Windows\\Fonts\\consola.ttf",  # Windows
+    ]
     
-    for y, line in enumerate(qr_lines):
-        for x, char in enumerate(line):
-            # Determine which pixels are black based on the character
-            # Each character represents 2 vertical pixels
-            top_black = False
-            bottom_black = False
-            
-            if char == '█':  # U+2588 - Full block
-                top_black = True
-                bottom_black = True
-            elif char == '▀':  # U+2580 - Upper half block
-                top_black = True
-                bottom_black = False
-            elif char == '▄':  # U+2584 - Lower half block
-                top_black = False
-                bottom_black = True
-            # else: space or other = both white
-            
-            # Draw the modules (with quiet zone offset)
-            x_start = quiet_zone + x * module_size
-            y_top_start = quiet_zone + y * 2 * module_size
-            y_bottom_start = quiet_zone + (y * 2 + 1) * module_size
-            
-            # Draw top module
-            if top_black:
-                for dx in range(module_size):
-                    for dy in range(module_size):
-                        img.putpixel((x_start + dx, y_top_start + dy), 0)
-            
-            # Draw bottom module
-            if bottom_black:
-                for dx in range(module_size):
-                    for dy in range(module_size):
-                        img.putpixel((x_start + dx, y_bottom_start + dy), 0)
+    for font_path in font_paths:
+        try:
+            font = ImageFont.truetype(font_path, 16)
+            break
+        except (OSError, IOError):
+            continue
     
-    # Scale up the image for better recognition
-    img = img.resize((img_width * 2, img_height * 2), Image.Resampling.NEAREST)
+    if font is None:
+        # Fallback to default font
+        try:
+            font = ImageFont.load_default()
+        except (OSError, IOError) as e:
+            print(f"Warning: Could not load font, using basic rendering: {e}", file=sys.stderr)
+    
+    # Render each line of the QR code
+    for i, line in enumerate(qr_lines):
+        y = i * CHAR_HEIGHT + 10
+        draw.text((10, y), line, fill='white', font=font)
+    
     img.save(output_path)
     return output_path
 

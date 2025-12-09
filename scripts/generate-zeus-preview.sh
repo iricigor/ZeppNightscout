@@ -116,9 +116,9 @@ extract_url() {
   # - Other ESC sequences
   local cleaned_text=$(echo "$text" | sed 's/\x1B\[[0-9;]*[mGKHJfABCDsuhl]//g' | sed 's/\x1B[@-_][0-9;]*[ -\/]*[@-~]//g')
   
-  # First try zepp:// deep link format (preferred)
-  local url=$(echo "$cleaned_text" | grep -oP 'zepp://[^\s\r\n"]+' | head -1 || echo "")
-  # If no zepp:// URL found, try https:// format
+  # Try zepp:// or zpkd1:// deep link formats (preferred)
+  local url=$(echo "$cleaned_text" | grep -oP '(zepp|zpkd1)://[^\s\r\n"]+' | head -1 || echo "")
+  # If no deep link URL found, try https:// format
   if [ -z "$url" ]; then
     url=$(echo "$cleaned_text" | grep -oP 'https://[a-zA-Z0-9./?&=_:#-]+' | head -1 || echo "")
   fi
@@ -167,36 +167,55 @@ fi
 
 # If still no URL found, try to capture and convert ASCII QR code to image
 if [ -z "$PREVIEW_URL" ]; then
-  echo "No URL text found in output, attempting to capture ASCII QR code as image..."
+  echo "No URL text found in output, attempting to decode ASCII QR code..."
   echo "::debug::Converting ASCII QR code to PNG image for capture"
   
   # Try to convert ASCII QR to image and decode it - disable exit on error temporarily
   set +e
   
-  # Save output to temp file for Python script
+  # Define temp file paths
   TEMP_OUTPUT_FILE=$(mktemp)
+  DECODED_URL_FILE=$(mktemp)
+  
   echo "$PREVIEW_OUTPUT" > "$TEMP_OUTPUT_FILE"
   
   # Try from stdout first
   echo "Converting ASCII QR code to image..."
-  DECODED_URL=$(python3 scripts/decode-ascii-qr.py "$TEMP_OUTPUT_FILE" 2>&1)
+  python3 scripts/decode-ascii-qr.py "$TEMP_OUTPUT_FILE" > "$DECODED_URL_FILE" 2>&1
   DECODE_EXIT_CODE=$?
+  
+  # Read the decoded URL if successful
+  if [ $DECODE_EXIT_CODE -eq 0 ] && [ -f "$DECODED_URL_FILE" ]; then
+    DECODED_URL=$(cat "$DECODED_URL_FILE")
+  else
+    echo "First attempt failed, output was:"
+    cat "$DECODED_URL_FILE" 2>/dev/null || echo "(no output)"
+    DECODED_URL=""
+  fi
   
   # If stdout didn't work, try from log file
   if [ $DECODE_EXIT_CODE -ne 0 ] && [ -f /tmp/zeus_preview.log ]; then
     echo "Trying from log file..."
     cat /tmp/zeus_preview.log > "$TEMP_OUTPUT_FILE"
-    DECODED_URL=$(python3 scripts/decode-ascii-qr.py "$TEMP_OUTPUT_FILE" 2>&1)
+    python3 scripts/decode-ascii-qr.py "$TEMP_OUTPUT_FILE" > "$DECODED_URL_FILE" 2>&1
     DECODE_EXIT_CODE=$?
+    
+    if [ $DECODE_EXIT_CODE -eq 0 ] && [ -f "$DECODED_URL_FILE" ]; then
+      DECODED_URL=$(cat "$DECODED_URL_FILE")
+    else
+      echo "Second attempt failed, output was:"
+      cat "$DECODED_URL_FILE" 2>/dev/null || echo "(no output)"
+      DECODED_URL=""
+    fi
   fi
   
-  # Clean up temp file
-  rm -f "$TEMP_OUTPUT_FILE"
+  # Clean up temp files
+  rm -f "$TEMP_OUTPUT_FILE" "$DECODED_URL_FILE"
   
   # Check if we got a URL from the decoding
   if [ $DECODE_EXIT_CODE -eq 0 ] && [ -n "$DECODED_URL" ]; then
-    # Check if the decoded output looks like a URL
-    if echo "$DECODED_URL" | grep -q "^zepp://\|^https://"; then
+    # Check if the decoded output looks like a URL (zepp://, zpkd1://, or https://)
+    if echo "$DECODED_URL" | grep -q "^zepp://\|^zpkd1://\|^https://"; then
       PREVIEW_URL="$DECODED_URL"
       echo "✅ Successfully decoded ASCII QR code to URL: $PREVIEW_URL"
       
@@ -244,6 +263,8 @@ except Exception as e:
     else
       echo "::debug::Decoded output doesn't look like a URL: $DECODED_URL"
     fi
+  else
+    echo "❌ Failed to decode ASCII QR code (exit code: $DECODE_EXIT_CODE)"
   fi
   
   set -e
