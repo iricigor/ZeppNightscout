@@ -110,8 +110,11 @@ echo "::debug::Attempting URL extraction from output..."
 extract_url() {
   local text="$1"
   # Strip ANSI escape codes first (they may hide or corrupt the URL)
-  # Remove ESC sequences: \x1B\[...[a-zA-Z] and other common patterns
-  local cleaned_text=$(echo "$text" | sed 's/\x1B\[[0-9;]*[a-zA-Z]//g' | sed 's/\x1B[@-_]//g')
+  # Remove common ANSI escape sequences:
+  # - CSI sequences: ESC[...m (colors, formatting)
+  # - ESC[...H/G/K (cursor positioning, line clearing)
+  # - Other ESC sequences
+  local cleaned_text=$(echo "$text" | sed 's/\x1B\[[0-9;]*[mGKHJfABCDsuhl]//g' | sed 's/\x1B[@-_][0-9;]*[ -\/]*[@-~]//g')
   
   # First try zepp:// deep link format (preferred)
   local url=$(echo "$cleaned_text" | grep -oP 'zepp://[^\s\r\n"]+' | head -1 || echo "")

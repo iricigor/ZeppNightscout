@@ -21,8 +21,8 @@ def extract_qr_ascii(text):
             continue
         elif in_qr:
             # Continue collecting lines until we hit the bottom border or empty line
-            # The bottom border is a line that is ALL ▄ characters or empty
-            if line.startswith('▄' * 10) and all(c in '▄\r\n' for c in line.strip()):
+            # The bottom border is a line that is ALL ▄ characters
+            if line.startswith('▄' * 10) and all(c == '▄' for c in line.strip()):
                 # This is the decorative bottom border - stop here
                 break
             elif line.strip() and any(c in line for c in ['█', '▀', '▄', ' ']):
