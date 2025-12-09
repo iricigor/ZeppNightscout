@@ -13,20 +13,22 @@ def extract_qr_ascii(text):
     start_pattern_found = False
     
     for line in lines:
-        # QR codes start with a line that's mostly ▄ characters
+        # QR codes start with a line that's mostly ▄ characters (decorative border from Zeus CLI)
         if not start_pattern_found and line.startswith('▄' * 10):
             in_qr = True
             start_pattern_found = True
-            qr_lines.append(line)
+            # Skip the decorative border - don't include it in qr_lines
+            continue
         elif in_qr:
-            # Continue collecting lines until we hit another border line or empty line
-            if line.startswith('▄' * 10):
-                qr_lines.append(line)
-                break  # End of QR code (bottom border)
+            # Continue collecting lines until we hit the bottom border or empty line
+            # The bottom border is a line that is ALL ▄ characters or empty
+            if line.startswith('▄' * 10) and all(c in '▄\r\n' for c in line.strip()):
+                # This is the decorative bottom border - stop here
+                break
             elif line.strip() and any(c in line for c in ['█', '▀', '▄', ' ']):
                 qr_lines.append(line)
             elif not line.strip():
-                # Empty line might indicate end of QR
+                # Empty line indicates end of QR
                 break
     
     return qr_lines
