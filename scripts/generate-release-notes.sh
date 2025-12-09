@@ -1,6 +1,6 @@
 #!/bin/bash
 # Generate release notes for ZeppNightscout
-# Usage: generate-release-notes.sh VERSION BASE_VERSION BUILD_NUMBER TAG BRANCH ARTIFACT_NAME DOWNLOAD_URL QR_URL ZEUS_QR_GENERATED [QR_IMAGE_URL]
+# Usage: generate-release-notes.sh VERSION BASE_VERSION BUILD_NUMBER TAG BRANCH ARTIFACT_NAME DOWNLOAD_URL QR_URL ZEUS_QR_GENERATED [QR_IMAGE_URL] [ZEUS_PREVIEW_URL]
 
 set -e
 
@@ -14,6 +14,7 @@ DOWNLOAD_URL="$7"
 QR_URL="$8"
 ZEUS_QR_GENERATED="$9"
 QR_IMAGE_URL="${10}"
+ZEUS_PREVIEW_URL="${11}"
 
 # Check if release_notes.md already exists and create backup
 if [ -f release_notes.md ]; then
@@ -41,6 +42,17 @@ if [ "$ZEUS_QR_GENERATED" == "true" ]; then
 
 ![Zeus Preview QR Code](${QR_IMAGE_URL})
 
+EOF
+  
+  # Add the decoded URL if available
+  if [ -n "$ZEUS_PREVIEW_URL" ]; then
+    cat >> release_notes.md << EOF
+**Direct Link:** \`${ZEUS_PREVIEW_URL}\`
+
+EOF
+  fi
+  
+  cat >> release_notes.md << 'EOF'
 > **Note:** This QR code connects directly to the Zepp platform for instant installation via the Zepp App's Developer Mode.
 > Make sure Developer Mode is enabled in your Zepp App (Profile → Settings → About → tap Zepp icon 7 times).
 
