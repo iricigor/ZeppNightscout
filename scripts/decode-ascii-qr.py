@@ -33,6 +33,11 @@ def extract_qr_ascii(text):
     
     return qr_lines
 
+# Character dimensions for rendering terminal text
+# These are tuned to work with typical monospace fonts for QR code recognition
+CHAR_WIDTH = 10
+CHAR_HEIGHT = 20
+
 def ascii_qr_to_image(qr_lines, output_path='qr_temp.png'):
     """Convert ASCII QR code to an image by rendering as terminal text.
     
@@ -48,13 +53,9 @@ def ascii_qr_to_image(qr_lines, output_path='qr_temp.png'):
     if max_width == 0:
         return None
     
-    # Character dimensions for rendering
-    char_width = 10
-    char_height = 20
-    
     # Calculate image size with some padding
-    img_width = max_width * char_width + 20
-    img_height = len(qr_lines) * char_height + 20
+    img_width = max_width * CHAR_WIDTH + 20
+    img_height = len(qr_lines) * CHAR_HEIGHT + 20
     
     # Create image with black background (like a terminal)
     img = Image.new('RGB', (img_width, img_height), color='black')
@@ -81,12 +82,12 @@ def ascii_qr_to_image(qr_lines, output_path='qr_temp.png'):
         # Fallback to default font
         try:
             font = ImageFont.load_default()
-        except:
-            print("Warning: Using basic font rendering", file=sys.stderr)
+        except (OSError, IOError) as e:
+            print(f"Warning: Could not load font, using basic rendering: {e}", file=sys.stderr)
     
     # Render each line of the QR code
     for i, line in enumerate(qr_lines):
-        y = i * char_height + 10
+        y = i * CHAR_HEIGHT + 10
         draw.text((10, y), line, fill='white', font=font)
     
     img.save(output_path)

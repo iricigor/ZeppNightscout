@@ -173,21 +173,23 @@ if [ -z "$PREVIEW_URL" ]; then
   # Try to convert ASCII QR to image and decode it - disable exit on error temporarily
   set +e
   
-  # Save output to temp file for Python script
+  # Define temp file paths
   TEMP_OUTPUT_FILE=$(mktemp)
+  DECODED_URL_FILE=$(mktemp)
+  
   echo "$PREVIEW_OUTPUT" > "$TEMP_OUTPUT_FILE"
   
   # Try from stdout first
   echo "Converting ASCII QR code to image..."
-  python3 scripts/decode-ascii-qr.py "$TEMP_OUTPUT_FILE" > /tmp/decoded_url.txt 2>&1
+  python3 scripts/decode-ascii-qr.py "$TEMP_OUTPUT_FILE" > "$DECODED_URL_FILE" 2>&1
   DECODE_EXIT_CODE=$?
   
   # Read the decoded URL if successful
-  if [ $DECODE_EXIT_CODE -eq 0 ] && [ -f /tmp/decoded_url.txt ]; then
-    DECODED_URL=$(cat /tmp/decoded_url.txt)
+  if [ $DECODE_EXIT_CODE -eq 0 ] && [ -f "$DECODED_URL_FILE" ]; then
+    DECODED_URL=$(cat "$DECODED_URL_FILE")
   else
     echo "First attempt failed, output was:"
-    cat /tmp/decoded_url.txt 2>/dev/null || echo "(no output)"
+    cat "$DECODED_URL_FILE" 2>/dev/null || echo "(no output)"
     DECODED_URL=""
   fi
   
@@ -195,20 +197,20 @@ if [ -z "$PREVIEW_URL" ]; then
   if [ $DECODE_EXIT_CODE -ne 0 ] && [ -f /tmp/zeus_preview.log ]; then
     echo "Trying from log file..."
     cat /tmp/zeus_preview.log > "$TEMP_OUTPUT_FILE"
-    python3 scripts/decode-ascii-qr.py "$TEMP_OUTPUT_FILE" > /tmp/decoded_url.txt 2>&1
+    python3 scripts/decode-ascii-qr.py "$TEMP_OUTPUT_FILE" > "$DECODED_URL_FILE" 2>&1
     DECODE_EXIT_CODE=$?
     
-    if [ $DECODE_EXIT_CODE -eq 0 ] && [ -f /tmp/decoded_url.txt ]; then
-      DECODED_URL=$(cat /tmp/decoded_url.txt)
+    if [ $DECODE_EXIT_CODE -eq 0 ] && [ -f "$DECODED_URL_FILE" ]; then
+      DECODED_URL=$(cat "$DECODED_URL_FILE")
     else
       echo "Second attempt failed, output was:"
-      cat /tmp/decoded_url.txt 2>/dev/null || echo "(no output)"
+      cat "$DECODED_URL_FILE" 2>/dev/null || echo "(no output)"
       DECODED_URL=""
     fi
   fi
   
   # Clean up temp files
-  rm -f "$TEMP_OUTPUT_FILE" /tmp/decoded_url.txt
+  rm -f "$TEMP_OUTPUT_FILE" "$DECODED_URL_FILE"
   
   # Check if we got a URL from the decoding
   if [ $DECODE_EXIT_CODE -eq 0 ] && [ -n "$DECODED_URL" ]; then
