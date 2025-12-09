@@ -4,14 +4,18 @@
 
 set -e
 
-echo "Installing required tools (qrencode, imagemagick, expect)..."
+echo "Installing required tools (qrencode, imagemagick, expect, python3-pip for QR decoding)..."
 if ! sudo DEBIAN_FRONTEND=noninteractive apt-get update -qq > /dev/null 2>&1; then
   echo "::error::Failed to update package lists"
   exit 1
 fi
-if ! sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq qrencode imagemagick expect > /dev/null 2>&1; then
+if ! sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq qrencode imagemagick expect python3-pip python3-pil > /dev/null 2>&1; then
   echo "::error::Failed to install required tools"
   exit 1
+fi
+echo "Installing Python QR code libraries..."
+if ! pip3 install -q qrcode pyzbar pillow > /dev/null 2>&1; then
+  echo "::warning::Failed to install Python QR libraries, will try alternative methods"
 fi
 echo "✅ Tools installed successfully"
 
@@ -29,38 +33,34 @@ set +e  # Temporarily disable exit-on-error to capture exit code
 # Write expect script to temp file to avoid bash interpretation issues
 EXPECT_SCRIPT=$(mktemp)
 cat > "$EXPECT_SCRIPT" <<'EOF'
-# Set timeout to 30 seconds - sufficient for device selection and URL generation
+# Set timeout to 30 seconds - sufficient for device selection and QR code generation
 set timeout 30
 log_user 1
 log_file -noappend /tmp/zeus_preview.log
 
 spawn zeus preview
 
-# Handle device selection and URL generation
-# Two scenarios: 1) Device selection prompt appears, 2) Direct URL output
+# Wait for device selection prompt and select Amazfit Balance (second option)
 expect {
-  -re {Which device would you like to preview\?|Select a target device} {
-    # Send enter to select the default (first) device
+  -re {Which device would you like to preview\?} {
+    # Wait a moment for the list to fully render
+    sleep 0.5
+    # Send down arrow to move from "Amazfit GTR 3" (default/first) to "Amazfit Balance" (second)
+    # This selects the primary target device for the app
+    send "\033[B"
+    sleep 0.5
+    # Send enter to confirm selection
     send "\r"
-    # After selecting device, wait for the URL or completion
+    # Wait for the build and QR code generation to complete
+    # The QR code is displayed as ASCII art, so we just wait for completion
     expect {
-      -re {(zepp://[^ \t\r\n"]+|https://[a-zA-Z0-9./?&=_:#-]+)} {
-        # Give it a moment to output the full URL
-        sleep 1
-        puts "\nURL detected, exiting..."
-      }
       timeout {
-        puts "\nTimeout after device selection"
+        puts "\nWaiting for QR code generation to complete..."
       }
       eof {
         puts "\nCommand completed (EOF)"
       }
     }
-  }
-  -re {(zepp://[^ \t\r\n"]+|https://[a-zA-Z0-9./?&=_:#-]+)} {
-    # URL appeared without device selection prompt
-    sleep 1
-    puts "\nURL detected without device selection, exiting..."
   }
   timeout {
     puts "\nTimeout waiting for device selection prompt"
@@ -69,6 +69,9 @@ expect {
     puts "\nCommand completed (no device selection needed)"
   }
 }
+
+# Give the command a moment to finish outputting everything
+sleep 1
 
 # Force exit to prevent hanging
 catch {
@@ -107,9 +110,41 @@ extract_url() {
   local url=$(echo "$text" | grep -oP 'zepp://[^\s\r\n"]+' | head -1 || echo "")
   # If no zepp:// URL found, try https:// format
   if [ -z "$url" ]; then
-    url=$(echo "$text" | grep -oP 'https://[a-zA-Z0-9./?&=_-]+' | head -1 || echo "")
+    url=$(echo "$text" | grep -oP 'https://[a-zA-Z0-9./?&=_:#-]+' | head -1 || echo "")
   fi
   echo "$url"
+}
+
+# Helper function to extract and decode ASCII QR code
+extract_qr_from_ascii() {
+  local text="$1"
+  
+  # Check if QR code exists in output
+  if ! echo "$text" | grep -q "^▄▄▄▄▄"; then
+    echo "::debug::No ASCII QR code block found in output"
+    return 1
+  fi
+  
+  echo "::debug::Found ASCII QR code block, attempting to decode..."
+  
+  # Save output to temp file for Python script
+  local temp_file=$(mktemp)
+  echo "$text" > "$temp_file"
+  
+  # Try to decode using Python script
+  local decoded_url=$(python3 scripts/decode-ascii-qr.py "$temp_file" 2>/dev/null || echo "")
+  
+  # Clean up
+  rm -f "$temp_file"
+  
+  if [ -n "$decoded_url" ]; then
+    echo "::debug::Successfully decoded QR code: $decoded_url"
+    echo "$decoded_url"
+    return 0
+  else
+    echo "::debug::Failed to decode QR code using Python script"
+    return 1
+  fi
 }
 
 # Try to extract the preview URL from output
@@ -118,6 +153,28 @@ PREVIEW_URL=$(extract_url "$PREVIEW_OUTPUT")
 # Also check the log file if URL not found in stdout
 if [ -z "$PREVIEW_URL" ] && [ -f /tmp/zeus_preview.log ]; then
   PREVIEW_URL=$(extract_url "$(cat /tmp/zeus_preview.log)")
+fi
+
+# If still no URL found, try to decode ASCII QR code
+if [ -z "$PREVIEW_URL" ]; then
+  echo "No URL text found in output, attempting to decode ASCII QR code..."
+  echo "::debug::ASCII QR decoding is experimental and may not work reliably"
+  
+  # Try from stdout first
+  PREVIEW_URL=$(extract_qr_from_ascii "$PREVIEW_OUTPUT")
+  
+  # If not found, try from log file
+  if [ -z "$PREVIEW_URL" ] && [ -f /tmp/zeus_preview.log ]; then
+    echo "Trying to decode QR from log file..."
+    PREVIEW_URL=$(extract_qr_from_ascii "$(cat /tmp/zeus_preview.log)")
+  fi
+  
+  # If still no URL, provide helpful information
+  if [ -z "$PREVIEW_URL" ]; then
+    echo "::notice::ASCII QR code decoding is experimental and currently unable to extract the URL"
+    echo "::notice::The QR code is displayed above for manual scanning with the Zepp app"
+    echo "::notice::To scan: Open Zepp App → Profile → Your Device → Developer Mode → Scan"
+  fi
 fi
 
 if [ -n "$PREVIEW_URL" ]; then
