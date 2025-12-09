@@ -28,6 +28,7 @@ Thumbs.db
 tmp/
 temp/
 *.tmp
+*.backup
 
 # Zepp OS specific
 .zepp/
