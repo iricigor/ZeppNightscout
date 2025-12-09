@@ -70,6 +70,7 @@ jobs:
         build_number: ${{ github.run_number }}
         branch: ${{ github.event.inputs.branch || github.ref_name }}
         zeus_qr_generated: ${{ steps.zeus_build.outputs.zeus_qr_generated }}
+        zeus_preview_url: ${{ steps.zeus_build.outputs.preview_url }}
         repository: ${{ github.repository }}
         github_sha: ${{ github.sha }}
         github_server_url: ${{ github.server_url }}

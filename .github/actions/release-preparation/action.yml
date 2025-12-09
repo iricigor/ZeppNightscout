@@ -19,6 +19,9 @@ inputs:
   zeus_qr_generated:
     description: 'Whether Zeus QR was generated'
     required: true
+  zeus_preview_url:
+    description: 'Zeus preview URL (zpkd1:// deep link)'
+    required: false
   repository:
     description: 'GitHub repository'
     required: true
@@ -112,7 +115,8 @@ runs:
           "${{ steps.qr_code.outputs.DOWNLOAD_URL }}" \
           "${{ steps.qr_code.outputs.QR_URL }}" \
           "${{ inputs.zeus_qr_generated }}" \
-          "$QR_IMAGE_URL"
+          "$QR_IMAGE_URL" \
+          "${{ inputs.zeus_preview_url }}"
     
     - name: Prepare release files list
       id: release_files
