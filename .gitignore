@@ -33,6 +33,8 @@ temp/
 .zepp/
 *.zab
 
-# QR code temp files
+# QR code temp files (but keep zeus_preview_qr.png)
 qr_temp.png
+qr_test*.png
+qr_terminal_render.png
 __pycache__/
