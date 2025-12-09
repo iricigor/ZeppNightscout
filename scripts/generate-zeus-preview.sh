@@ -246,9 +246,16 @@ except Exception as e:
         set -e
         
         # Output the URL and mark QR as generated if we have the image file
-        if [ -n "$GITHUB_OUTPUT" ]; then
-          echo "PREVIEW_URL=$PREVIEW_URL" >> "$GITHUB_OUTPUT"
-          echo "ZEUS_QR_GENERATED=true" >> "$GITHUB_OUTPUT"
+        if [ -f "zeus_preview_qr.png" ]; then
+          if [ -n "$GITHUB_OUTPUT" ]; then
+            echo "PREVIEW_URL=$PREVIEW_URL" >> "$GITHUB_OUTPUT"
+            echo "ZEUS_QR_GENERATED=true" >> "$GITHUB_OUTPUT"
+          fi
+        else
+          echo "::warning::QR image file not found after conversion"
+          if [ -n "$GITHUB_OUTPUT" ]; then
+            echo "ZEUS_QR_GENERATED=false" >> "$GITHUB_OUTPUT"
+          fi
         fi
         
         # Validate the QR code and report status (but don't fail)

@@ -1,6 +1,10 @@
 #!/bin/bash
 # Generate release notes for ZeppNightscout
 # Usage: generate-release-notes.sh VERSION BASE_VERSION BUILD_NUMBER TAG BRANCH ARTIFACT_NAME DOWNLOAD_URL QR_URL ZEUS_QR_GENERATED [QR_IMAGE_URL] [ZEUS_PREVIEW_URL]
+# Parameters:
+#   1-9: Required parameters
+#   10: QR_IMAGE_URL - Optional, URL to the Zeus QR code image in the release
+#   11: ZEUS_PREVIEW_URL - Optional, the decoded Zeus preview URL (zpkd1://...)
 
 set -e
 
@@ -47,7 +51,7 @@ EOF
   # Add the decoded URL if available
   if [ -n "$ZEUS_PREVIEW_URL" ]; then
     cat >> release_notes.md << EOF
-**Direct Link:** \`${ZEUS_PREVIEW_URL}\`
+**Zeus Preview Link:** \`${ZEUS_PREVIEW_URL}\`
 
 EOF
   fi
