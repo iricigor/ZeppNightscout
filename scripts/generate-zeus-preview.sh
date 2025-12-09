@@ -103,14 +103,24 @@ if [ -f /tmp/zeus_preview.log ]; then
   cat /tmp/zeus_preview.log
 fi
 
+# Debug: Show cleaned output for URL extraction
+echo "::debug::Attempting URL extraction from output..."
+
 # Helper function to extract URL from text
 extract_url() {
   local text="$1"
+  # Strip ANSI escape codes first (they may hide or corrupt the URL)
+  # Remove common ANSI escape sequences:
+  # - CSI sequences: ESC[...m (colors, formatting)
+  # - ESC[...H/G/K (cursor positioning, line clearing)
+  # - Other ESC sequences
+  local cleaned_text=$(echo "$text" | sed 's/\x1B\[[0-9;]*[mGKHJfABCDsuhl]//g' | sed 's/\x1B[@-_][0-9;]*[ -\/]*[@-~]//g')
+  
   # First try zepp:// deep link format (preferred)
-  local url=$(echo "$text" | grep -oP 'zepp://[^\s\r\n"]+' | head -1 || echo "")
+  local url=$(echo "$cleaned_text" | grep -oP 'zepp://[^\s\r\n"]+' | head -1 || echo "")
   # If no zepp:// URL found, try https:// format
   if [ -z "$url" ]; then
-    url=$(echo "$text" | grep -oP 'https://[a-zA-Z0-9./?&=_:#-]+' | head -1 || echo "")
+    url=$(echo "$cleaned_text" | grep -oP 'https://[a-zA-Z0-9./?&=_:#-]+' | head -1 || echo "")
   fi
   echo "$url"
 }
