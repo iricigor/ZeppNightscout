@@ -186,7 +186,9 @@ if [ -z "$PREVIEW_URL" ]; then
   
   # Read the decoded URL if successful
   if [ $DECODE_EXIT_CODE -eq 0 ] && [ -f "$DECODED_URL_FILE" ]; then
-    DECODED_URL=$(cat "$DECODED_URL_FILE")
+    # Extract only the URL line (ignoring debug messages from stderr)
+    # The URL should be on a line starting with zepp://, zpkd1://, or https://
+    DECODED_URL=$(grep -oP '^(zepp|zpkd1|https)://[^\s\r\n]+' "$DECODED_URL_FILE" | head -1 || echo "")
   else
     echo "First attempt failed, output was:"
     cat "$DECODED_URL_FILE" 2>/dev/null || echo "(no output)"
@@ -201,7 +203,9 @@ if [ -z "$PREVIEW_URL" ]; then
     DECODE_EXIT_CODE=$?
     
     if [ $DECODE_EXIT_CODE -eq 0 ] && [ -f "$DECODED_URL_FILE" ]; then
-      DECODED_URL=$(cat "$DECODED_URL_FILE")
+      # Extract only the URL line (ignoring debug messages from stderr)
+      # The URL should be on a line starting with zepp://, zpkd1://, or https://
+      DECODED_URL=$(grep -oP '^(zepp|zpkd1|https)://[^\s\r\n]+' "$DECODED_URL_FILE" | head -1 || echo "")
     else
       echo "Second attempt failed, output was:"
       cat "$DECODED_URL_FILE" 2>/dev/null || echo "(no output)"
