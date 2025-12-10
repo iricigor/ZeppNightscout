@@ -155,7 +155,7 @@ Page({
     // Checkbox label
     hmUI.createWidget(hmUI.widget.TEXT, {
       x: 50,
-      y: 500,
+      y: 350,
       w: 200,
       h: 40,
       text: 'Test Checkbox:',
@@ -167,8 +167,8 @@ Page({
 
     // Checkbox box background (outer border)
     const checkboxSize = 40;
-    const checkboxX = screenWidth - 100;
-    const checkboxY = 500;
+    const checkboxX = screenWidth - 120;
+    const checkboxY = 350;
     
     hmUI.createWidget(hmUI.widget.FILL_RECT, {
       x: checkboxX,
@@ -208,7 +208,7 @@ Page({
     // Checkbox status text
     widgets.checkboxStatus = hmUI.createWidget(hmUI.widget.TEXT, {
       x: 0,
-      y: 550,
+      y: 400,
       w: screenWidth,
       h: 30,
       text: 'Status: Unchecked',
