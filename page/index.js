@@ -62,7 +62,6 @@ Page({
       y: 100,
       w: screenWidth,
       h: 100,
-      color: 0x000000,
       alpha: 0, // Invisible
       click_func: createTapFeedback('start', 'START OK! tapped')
     });
@@ -86,7 +85,6 @@ Page({
       y: 200,
       w: screenWidth,
       h: 50,
-      color: 0x000000,
       alpha: 0, // Invisible
       click_func: createTapFeedback('version', 'Version tapped')
     });
@@ -110,7 +108,6 @@ Page({
       y: 280,
       w: screenWidth,
       h: 100,
-      color: 0x000000,
       alpha: 0, // Invisible
       click_func: createTapFeedback('instruction', 'Instruction tapped')
     });
@@ -134,7 +131,6 @@ Page({
       y: 380,
       w: screenWidth,
       h: 50,
-      color: 0x000000,
       alpha: 0, // Invisible
       click_func: createTapFeedback('tap', 'Tap instruction tapped')
     });
