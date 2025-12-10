@@ -28,7 +28,7 @@ Page({
           if (exclamationCount < maxExclamations) {
             widget.setProperty(hmUI.prop.TEXT, currentText + '!');
           } else {
-            // After 3 taps with visible feedback, close the app
+            // After 4th tap (when 3 exclamation marks are showing), close the app
             console.log('Max taps reached - closing app');
             hmApp.exit();
           }
