@@ -152,10 +152,17 @@ Page({
     });
 
     // Add checkbox test section
+    // Define checkbox positioning constants
+    const checkboxSize = 40;
+    const checkboxMarginRight = 120;  // Distance from right edge for circular screen accessibility
+    const checkboxY = 350;  // Vertical position - higher up for circular screen accessibility
+    const checkboxStatusY = checkboxY + 50;  // Status text below checkbox
+    const checkboxX = screenWidth - checkboxMarginRight;
+    
     // Checkbox label
     hmUI.createWidget(hmUI.widget.TEXT, {
       x: 50,
-      y: 500,
+      y: checkboxY,
       w: 200,
       h: 40,
       text: 'Test Checkbox:',
@@ -166,9 +173,6 @@ Page({
     });
 
     // Checkbox box background (outer border)
-    const checkboxSize = 40;
-    const checkboxX = screenWidth - 100;
-    const checkboxY = 500;
     
     hmUI.createWidget(hmUI.widget.FILL_RECT, {
       x: checkboxX,
@@ -208,7 +212,7 @@ Page({
     // Checkbox status text
     widgets.checkboxStatus = hmUI.createWidget(hmUI.widget.TEXT, {
       x: 0,
-      y: 550,
+      y: checkboxStatusY,
       w: screenWidth,
       h: 30,
       text: 'Status: Unchecked',
