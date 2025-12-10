@@ -12,6 +12,25 @@ Page({
     const screenWidth = deviceInfo.width;
     const screenHeight = deviceInfo.height;
     
+    // Store widget references for tap feedback
+    const widgets = {};
+    
+    // Helper function to create tap feedback handler
+    const createTapFeedback = (widgetId, logMessage, maxExclamations = 3) => {
+      return () => {
+        console.log(logMessage);
+        const widget = widgets[widgetId];
+        if (widget) {
+          const currentText = widget.getProperty(hmUI.prop.TEXT);
+          // Count existing exclamation marks at the end
+          const exclamationCount = (currentText.match(/!+$/)?.[0] || '').length;
+          if (exclamationCount < maxExclamations) {
+            widget.setProperty(hmUI.prop.TEXT, currentText + '!');
+          }
+        }
+      };
+    };
+    
     // Reusable click handler for closing the app
     const closeApp = () => {
       console.log('Screen tapped - closing app');
@@ -20,7 +39,7 @@ Page({
     
     // This is the absolute first action that creates a visual element.
     // If this runs, the framework is working.
-    const startWidget = hmUI.createWidget(hmUI.widget.TEXT, {
+    widgets.start = hmUI.createWidget(hmUI.widget.TEXT, {
       x: 0,
       y: 100,
       w: screenWidth,
@@ -30,14 +49,11 @@ Page({
       color: 0xffffff,
       align_h: hmUI.align.CENTER_H,
       align_v: hmUI.align.CENTER_V,
-      click_func: () => {
-        console.log('START OK! tapped');
-        startWidget.setProperty(hmUI.prop.TEXT, startWidget.getProperty(hmUI.prop.TEXT) + '!');
-      }
+      click_func: createTapFeedback('start', 'START OK! tapped')
     });
 
     // Add version info
-    const versionWidget = hmUI.createWidget(hmUI.widget.TEXT, {
+    widgets.version = hmUI.createWidget(hmUI.widget.TEXT, {
       x: 0,
       y: 200,
       w: screenWidth,
@@ -47,14 +63,11 @@ Page({
       color: 0x00ff00,
       align_h: hmUI.align.CENTER_H,
       align_v: hmUI.align.CENTER_V,
-      click_func: () => {
-        console.log('Version tapped');
-        versionWidget.setProperty(hmUI.prop.TEXT, versionWidget.getProperty(hmUI.prop.TEXT) + '!');
-      }
+      click_func: createTapFeedback('version', 'Version tapped')
     });
 
     // Add simple instruction
-    const instructionWidget = hmUI.createWidget(hmUI.widget.TEXT, {
+    widgets.instruction = hmUI.createWidget(hmUI.widget.TEXT, {
       x: 0,
       y: 280,
       w: screenWidth,
@@ -64,14 +77,11 @@ Page({
       color: 0xaaaaaa,
       align_h: hmUI.align.CENTER_H,
       align_v: hmUI.align.CENTER_V,
-      click_func: () => {
-        console.log('Instruction tapped');
-        instructionWidget.setProperty(hmUI.prop.TEXT, instructionWidget.getProperty(hmUI.prop.TEXT) + '!');
-      }
+      click_func: createTapFeedback('instruction', 'Instruction tapped')
     });
 
     // Add tap-to-close instruction with click handler
-    const tapWidget = hmUI.createWidget(hmUI.widget.TEXT, {
+    widgets.tap = hmUI.createWidget(hmUI.widget.TEXT, {
       x: 0,
       y: 380,
       w: screenWidth,
@@ -81,10 +91,7 @@ Page({
       color: 0x888888,
       align_h: hmUI.align.CENTER_H,
       align_v: hmUI.align.CENTER_V,
-      click_func: () => {
-        console.log('Tap instruction tapped');
-        tapWidget.setProperty(hmUI.prop.TEXT, tapWidget.getProperty(hmUI.prop.TEXT) + '!');
-      }
+      click_func: createTapFeedback('tap', 'Tap instruction tapped')
     });
   },
 
