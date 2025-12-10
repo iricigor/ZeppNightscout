@@ -29,6 +29,8 @@ fi
 cat > release_notes.md << EOF
 ## ZeppNightscout ${VERSION}
 
+**Released**: $(date -u '+%Y-%m-%d %H:%M:%S UTC')
+
 **Build**: #${BUILD_NUMBER} | **Base Version**: ${BASE_VERSION} | **Branch**: ${BRANCH}
 
 ### Download
