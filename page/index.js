@@ -18,6 +18,14 @@ Page({
     // Checkbox state
     let isChecked = false;
     
+    // Reusable button styling for invisible clickable areas
+    const invisibleButtonStyle = Object.freeze({
+      normal_color: 0x000000, // Black background (blends with screen background)
+      press_color: 0x333333,  // Slightly lighter when pressed for feedback
+      radius: 0,
+      text: ''
+    });
+    
     // Helper function to create tap feedback handler
     const createTapFeedback = (widgetId, logMessage, maxExclamations = 3) => {
       return () => {
@@ -60,12 +68,13 @@ Page({
     });
 
     // Add clickable area for start text (TEXT widgets don't support click_func)
-    hmUI.createWidget(hmUI.widget.FILL_RECT, {
+    // Use BUTTON widget instead of FILL_RECT because FILL_RECT doesn't support click_func
+    hmUI.createWidget(hmUI.widget.BUTTON, {
       x: 0,
       y: 100,
       w: screenWidth,
       h: 100,
-      alpha: 0, // Invisible
+      ...invisibleButtonStyle,
       click_func: createTapFeedback('start', 'START OK! tapped')
     });
 
@@ -83,12 +92,13 @@ Page({
     });
 
     // Add clickable area for version text
-    hmUI.createWidget(hmUI.widget.FILL_RECT, {
+    // Use BUTTON widget instead of FILL_RECT because FILL_RECT doesn't support click_func
+    hmUI.createWidget(hmUI.widget.BUTTON, {
       x: 0,
       y: 200,
       w: screenWidth,
       h: 50,
-      alpha: 0, // Invisible
+      ...invisibleButtonStyle,
       click_func: createTapFeedback('version', 'Version tapped')
     });
 
@@ -106,12 +116,13 @@ Page({
     });
 
     // Add clickable area for instruction text
-    hmUI.createWidget(hmUI.widget.FILL_RECT, {
+    // Use BUTTON widget instead of FILL_RECT because FILL_RECT doesn't support click_func
+    hmUI.createWidget(hmUI.widget.BUTTON, {
       x: 0,
       y: 280,
       w: screenWidth,
       h: 100,
-      alpha: 0, // Invisible
+      ...invisibleButtonStyle,
       click_func: createTapFeedback('instruction', 'Instruction tapped')
     });
 
@@ -129,12 +140,13 @@ Page({
     });
 
     // Add clickable area for tap instruction text
-    hmUI.createWidget(hmUI.widget.FILL_RECT, {
+    // Use BUTTON widget instead of FILL_RECT because FILL_RECT doesn't support click_func
+    hmUI.createWidget(hmUI.widget.BUTTON, {
       x: 0,
       y: 380,
       w: screenWidth,
       h: 50,
-      alpha: 0, // Invisible
+      ...invisibleButtonStyle,
       click_func: createTapFeedback('tap', 'Tap instruction tapped')
     });
 
@@ -223,12 +235,13 @@ Page({
     });
 
     // Clickable area for checkbox
-    hmUI.createWidget(hmUI.widget.FILL_RECT, {
+    // Use BUTTON widget instead of FILL_RECT because FILL_RECT doesn't support click_func
+    hmUI.createWidget(hmUI.widget.BUTTON, {
       x: checkboxX - 10,
       y: checkboxY - 10,
       w: checkboxSize + 20,
       h: checkboxSize + 20,
-      alpha: 0, // Invisible
+      ...invisibleButtonStyle,
       click_func: () => {
         // Toggle checkbox state
         isChecked = !isChecked;
