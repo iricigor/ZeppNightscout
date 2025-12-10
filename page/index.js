@@ -23,9 +23,14 @@ Page({
         if (widget) {
           const currentText = widget.getProperty(hmUI.prop.TEXT);
           // Count existing exclamation marks at the end
-          const exclamationCount = (currentText.match(/!+$/)?.[0] || '').length;
+          const match = currentText.match(/!+$/);
+          const exclamationCount = match ? match[0].length : 0;
           if (exclamationCount < maxExclamations) {
             widget.setProperty(hmUI.prop.TEXT, currentText + '!');
+          } else {
+            // After 3 taps with visible feedback, close the app
+            console.log('Max taps reached - closing app');
+            hmApp.exit();
           }
         }
       };
