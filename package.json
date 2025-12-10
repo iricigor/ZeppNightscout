@@ -8,7 +8,7 @@
     "build:prod": "echo 'Run: zeus build --production (requires @zeppos/zeus-cli)'",
     "preview": "echo 'Run: zeus preview (requires @zeppos/zeus-cli and zeus login)'",
     "install:device": "echo 'Run: zeus install (requires @zeppos/zeus-cli and connected device)'",
-    "test": "node tests/test-parser.js && node tests/test-url-token-validation.js",
+    "test": "node tests/test-parser.js && node tests/test-url-token-validation.js && node tests/test-checkbox.js",
     "test:syntax": "node --check page/index.js && node --check app-side/index.js && node --check shared/message.js",
     "test:yaml": "node tests/test-yaml.js",
     "test:build": "node tests/test-build.js",
