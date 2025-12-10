@@ -18,6 +18,14 @@ Page({
     // Checkbox state
     let isChecked = false;
     
+    // Reusable button styling for invisible clickable areas
+    const invisibleButtonStyle = {
+      normal_color: 0x000000, // Black background (blends with screen background)
+      press_color: 0x333333,  // Slightly lighter when pressed for feedback
+      radius: 0,
+      text: ''
+    };
+    
     // Helper function to create tap feedback handler
     const createTapFeedback = (widgetId, logMessage, maxExclamations = 3) => {
       return () => {
@@ -66,11 +74,7 @@ Page({
       y: 100,
       w: screenWidth,
       h: 100,
-      normal_color: 0x000000,
-      press_color: 0x333333,
-      color: 0x000000, // Transparent background
-      radius: 0,
-      text: '',
+      ...invisibleButtonStyle,
       click_func: createTapFeedback('start', 'START OK! tapped')
     });
 
@@ -94,11 +98,7 @@ Page({
       y: 200,
       w: screenWidth,
       h: 50,
-      normal_color: 0x000000,
-      press_color: 0x333333,
-      color: 0x000000, // Transparent background
-      radius: 0,
-      text: '',
+      ...invisibleButtonStyle,
       click_func: createTapFeedback('version', 'Version tapped')
     });
 
@@ -122,11 +122,7 @@ Page({
       y: 280,
       w: screenWidth,
       h: 100,
-      normal_color: 0x000000,
-      press_color: 0x333333,
-      color: 0x000000, // Transparent background
-      radius: 0,
-      text: '',
+      ...invisibleButtonStyle,
       click_func: createTapFeedback('instruction', 'Instruction tapped')
     });
 
@@ -150,11 +146,7 @@ Page({
       y: 380,
       w: screenWidth,
       h: 50,
-      normal_color: 0x000000,
-      press_color: 0x333333,
-      color: 0x000000, // Transparent background
-      radius: 0,
-      text: '',
+      ...invisibleButtonStyle,
       click_func: createTapFeedback('tap', 'Tap instruction tapped')
     });
 
@@ -249,11 +241,7 @@ Page({
       y: checkboxY - 10,
       w: checkboxSize + 20,
       h: checkboxSize + 20,
-      normal_color: 0x000000,
-      press_color: 0x333333,
-      color: 0x000000, // Transparent background
-      radius: 0,
-      text: '',
+      ...invisibleButtonStyle,
       click_func: () => {
         // Toggle checkbox state
         isChecked = !isChecked;
