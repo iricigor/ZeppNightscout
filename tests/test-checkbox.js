@@ -33,7 +33,9 @@ if (isChecked === false) {
 }
 
 // Test 4: Multiple toggles
-for (let i = 0; i < 10; i++) {
+// Test with 10 toggles (even number, should end up unchecked)
+const TOGGLE_COUNT = 10;
+for (let i = 0; i < TOGGLE_COUNT; i++) {
   isChecked = !isChecked;
 }
 if (isChecked === false) { // Should be false after even number of toggles
@@ -75,7 +77,8 @@ testResults.forEach(result => console.log(result));
 console.log('\n========================================');
 
 // Check if all tests passed
-const failedTests = testResults.filter(r => r.startsWith('✗'));
+const FAILED_TEST_MARKER = '✗';
+const failedTests = testResults.filter(r => r.startsWith(FAILED_TEST_MARKER));
 if (failedTests.length === 0) {
   console.log('All tests passed! ✓');
   console.log('========================================\n');
