@@ -30,7 +30,7 @@ hmUI.createWidget(hmUI.widget.BUTTON, {
   y: 100,
   w: screenWidth,
   h: 100,
-  normal_color: 0x000000,  // Black (transparent on black background)
+  normal_color: 0x000000,  // Black (blends with black screen background)
   press_color: 0x333333,   // Slightly lighter when pressed
   text: '',                // No text, just a clickable area
   radius: 0,               // Sharp corners
@@ -40,11 +40,13 @@ hmUI.createWidget(hmUI.widget.BUTTON, {
 
 ## Changes Made
 Updated 5 click-sensitive areas in `page/index.js`:
-1. Start text tap area (line 64)
-2. Version text tap area (line 92)
+1. Start text tap area (line 72)
+2. Version text tap area (line 96)
 3. Instruction text tap area (line 120)
-4. Tap instruction text tap area (line 148)
-5. Checkbox click area (line 247)
+4. Tap instruction text tap area (line 144)
+5. Checkbox click area (line 239)
+
+Additionally, refactored to use a reusable `invisibleButtonStyle` configuration object (line 22) to reduce code duplication and improve maintainability.
 
 ## Alternative Approach (Not Used)
 Another valid approach would be to use `addEventListener` on `FILL_RECT`:
