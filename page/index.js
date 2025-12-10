@@ -53,7 +53,17 @@ Page({
       text_size: 48,
       color: 0xffffff,
       align_h: hmUI.align.CENTER_H,
-      align_v: hmUI.align.CENTER_V,
+      align_v: hmUI.align.CENTER_V
+    });
+
+    // Add clickable area for start text (TEXT widgets don't support click_func)
+    hmUI.createWidget(hmUI.widget.FILL_RECT, {
+      x: 0,
+      y: 100,
+      w: screenWidth,
+      h: 100,
+      color: 0x000000,
+      alpha: 0, // Invisible
       click_func: createTapFeedback('start', 'START OK! tapped')
     });
 
@@ -67,7 +77,17 @@ Page({
       text_size: 24,
       color: 0x00ff00,
       align_h: hmUI.align.CENTER_H,
-      align_v: hmUI.align.CENTER_V,
+      align_v: hmUI.align.CENTER_V
+    });
+
+    // Add clickable area for version text
+    hmUI.createWidget(hmUI.widget.FILL_RECT, {
+      x: 0,
+      y: 200,
+      w: screenWidth,
+      h: 50,
+      color: 0x000000,
+      alpha: 0, // Invisible
       click_func: createTapFeedback('version', 'Version tapped')
     });
 
@@ -81,7 +101,17 @@ Page({
       text_size: 20,
       color: 0xaaaaaa,
       align_h: hmUI.align.CENTER_H,
-      align_v: hmUI.align.CENTER_V,
+      align_v: hmUI.align.CENTER_V
+    });
+
+    // Add clickable area for instruction text
+    hmUI.createWidget(hmUI.widget.FILL_RECT, {
+      x: 0,
+      y: 280,
+      w: screenWidth,
+      h: 100,
+      color: 0x000000,
+      alpha: 0, // Invisible
       click_func: createTapFeedback('instruction', 'Instruction tapped')
     });
 
@@ -95,7 +125,17 @@ Page({
       text_size: 18,
       color: 0x888888,
       align_h: hmUI.align.CENTER_H,
-      align_v: hmUI.align.CENTER_V,
+      align_v: hmUI.align.CENTER_V
+    });
+
+    // Add clickable area for tap instruction text
+    hmUI.createWidget(hmUI.widget.FILL_RECT, {
+      x: 0,
+      y: 380,
+      w: screenWidth,
+      h: 50,
+      color: 0x000000,
+      alpha: 0, // Invisible
       click_func: createTapFeedback('tap', 'Tap instruction tapped')
     });
   },
