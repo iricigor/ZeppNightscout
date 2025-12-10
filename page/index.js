@@ -7,12 +7,17 @@ Page({
   onInit() {
     console.log('App starting - minimal version');
     
+    // Get device screen dimensions for proper layout
+    const deviceInfo = hmSetting.getDeviceInfo();
+    const screenWidth = deviceInfo.width;
+    const screenHeight = deviceInfo.height;
+    
     // This is the absolute first action that creates a visual element.
     // If this runs, the framework is working.
     hmUI.createWidget(hmUI.widget.TEXT, {
       x: 0,
       y: 100,
-      w: 480,
+      w: screenWidth,
       h: 100,
       text: 'START OK!',
       text_size: 48,
@@ -25,7 +30,7 @@ Page({
     hmUI.createWidget(hmUI.widget.TEXT, {
       x: 0,
       y: 200,
-      w: 480,
+      w: screenWidth,
       h: 50,
       text: 'Version 0.3.0',
       text_size: 24,
@@ -38,7 +43,7 @@ Page({
     hmUI.createWidget(hmUI.widget.TEXT, {
       x: 0,
       y: 280,
-      w: 480,
+      w: screenWidth,
       h: 100,
       text: 'App is running successfully.\nMinimal test mode.',
       text_size: 20,
@@ -51,7 +56,7 @@ Page({
     hmUI.createWidget(hmUI.widget.TEXT, {
       x: 0,
       y: 380,
-      w: 480,
+      w: screenWidth,
       h: 50,
       text: 'Tap anywhere to close',
       text_size: 18,
@@ -60,19 +65,27 @@ Page({
       align_v: hmUI.align.CENTER_V
     });
 
-    // Create an invisible full-screen widget to capture tap events
-    const tapHandler = hmUI.createWidget(hmUI.widget.IMG, {
+    // Create an invisible full-screen button to capture tap events
+    // Using BUTTON widget with transparent colors for better cross-version compatibility
+    const tapHandler = hmUI.createWidget(hmUI.widget.BUTTON, {
       x: 0,
       y: 0,
-      w: 480,
-      h: 480,
-      src: ''  // No image, making it invisible
+      w: screenWidth,
+      h: screenHeight,
+      text: '',
+      normal_color: 0x000000,
+      press_color: 0x000000,
+      radius: 0,
+      click_func: () => {
+        console.log('Screen tapped - closing app');
+        hmApp.exit();
+      }
     });
-
-    // Add tap event listener to close the app
-    tapHandler.addEventListener(hmUI.event.CLICK_UP, (info) => {
-      console.log('Screen tapped at', info.x, info.y, '- closing app');
-      hmApp.exit();
+    
+    // Set very low opacity to make button nearly invisible
+    // This ensures it doesn't interfere with the text display
+    tapHandler.setProperty(hmUI.prop.MORE, {
+      alpha: 1  // Minimal visibility, almost fully transparent
     });
   },
 
