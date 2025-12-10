@@ -148,17 +148,6 @@ Page({
       align_v: hmUI.align.CENTER_V
     });
 
-    // Register swipe gesture handlers
-    // Swipe down to close the app
-    hmUI.createWidget(hmUI.widget.WIDGET_DELEGATE, {
-      resume_call: () => {
-        console.log('App resumed');
-      },
-      pause_call: () => {
-        console.log('App paused');
-      }
-    });
-
     // Add gesture event listener for swipe
     hmApp.registerGestureEvent(function(event) {
       console.log('Gesture event received:', event);
@@ -171,20 +160,32 @@ Page({
       // Check for swipe up gesture
       else if (event === hmApp.gesture.UP) {
         console.log('Swipe up detected');
-        // Could add different functionality here
+        // Visual feedback with timeout to reset
         widgets.swipe.setProperty(hmUI.prop.TEXT, 'Swipe up detected!');
         widgets.swipe.setProperty(hmUI.prop.COLOR, 0x00ff00);
+        setTimeout(() => {
+          widgets.swipe.setProperty(hmUI.prop.TEXT, 'or swipe down to close');
+          widgets.swipe.setProperty(hmUI.prop.COLOR, 0x666666);
+        }, 2000);
       }
       // Check for swipe left/right gestures
       else if (event === hmApp.gesture.LEFT) {
         console.log('Swipe left detected');
         widgets.swipe.setProperty(hmUI.prop.TEXT, 'Swipe left detected!');
         widgets.swipe.setProperty(hmUI.prop.COLOR, 0xffff00);
+        setTimeout(() => {
+          widgets.swipe.setProperty(hmUI.prop.TEXT, 'or swipe down to close');
+          widgets.swipe.setProperty(hmUI.prop.COLOR, 0x666666);
+        }, 2000);
       }
       else if (event === hmApp.gesture.RIGHT) {
         console.log('Swipe right detected');
         widgets.swipe.setProperty(hmUI.prop.TEXT, 'Swipe right detected!');
         widgets.swipe.setProperty(hmUI.prop.COLOR, 0xff8800);
+        setTimeout(() => {
+          widgets.swipe.setProperty(hmUI.prop.TEXT, 'or swipe down to close');
+          widgets.swipe.setProperty(hmUI.prop.COLOR, 0x666666);
+        }, 2000);
       }
       
       return true;
