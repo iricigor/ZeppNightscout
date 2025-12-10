@@ -12,6 +12,12 @@ Page({
     const screenWidth = deviceInfo.width;
     const screenHeight = deviceInfo.height;
     
+    // Reusable click handler for closing the app
+    const closeApp = () => {
+      console.log('Screen tapped - closing app');
+      hmApp.exit();
+    };
+    
     // This is the absolute first action that creates a visual element.
     // If this runs, the framework is working.
     hmUI.createWidget(hmUI.widget.TEXT, {
@@ -23,7 +29,8 @@ Page({
       text_size: 48,
       color: 0xffffff,
       align_h: hmUI.align.CENTER_H,
-      align_v: hmUI.align.CENTER_V
+      align_v: hmUI.align.CENTER_V,
+      click_func: closeApp
     });
 
     // Add version info
@@ -36,7 +43,8 @@ Page({
       text_size: 24,
       color: 0x00ff00,
       align_h: hmUI.align.CENTER_H,
-      align_v: hmUI.align.CENTER_V
+      align_v: hmUI.align.CENTER_V,
+      click_func: closeApp
     });
 
     // Add simple instruction
@@ -49,7 +57,8 @@ Page({
       text_size: 20,
       color: 0xaaaaaa,
       align_h: hmUI.align.CENTER_H,
-      align_v: hmUI.align.CENTER_V
+      align_v: hmUI.align.CENTER_V,
+      click_func: closeApp
     });
 
     // Add tap-to-close instruction with click handler
@@ -58,15 +67,12 @@ Page({
       y: 380,
       w: screenWidth,
       h: 50,
-      text: 'Tap here to close',
+      text: 'tap anywhere to close',
       text_size: 18,
       color: 0x888888,
       align_h: hmUI.align.CENTER_H,
       align_v: hmUI.align.CENTER_V,
-      click_func: () => {
-        console.log('Screen tapped - closing app');
-        hmApp.exit();
-      }
+      click_func: closeApp
     });
   },
 
