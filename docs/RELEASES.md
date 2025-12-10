@@ -129,7 +129,7 @@ This method creates an official release from a version tag:
 
 ## How It Works
 
-The release workflow (`.github/workflows/release.yml`) performs these steps:
+The release workflow (`.github/workflows/release-modular.yml`) performs these steps:
 
 1. **Trigger**: 
    - Automatically on tag push matching `v*.*.*`

@@ -4,7 +4,7 @@ This directory contains automated workflows for the ZeppNightscout project.
 
 ## Workflows
 
-### Release Workflow (`release.yml`)
+### Release Workflow (`release-modular.yml`)
 
 Automated build and release pipeline that creates GitHub releases with Zeus preview QR codes.
 
@@ -18,11 +18,7 @@ Automated build and release pipeline that creates GitHub releases with Zeus prev
 - Zeus preview QR code generation (requires secrets)
 - GitHub release creation with comprehensive notes
 - Multiple installation options via QR codes
-
-**Important: When modifying this workflow:**
-- Update the PR number in the "Get version and build number" step
-- Change the comment `# Last modification done in PR iricigor/ZeppNightscout#XX` to reflect your PR number
-- This helps track which PR last modified the release pipeline
+- Modular design using composite actions for better maintainability
 
 #### Required Secrets
 

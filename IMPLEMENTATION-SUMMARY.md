@@ -12,7 +12,7 @@
 
 ### 1. Non-Interactive Zeus Authentication (Requirement: "provide arguments in commandline")
 
-**Location**: `.github/workflows/release.yml` lines 86-111
+**Location**: `.github/workflows/release-modular.yml` using composite action `.github/actions/zeus-setup`
 
 **Implementation**:
 - Uses repository secrets `ZEPP_APP_TOKEN`, `ZEPP_USER_ID`, and `ZEPP_CNAME`
@@ -29,7 +29,7 @@
 
 ### 2. Zeus Preview QR Code Generation (Requirement: "build using zeus preview command")
 
-**Location**: `.github/workflows/release.yml` lines 184-241
+**Location**: `.github/workflows/release-modular.yml` using composite action `.github/actions/zeus-build-preview`
 
 **Implementation**:
 - Runs `zeus preview` command after successful authentication
@@ -46,7 +46,7 @@
 
 ### 3. Enhanced Release Notes (Requirement: "generate similar release as now, but with newly generated QR code")
 
-**Location**: `.github/workflows/release.yml` lines 288-360
+**Location**: `.github/workflows/release-modular.yml` using composite action `.github/actions/release-preparation`
 
 **Implementation**:
 - Creates releases with **two types of QR codes**:
@@ -79,10 +79,11 @@
 ## Files Changed
 
 ### Modified Files
-1. `.github/workflows/release.yml` - Replaced interactive login with direct token configuration
-2. `docs/RELEASES.md` - Updated with new token-based authentication approach
-3. `docs/ZEPP-LOGIN-FEATURE.md` - Updated with new authentication method
-4. `.github/workflows/README.md` - Updated secrets documentation
+1. `.github/workflows/release-modular.yml` - Modular release workflow using composite actions
+2. `.github/actions/*` - Composite actions for version management, Zeus setup, build, and release preparation
+3. `docs/RELEASES.md` - Updated with modular workflow references
+4. `docs/ZEPP-LOGIN-FEATURE.md` - Updated with new authentication method
+5. `.github/workflows/README.md` - Updated secrets documentation
 
 ### New Files
 1. `.github/workflows/README.md` - Workflow documentation (updated)
