@@ -15,6 +15,9 @@ Page({
     // Store widget references for tap feedback
     const widgets = {};
     
+    // Checkbox state
+    let isChecked = false;
+    
     // Helper function to create tap feedback handler
     const createTapFeedback = (widgetId, logMessage, maxExclamations = 3) => {
       return () => {
@@ -146,6 +149,100 @@ Page({
       color: 0x666666,
       align_h: hmUI.align.CENTER_H,
       align_v: hmUI.align.CENTER_V
+    });
+
+    // Add checkbox test section
+    // Checkbox label
+    hmUI.createWidget(hmUI.widget.TEXT, {
+      x: 50,
+      y: 500,
+      w: 200,
+      h: 40,
+      text: 'Test Checkbox:',
+      text_size: 18,
+      color: 0xaaaaaa,
+      align_h: hmUI.align.LEFT,
+      align_v: hmUI.align.CENTER_V
+    });
+
+    // Checkbox box background (outer border)
+    const checkboxSize = 40;
+    const checkboxX = screenWidth - 100;
+    const checkboxY = 500;
+    
+    hmUI.createWidget(hmUI.widget.FILL_RECT, {
+      x: checkboxX,
+      y: checkboxY,
+      w: checkboxSize,
+      h: checkboxSize,
+      color: 0x888888,
+      radius: 5
+    });
+
+    // Checkbox inner area (white background when unchecked)
+    widgets.checkboxInner = hmUI.createWidget(hmUI.widget.FILL_RECT, {
+      x: checkboxX + 2,
+      y: checkboxY + 2,
+      w: checkboxSize - 4,
+      h: checkboxSize - 4,
+      color: 0x222222,
+      radius: 3
+    });
+
+    // Checkbox checkmark (visible when checked)
+    widgets.checkmark = hmUI.createWidget(hmUI.widget.TEXT, {
+      x: checkboxX,
+      y: checkboxY,
+      w: checkboxSize,
+      h: checkboxSize,
+      text: '✓',
+      text_size: 32,
+      color: 0x00ff00,
+      align_h: hmUI.align.CENTER_H,
+      align_v: hmUI.align.CENTER_V
+    });
+
+    // Initially hide the checkmark
+    widgets.checkmark.setProperty(hmUI.prop.VISIBLE, false);
+
+    // Checkbox status text
+    widgets.checkboxStatus = hmUI.createWidget(hmUI.widget.TEXT, {
+      x: 0,
+      y: 550,
+      w: screenWidth,
+      h: 30,
+      text: 'Status: Unchecked',
+      text_size: 16,
+      color: 0x888888,
+      align_h: hmUI.align.CENTER_H,
+      align_v: hmUI.align.CENTER_V
+    });
+
+    // Clickable area for checkbox
+    hmUI.createWidget(hmUI.widget.FILL_RECT, {
+      x: checkboxX - 10,
+      y: checkboxY - 10,
+      w: checkboxSize + 20,
+      h: checkboxSize + 20,
+      alpha: 0, // Invisible
+      click_func: () => {
+        // Toggle checkbox state
+        isChecked = !isChecked;
+        
+        // Update checkmark visibility
+        widgets.checkmark.setProperty(hmUI.prop.VISIBLE, isChecked);
+        
+        // Update status text
+        if (isChecked) {
+          widgets.checkboxStatus.setProperty(hmUI.prop.TEXT, 'Status: Checked ✓');
+          widgets.checkboxStatus.setProperty(hmUI.prop.COLOR, 0x00ff00);
+        } else {
+          widgets.checkboxStatus.setProperty(hmUI.prop.TEXT, 'Status: Unchecked');
+          widgets.checkboxStatus.setProperty(hmUI.prop.COLOR, 0x888888);
+        }
+        
+        console.log('Checkbox toggled:', isChecked ? 'checked' : 'unchecked');
+      }
     });
 
     // Add gesture event listener for swipe
