@@ -19,12 +19,12 @@ Page({
     let isChecked = false;
     
     // Reusable button styling for invisible clickable areas
-    const invisibleButtonStyle = {
+    const invisibleButtonStyle = Object.freeze({
       normal_color: 0x000000, // Black background (blends with screen background)
       press_color: 0x333333,  // Slightly lighter when pressed for feedback
       radius: 0,
       text: ''
-    };
+    });
     
     // Helper function to create tap feedback handler
     const createTapFeedback = (widgetId, logMessage, maxExclamations = 3) => {
