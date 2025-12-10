@@ -46,6 +46,34 @@ Page({
       align_h: hmUI.align.CENTER_H,
       align_v: hmUI.align.CENTER_V
     });
+
+    // Add tap-to-close instruction
+    hmUI.createWidget(hmUI.widget.TEXT, {
+      x: 0,
+      y: 380,
+      w: 480,
+      h: 50,
+      text: 'Tap anywhere to close',
+      text_size: 18,
+      color: 0x888888,
+      align_h: hmUI.align.CENTER_H,
+      align_v: hmUI.align.CENTER_V
+    });
+
+    // Create an invisible full-screen widget to capture tap events
+    const tapHandler = hmUI.createWidget(hmUI.widget.IMG, {
+      x: 0,
+      y: 0,
+      w: 480,
+      h: 480,
+      src: ''  // No image, making it invisible
+    });
+
+    // Add tap event listener to close the app
+    tapHandler.addEventListener(hmUI.event.CLICK_UP, (info) => {
+      console.log('Screen tapped at', info.x, info.y, '- closing app');
+      hmApp.exit();
+    });
   },
 
   onDestroy() {
