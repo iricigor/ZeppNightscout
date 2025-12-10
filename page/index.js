@@ -52,40 +52,21 @@ Page({
       align_v: hmUI.align.CENTER_V
     });
 
-    // Add tap-to-close instruction
+    // Add tap-to-close instruction with click handler
     hmUI.createWidget(hmUI.widget.TEXT, {
       x: 0,
       y: 380,
       w: screenWidth,
       h: 50,
-      text: 'Tap anywhere to close',
+      text: 'Tap here to close',
       text_size: 18,
       color: 0x888888,
       align_h: hmUI.align.CENTER_H,
-      align_v: hmUI.align.CENTER_V
-    });
-
-    // Create an invisible full-screen button to capture tap events
-    // Using BUTTON widget with transparent colors for better cross-version compatibility
-    const tapHandler = hmUI.createWidget(hmUI.widget.BUTTON, {
-      x: 0,
-      y: 0,
-      w: screenWidth,
-      h: screenHeight,
-      text: '',
-      normal_color: 0x000000,
-      press_color: 0x000000,
-      radius: 0,
+      align_v: hmUI.align.CENTER_V,
       click_func: () => {
         console.log('Screen tapped - closing app');
         hmApp.exit();
       }
-    });
-    
-    // Set to fully transparent to make button invisible
-    // This ensures it doesn't interfere with the text display
-    tapHandler.setProperty(hmUI.prop.MORE, {
-      alpha: 0  // Fully transparent - button is invisible but still captures clicks
     });
   },
 
