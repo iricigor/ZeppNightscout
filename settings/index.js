@@ -5,19 +5,14 @@
 
 AppSettingsPage({
   build(props) {
-    return View(
-      {
-        style: {
-          padding: '20px'
-        }
-      },
+    return Section(
+      {},
       [
         Text({
-          label: 'Welcome to Zepp Nightscout settings',
-          style: {
-            fontSize: '16px',
-            color: '#333333'
-          }
+          label: 'Zepp Nightscout Settings'
+        }),
+        Text({
+          label: 'Configure your Nightscout connection in the watch app (Page 3)'
         })
       ]
     );
