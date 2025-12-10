@@ -57,13 +57,40 @@ Page({
     });
 
     // Add clickable area for start text (TEXT widgets don't support click_func)
+    // Try multiple widget types to test which one works
     hmUI.createWidget(hmUI.widget.FILL_RECT, {
       x: 0,
       y: 100,
       w: screenWidth,
       h: 100,
       alpha: 0, // Invisible
-      click_func: createTapFeedback('start', 'START OK! tapped')
+      click_func: createTapFeedback('start', 'START OK! tapped - FILL_RECT')
+    });
+    
+    // Alternative: STROKE_RECT (rectangle outline, also invisible)
+    hmUI.createWidget(hmUI.widget.STROKE_RECT, {
+      x: 0,
+      y: 100,
+      w: screenWidth,
+      h: 100,
+      color: 0x000000,
+      line_width: 1,
+      alpha: 0, // Invisible
+      click_func: createTapFeedback('start', 'START OK! tapped - STROKE_RECT')
+    });
+    
+    // Alternative: BUTTON (styled to be transparent-like)
+    hmUI.createWidget(hmUI.widget.BUTTON, {
+      x: 0,
+      y: 100,
+      w: screenWidth,
+      h: 100,
+      text: '',
+      normal_color: 0x000000,
+      press_color: 0x000000,
+      radius: 0,
+      alpha: 0, // Try to make invisible
+      click_func: createTapFeedback('start', 'START OK! tapped - BUTTON')
     });
 
     // Add version info
@@ -80,13 +107,38 @@ Page({
     });
 
     // Add clickable area for version text
+    // Try multiple widget types to test which one works
     hmUI.createWidget(hmUI.widget.FILL_RECT, {
       x: 0,
       y: 200,
       w: screenWidth,
       h: 50,
       alpha: 0, // Invisible
-      click_func: createTapFeedback('version', 'Version tapped')
+      click_func: createTapFeedback('version', 'Version tapped - FILL_RECT')
+    });
+    
+    hmUI.createWidget(hmUI.widget.STROKE_RECT, {
+      x: 0,
+      y: 200,
+      w: screenWidth,
+      h: 50,
+      color: 0x000000,
+      line_width: 1,
+      alpha: 0,
+      click_func: createTapFeedback('version', 'Version tapped - STROKE_RECT')
+    });
+    
+    hmUI.createWidget(hmUI.widget.BUTTON, {
+      x: 0,
+      y: 200,
+      w: screenWidth,
+      h: 50,
+      text: '',
+      normal_color: 0x000000,
+      press_color: 0x000000,
+      radius: 0,
+      alpha: 0,
+      click_func: createTapFeedback('version', 'Version tapped - BUTTON')
     });
 
     // Add simple instruction
@@ -103,13 +155,38 @@ Page({
     });
 
     // Add clickable area for instruction text
+    // Try multiple widget types to test which one works
     hmUI.createWidget(hmUI.widget.FILL_RECT, {
       x: 0,
       y: 280,
       w: screenWidth,
       h: 100,
       alpha: 0, // Invisible
-      click_func: createTapFeedback('instruction', 'Instruction tapped')
+      click_func: createTapFeedback('instruction', 'Instruction tapped - FILL_RECT')
+    });
+    
+    hmUI.createWidget(hmUI.widget.STROKE_RECT, {
+      x: 0,
+      y: 280,
+      w: screenWidth,
+      h: 100,
+      color: 0x000000,
+      line_width: 1,
+      alpha: 0,
+      click_func: createTapFeedback('instruction', 'Instruction tapped - STROKE_RECT')
+    });
+    
+    hmUI.createWidget(hmUI.widget.BUTTON, {
+      x: 0,
+      y: 280,
+      w: screenWidth,
+      h: 100,
+      text: '',
+      normal_color: 0x000000,
+      press_color: 0x000000,
+      radius: 0,
+      alpha: 0,
+      click_func: createTapFeedback('instruction', 'Instruction tapped - BUTTON')
     });
 
     // Add tap-to-close instruction with click handler
@@ -126,13 +203,38 @@ Page({
     });
 
     // Add clickable area for tap instruction text
+    // Try multiple widget types to test which one works
     hmUI.createWidget(hmUI.widget.FILL_RECT, {
       x: 0,
       y: 380,
       w: screenWidth,
       h: 50,
       alpha: 0, // Invisible
-      click_func: createTapFeedback('tap', 'Tap instruction tapped')
+      click_func: createTapFeedback('tap', 'Tap instruction tapped - FILL_RECT')
+    });
+    
+    hmUI.createWidget(hmUI.widget.STROKE_RECT, {
+      x: 0,
+      y: 380,
+      w: screenWidth,
+      h: 50,
+      color: 0x000000,
+      line_width: 1,
+      alpha: 0,
+      click_func: createTapFeedback('tap', 'Tap instruction tapped - STROKE_RECT')
+    });
+    
+    hmUI.createWidget(hmUI.widget.BUTTON, {
+      x: 0,
+      y: 380,
+      w: screenWidth,
+      h: 50,
+      text: '',
+      normal_color: 0x000000,
+      press_color: 0x000000,
+      radius: 0,
+      alpha: 0,
+      click_func: createTapFeedback('tap', 'Tap instruction tapped - BUTTON')
     });
   },
 
