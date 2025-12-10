@@ -20,7 +20,7 @@ Page({
     
     // This is the absolute first action that creates a visual element.
     // If this runs, the framework is working.
-    hmUI.createWidget(hmUI.widget.TEXT, {
+    const startWidget = hmUI.createWidget(hmUI.widget.TEXT, {
       x: 0,
       y: 100,
       w: screenWidth,
@@ -30,11 +30,14 @@ Page({
       color: 0xffffff,
       align_h: hmUI.align.CENTER_H,
       align_v: hmUI.align.CENTER_V,
-      click_func: closeApp
+      click_func: () => {
+        console.log('START OK! tapped');
+        startWidget.setProperty(hmUI.prop.TEXT, startWidget.getProperty(hmUI.prop.TEXT) + '!');
+      }
     });
 
     // Add version info
-    hmUI.createWidget(hmUI.widget.TEXT, {
+    const versionWidget = hmUI.createWidget(hmUI.widget.TEXT, {
       x: 0,
       y: 200,
       w: screenWidth,
@@ -44,11 +47,14 @@ Page({
       color: 0x00ff00,
       align_h: hmUI.align.CENTER_H,
       align_v: hmUI.align.CENTER_V,
-      click_func: closeApp
+      click_func: () => {
+        console.log('Version tapped');
+        versionWidget.setProperty(hmUI.prop.TEXT, versionWidget.getProperty(hmUI.prop.TEXT) + '!');
+      }
     });
 
     // Add simple instruction
-    hmUI.createWidget(hmUI.widget.TEXT, {
+    const instructionWidget = hmUI.createWidget(hmUI.widget.TEXT, {
       x: 0,
       y: 280,
       w: screenWidth,
@@ -58,11 +64,14 @@ Page({
       color: 0xaaaaaa,
       align_h: hmUI.align.CENTER_H,
       align_v: hmUI.align.CENTER_V,
-      click_func: closeApp
+      click_func: () => {
+        console.log('Instruction tapped');
+        instructionWidget.setProperty(hmUI.prop.TEXT, instructionWidget.getProperty(hmUI.prop.TEXT) + '!');
+      }
     });
 
     // Add tap-to-close instruction with click handler
-    hmUI.createWidget(hmUI.widget.TEXT, {
+    const tapWidget = hmUI.createWidget(hmUI.widget.TEXT, {
       x: 0,
       y: 380,
       w: screenWidth,
@@ -72,7 +81,10 @@ Page({
       color: 0x888888,
       align_h: hmUI.align.CENTER_H,
       align_v: hmUI.align.CENTER_V,
-      click_func: closeApp
+      click_func: () => {
+        console.log('Tap instruction tapped');
+        tapWidget.setProperty(hmUI.prop.TEXT, tapWidget.getProperty(hmUI.prop.TEXT) + '!');
+      }
     });
   },
 
