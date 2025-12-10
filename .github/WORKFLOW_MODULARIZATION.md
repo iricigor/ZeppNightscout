@@ -10,8 +10,7 @@ The release workflow has been split into reusable components to improve maintain
 
 ### Main Workflow Files
 
-1. **`.github/workflows/release.yml`** - Original workflow (fixed YAML syntax error)
-2. **`.github/workflows/release-modular.yml`** - New modular workflow using composite actions
+1. **`.github/workflows/release-modular.yml`** - Modular workflow using composite actions (active)
 
 ### Composite Actions
 
@@ -47,40 +46,33 @@ Located in `scripts/`:
 
 ## Benefits
 
-### Before (Original Workflow)
-- 433 lines in a single file
+### Before (Original Workflow - Now Removed)
+- 307 lines in a single file
 - Complex nested logic with heredocs
 - Difficult to test individual components
 - YAML syntax issues with heredocs
 
-### After (Modular Workflow)
-- 91 lines in main workflow (78% reduction)
+### After (Modular Workflow - Current)
+- 89 lines in main workflow (71% reduction)
 - 4 reusable composite actions
 - 2 helper shell scripts
 - Clear separation of concerns
 - Easy to test and maintain
 - No YAML syntax issues
 
-## Migration Path
+## Migration Completed
 
-### Option 1: Use Modular Workflow (Recommended)
-Replace `release.yml` with `release-modular.yml`:
-```bash
-mv .github/workflows/release.yml .github/workflows/release-legacy.yml
-mv .github/workflows/release-modular.yml .github/workflows/release.yml
-```
-
-### Option 2: Keep Both
-Keep both workflows for gradual migration:
-- `release.yml` - Stable, original workflow (with YAML fix)
-- `release-modular.yml` - New modular workflow for testing
+The original monolithic `release.yml` has been removed. The repository now uses the modular workflow exclusively:
+- **Active workflow**: `.github/workflows/release-modular.yml`
+- **Composite actions**: Located in `.github/actions/`
+- **Helper scripts**: Located in `scripts/`
 
 ## Testing
 
-To test the modular workflow:
+The modular workflow is now the active release pipeline:
 1. Trigger manually via workflow_dispatch
 2. Push a test tag: `git tag v0.1.999 && git push origin v0.1.999`
-3. Compare outputs with original workflow
+3. Monitor the workflow execution
 
 ## Future Improvements
 

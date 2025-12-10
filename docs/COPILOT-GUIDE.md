@@ -386,7 +386,7 @@ Start coding and let Copilot assist you! Remember to review all suggestions and 
 
 ## Important: Release Pipeline Maintenance
 
-When modifying the release workflow (`.github/workflows/release.yml`):
-1. **Always update the PR tracking comment** in the "Get version and build number" step
-2. Change `# Last modification done in PR iricigor/ZeppNightscout#XX` to your current PR number
-3. This helps track which PR last modified the release pipeline and prevents confusion when debugging pipeline issues
+When modifying the release workflow (`.github/workflows/release-modular.yml`):
+1. The workflow uses modular composite actions for better maintainability
+2. Each composite action is in `.github/actions/` directory
+3. Update the relevant action if you need to modify specific functionality
