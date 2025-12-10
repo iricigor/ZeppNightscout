@@ -82,10 +82,10 @@ Page({
       }
     });
     
-    // Set very low opacity to make button nearly invisible
+    // Set to fully transparent to make button invisible
     // This ensures it doesn't interfere with the text display
     tapHandler.setProperty(hmUI.prop.MORE, {
-      alpha: 1  // Minimal visibility, almost fully transparent
+      alpha: 0  // Fully transparent - button is invisible but still captures clicks
     });
   },
 
