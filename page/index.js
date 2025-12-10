@@ -57,40 +57,13 @@ Page({
     });
 
     // Add clickable area for start text (TEXT widgets don't support click_func)
-    // Try multiple widget types to test which one works
     hmUI.createWidget(hmUI.widget.FILL_RECT, {
       x: 0,
       y: 100,
       w: screenWidth,
       h: 100,
       alpha: 0, // Invisible
-      click_func: createTapFeedback('start', 'START OK! tapped - FILL_RECT')
-    });
-    
-    // Alternative: STROKE_RECT (rectangle outline, also invisible)
-    hmUI.createWidget(hmUI.widget.STROKE_RECT, {
-      x: 0,
-      y: 100,
-      w: screenWidth,
-      h: 100,
-      color: 0x000000,
-      line_width: 1,
-      alpha: 0, // Invisible
-      click_func: createTapFeedback('start', 'START OK! tapped - STROKE_RECT')
-    });
-    
-    // Alternative: BUTTON (styled to be transparent-like)
-    hmUI.createWidget(hmUI.widget.BUTTON, {
-      x: 0,
-      y: 100,
-      w: screenWidth,
-      h: 100,
-      text: '',
-      normal_color: 0x000000,
-      press_color: 0x000000,
-      radius: 0,
-      alpha: 0, // Try to make invisible
-      click_func: createTapFeedback('start', 'START OK! tapped - BUTTON')
+      click_func: createTapFeedback('start', 'START OK! tapped')
     });
 
     // Add version info
@@ -107,38 +80,13 @@ Page({
     });
 
     // Add clickable area for version text
-    // Try multiple widget types to test which one works
     hmUI.createWidget(hmUI.widget.FILL_RECT, {
       x: 0,
       y: 200,
       w: screenWidth,
       h: 50,
       alpha: 0, // Invisible
-      click_func: createTapFeedback('version', 'Version tapped - FILL_RECT')
-    });
-    
-    hmUI.createWidget(hmUI.widget.STROKE_RECT, {
-      x: 0,
-      y: 200,
-      w: screenWidth,
-      h: 50,
-      color: 0x000000,
-      line_width: 1,
-      alpha: 0,
-      click_func: createTapFeedback('version', 'Version tapped - STROKE_RECT')
-    });
-    
-    hmUI.createWidget(hmUI.widget.BUTTON, {
-      x: 0,
-      y: 200,
-      w: screenWidth,
-      h: 50,
-      text: '',
-      normal_color: 0x000000,
-      press_color: 0x000000,
-      radius: 0,
-      alpha: 0,
-      click_func: createTapFeedback('version', 'Version tapped - BUTTON')
+      click_func: createTapFeedback('version', 'Version tapped')
     });
 
     // Add simple instruction
@@ -155,38 +103,13 @@ Page({
     });
 
     // Add clickable area for instruction text
-    // Try multiple widget types to test which one works
     hmUI.createWidget(hmUI.widget.FILL_RECT, {
       x: 0,
       y: 280,
       w: screenWidth,
       h: 100,
       alpha: 0, // Invisible
-      click_func: createTapFeedback('instruction', 'Instruction tapped - FILL_RECT')
-    });
-    
-    hmUI.createWidget(hmUI.widget.STROKE_RECT, {
-      x: 0,
-      y: 280,
-      w: screenWidth,
-      h: 100,
-      color: 0x000000,
-      line_width: 1,
-      alpha: 0,
-      click_func: createTapFeedback('instruction', 'Instruction tapped - STROKE_RECT')
-    });
-    
-    hmUI.createWidget(hmUI.widget.BUTTON, {
-      x: 0,
-      y: 280,
-      w: screenWidth,
-      h: 100,
-      text: '',
-      normal_color: 0x000000,
-      press_color: 0x000000,
-      radius: 0,
-      alpha: 0,
-      click_func: createTapFeedback('instruction', 'Instruction tapped - BUTTON')
+      click_func: createTapFeedback('instruction', 'Instruction tapped')
     });
 
     // Add tap-to-close instruction with click handler
@@ -203,38 +126,69 @@ Page({
     });
 
     // Add clickable area for tap instruction text
-    // Try multiple widget types to test which one works
     hmUI.createWidget(hmUI.widget.FILL_RECT, {
       x: 0,
       y: 380,
       w: screenWidth,
       h: 50,
       alpha: 0, // Invisible
-      click_func: createTapFeedback('tap', 'Tap instruction tapped - FILL_RECT')
+      click_func: createTapFeedback('tap', 'Tap instruction tapped')
     });
-    
-    hmUI.createWidget(hmUI.widget.STROKE_RECT, {
+
+    // Add swipe gesture instruction
+    widgets.swipe = hmUI.createWidget(hmUI.widget.TEXT, {
       x: 0,
-      y: 380,
+      y: 430,
       w: screenWidth,
-      h: 50,
-      color: 0x000000,
-      line_width: 1,
-      alpha: 0,
-      click_func: createTapFeedback('tap', 'Tap instruction tapped - STROKE_RECT')
+      h: 40,
+      text: 'or swipe down to close',
+      text_size: 16,
+      color: 0x666666,
+      align_h: hmUI.align.CENTER_H,
+      align_v: hmUI.align.CENTER_V
     });
-    
-    hmUI.createWidget(hmUI.widget.BUTTON, {
-      x: 0,
-      y: 380,
-      w: screenWidth,
-      h: 50,
-      text: '',
-      normal_color: 0x000000,
-      press_color: 0x000000,
-      radius: 0,
-      alpha: 0,
-      click_func: createTapFeedback('tap', 'Tap instruction tapped - BUTTON')
+
+    // Add gesture event listener for swipe
+    hmApp.registerGestureEvent(function(event) {
+      console.log('Gesture event received:', event);
+      
+      // Check for swipe down gesture
+      if (event === hmApp.gesture.DOWN) {
+        console.log('Swipe down detected - closing app');
+        hmApp.exit();
+      }
+      // Check for swipe up gesture
+      else if (event === hmApp.gesture.UP) {
+        console.log('Swipe up detected');
+        // Visual feedback with timeout to reset
+        widgets.swipe.setProperty(hmUI.prop.TEXT, 'Swipe up detected!');
+        widgets.swipe.setProperty(hmUI.prop.COLOR, 0x00ff00);
+        setTimeout(() => {
+          widgets.swipe.setProperty(hmUI.prop.TEXT, 'or swipe down to close');
+          widgets.swipe.setProperty(hmUI.prop.COLOR, 0x666666);
+        }, 2000);
+      }
+      // Check for swipe left/right gestures
+      else if (event === hmApp.gesture.LEFT) {
+        console.log('Swipe left detected');
+        widgets.swipe.setProperty(hmUI.prop.TEXT, 'Swipe left detected!');
+        widgets.swipe.setProperty(hmUI.prop.COLOR, 0xffff00);
+        setTimeout(() => {
+          widgets.swipe.setProperty(hmUI.prop.TEXT, 'or swipe down to close');
+          widgets.swipe.setProperty(hmUI.prop.COLOR, 0x666666);
+        }, 2000);
+      }
+      else if (event === hmApp.gesture.RIGHT) {
+        console.log('Swipe right detected');
+        widgets.swipe.setProperty(hmUI.prop.TEXT, 'Swipe right detected!');
+        widgets.swipe.setProperty(hmUI.prop.COLOR, 0xff8800);
+        setTimeout(() => {
+          widgets.swipe.setProperty(hmUI.prop.TEXT, 'or swipe down to close');
+          widgets.swipe.setProperty(hmUI.prop.COLOR, 0x666666);
+        }, 2000);
+      }
+      
+      return true;
     });
   },
 
