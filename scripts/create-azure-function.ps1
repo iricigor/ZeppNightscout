@@ -392,13 +392,15 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
 }
 }
 
-# Display usage information when script is loaded
-Write-Host ""
-Write-Host "✓ Set-ZeppAzureFunction cmdlet loaded successfully!" -ForegroundColor Green
-Write-Host ""
-Write-Host "Usage:" -ForegroundColor Cyan
-Write-Host "  Set-ZeppAzureFunction -ResourceGroupName 'rg-zepp' -FunctionAppName 'func-zepp' -AllowedIpAddress '1.2.3.4'" -ForegroundColor White
-Write-Host ""
-Write-Host "For help:" -ForegroundColor Cyan
-Write-Host "  Get-Help Set-ZeppAzureFunction -Detailed" -ForegroundColor White
-Write-Host ""
+# Display usage information when script is loaded (only in interactive sessions)
+if ([Environment]::UserInteractive -and -not $PSBoundParameters.Count) {
+    Write-Host ""
+    Write-Host "✓ Set-ZeppAzureFunction cmdlet loaded successfully!" -ForegroundColor Green
+    Write-Host ""
+    Write-Host "Usage:" -ForegroundColor Cyan
+    Write-Host "  Set-ZeppAzureFunction -ResourceGroupName 'rg-zepp' -FunctionAppName 'func-zepp' -AllowedIpAddress '1.2.3.4'" -ForegroundColor White
+    Write-Host ""
+    Write-Host "For help:" -ForegroundColor Cyan
+    Write-Host "  Get-Help Set-ZeppAzureFunction -Detailed" -ForegroundColor White
+    Write-Host ""
+}
