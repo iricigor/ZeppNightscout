@@ -296,14 +296,58 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     # Create zip using PowerShell compression
     Compress-Archive -Path "$tempDir\*" -DestinationPath $zipPath -Force
     
-    # Deploy using Publish-AzWebApp
+    # Deploy using Kudu API zip deployment
     try {
-        Publish-AzWebApp -ResourceGroupName $ResourceGroupName -Name $FunctionAppName -ArchivePath $zipPath -Force | Out-Null
-        Write-ColorOutput "✓ Function code deployed" "Green"
+        # Get publishing credentials
+        $publishingProfile = Invoke-AzResourceAction `
+            -ResourceType "Microsoft.Web/sites/config" `
+            -ResourceGroupName $ResourceGroupName `
+            -ResourceName "$FunctionAppName/publishingcredentials" `
+            -Action list `
+            -ApiVersion "2022-03-01" `
+            -Force
+        
+        $username = $publishingProfile.Properties.publishingUserName
+        $password = $publishingProfile.Properties.publishingPassword
+        
+        # Create Basic Auth header
+        $base64AuthInfo = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("${username}:${password}"))
+        
+        # Deploy zip file using Kudu API
+        $zipDeployUrl = "https://$FunctionAppName.scm.azurewebsites.net/api/zipdeploy"
+        $headers = @{
+            Authorization = "Basic $base64AuthInfo"
+        }
+        
+        # Deploy with retry logic
+        $maxRetries = 3
+        $retryCount = 0
+        $deployed = $false
+        
+        while (-not $deployed -and $retryCount -lt $maxRetries) {
+            try {
+                Invoke-RestMethod -Uri $zipDeployUrl -Method Post -Headers $headers -InFile $zipPath -ContentType "application/zip" -TimeoutSec 300 | Out-Null
+                $deployed = $true
+                Write-ColorOutput "✓ Function code deployed" "Green"
+            } catch {
+                $retryCount++
+                if ($retryCount -lt $maxRetries) {
+                    Write-ColorOutput "Deployment attempt $retryCount failed, retrying..." "Yellow"
+                    Start-Sleep -Seconds 5
+                } else {
+                    throw
+                }
+            }
+        }
     } catch {
         Write-ColorOutput "Warning: Function deployment may have failed, but the function app is created." "Yellow"
         Write-ColorOutput "You can manually upload the function code through the Azure Portal." "Yellow"
         Write-ColorOutput "Error details: $($_.Exception.Message)" "Red"
+    } finally {
+        # Clear sensitive credentials from memory
+        Remove-Variable -Name username -ErrorAction SilentlyContinue
+        Remove-Variable -Name password -ErrorAction SilentlyContinue
+        Remove-Variable -Name base64AuthInfo -ErrorAction SilentlyContinue
     }
     
     # Clean up temp files
