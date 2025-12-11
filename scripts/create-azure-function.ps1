@@ -241,7 +241,9 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     # Move host.json to the right place
     Move-Item -Path $hostJsonPath -Destination $tempDir -Force
     
-    $zipPath = Join-Path $env:TEMP "function-app-$(Get-Random).zip"
+    # Use timestamp and process ID for unique zip file name to avoid conflicts
+    $timestamp = Get-Date -Format "yyyyMMddHHmmss"
+    $zipPath = Join-Path $env:TEMP "function-app-$timestamp-$PID.zip"
     
     # Create zip using PowerShell compression
     Compress-Archive -Path "$tempDir\*" -DestinationPath $zipPath -Force
@@ -289,13 +291,20 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
 
     # Get function URL
     Write-ColorOutput "Retrieving function URL..." "Yellow"
-    $functionKeys = az functionapp function keys list `
+    $functionKeysJson = az functionapp function keys list `
         --resource-group $ResourceGroupName `
         --name $FunctionAppName `
-        --function-name GetToken 2>&1 | ConvertFrom-Json
+        --function-name GetToken 2>&1
     
-    $defaultKey = $functionKeys.default
-    $functionUrl = "https://$FunctionAppName.azurewebsites.net/api/GetToken?code=$defaultKey"
+    if ($LASTEXITCODE -ne 0) {
+        Write-ColorOutput "Warning: Could not retrieve function keys. The function was created successfully." "Yellow"
+        Write-ColorOutput "You can find the function URL in the Azure Portal." "Yellow"
+        $functionUrl = "https://$FunctionAppName.azurewebsites.net/api/GetToken"
+    } else {
+        $functionKeys = $functionKeysJson | ConvertFrom-Json
+        $defaultKey = $functionKeys.default
+        $functionUrl = "https://$FunctionAppName.azurewebsites.net/api/GetToken?code=$defaultKey"
+    }
     
     Write-ColorOutput "================================================" "Cyan"
     Write-ColorOutput "  Deployment Completed Successfully! ✓" "Green"
@@ -315,7 +324,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     Write-ColorOutput $functionUrl "Yellow"
     Write-Host ""
     Write-ColorOutput "To test the function, run:" "Cyan"
-    Write-ColorOutput "  curl `"$functionUrl`"" "White"
+    Write-ColorOutput '  curl "' + $functionUrl + '"' "White"
     Write-Host ""
     Write-ColorOutput "To edit the function in Azure Portal:" "Cyan"
     Write-ColorOutput "  1. Go to https://portal.azure.com" "White"
