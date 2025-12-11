@@ -56,6 +56,10 @@ Page({
       click_func: () => {
         console.log('Button clicked');
         widgets.button.setProperty(hmUI.prop.TEXT, 'clicked');
+        // Navigate to second page
+        setTimeout(() => {
+          hmApp.gotoPage({ url: 'page/page2' });
+        }, 300);
       }
     });
 
@@ -65,7 +69,7 @@ Page({
       y: 280,
       w: screenWidth,
       h: 80,
-      text: 'Try swiping\nin any direction',
+      text: 'Try swiping\n(left = next page)',
       text_size: 18,
       color: 0x888888,
       align_h: hmUI.align.CENTER_H,
@@ -92,6 +96,10 @@ Page({
         console.log('Swipe left detected');
         feedbackText = 'Swipe left detected!';
         feedbackColor = 0xffff00;
+        // Navigate to second page
+        setTimeout(() => {
+          hmApp.gotoPage({ url: 'page/page2' });
+        }, 300);
       } else if (event === hmApp.gesture.RIGHT) {
         console.log('Swipe right detected');
         feedbackText = 'Swipe right detected!';
@@ -103,7 +111,7 @@ Page({
         widgets.swipeText.setProperty(hmUI.prop.TEXT, feedbackText);
         widgets.swipeText.setProperty(hmUI.prop.COLOR, feedbackColor);
         setTimeout(() => {
-          widgets.swipeText.setProperty(hmUI.prop.TEXT, 'Try swiping\nin any direction');
+          widgets.swipeText.setProperty(hmUI.prop.TEXT, 'Try swiping\n(left = next page)');
           widgets.swipeText.setProperty(hmUI.prop.COLOR, 0x888888);
         }, 2000);
       }
