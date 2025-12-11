@@ -56,6 +56,10 @@ Page({
       click_func: () => {
         console.log('Button clicked');
         widgets.button.setProperty(hmUI.prop.TEXT, 'clicked');
+        // Navigate to second page
+        setTimeout(() => {
+          hmApp.gotoPage({ url: 'page/page2' });
+        }, 300);
       }
     });
 
@@ -92,6 +96,10 @@ Page({
         console.log('Swipe left detected');
         feedbackText = 'Swipe left detected!';
         feedbackColor = 0xffff00;
+        // Navigate to second page
+        setTimeout(() => {
+          hmApp.gotoPage({ url: 'page/page2' });
+        }, 500);
       } else if (event === hmApp.gesture.RIGHT) {
         console.log('Swipe right detected');
         feedbackText = 'Swipe right detected!';
