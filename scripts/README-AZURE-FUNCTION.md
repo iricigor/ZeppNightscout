@@ -251,8 +251,8 @@ Add-AzWebAppAccessRestrictionRule `
     -Priority 100
 ```
 
-##### Option 3: Using Azure Cloud Shell
-Open Cloud Shell in Azure Portal and run:
+##### Option 3: Using Azure Cloud Shell (Alternative with Azure CLI)
+Open Cloud Shell in Azure Portal and run these Azure CLI commands:
 ```bash
 # Remove old rule
 az functionapp config access-restriction remove \
@@ -269,6 +269,8 @@ az functionapp config access-restriction add \
     --ip-address NEW.IP.ADDRESS.HERE \
     --priority 100
 ```
+
+**Note:** Azure Cloud Shell supports both PowerShell and Azure CLI. Use PowerShell (Option 2) for consistency with the deployment script.
 
 ### Function Key Authentication
 
