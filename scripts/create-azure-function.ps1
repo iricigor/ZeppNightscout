@@ -339,15 +339,15 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
                 }
             }
         }
-        
-        # Clear sensitive credentials from memory
-        Remove-Variable -Name username -ErrorAction SilentlyContinue
-        Remove-Variable -Name password -ErrorAction SilentlyContinue
-        Remove-Variable -Name base64AuthInfo -ErrorAction SilentlyContinue
     } catch {
         Write-ColorOutput "Warning: Function deployment may have failed, but the function app is created." "Yellow"
         Write-ColorOutput "You can manually upload the function code through the Azure Portal." "Yellow"
         Write-ColorOutput "Error details: $($_.Exception.Message)" "Red"
+    } finally {
+        # Clear sensitive credentials from memory
+        Remove-Variable -Name username -ErrorAction SilentlyContinue
+        Remove-Variable -Name password -ErrorAction SilentlyContinue
+        Remove-Variable -Name base64AuthInfo -ErrorAction SilentlyContinue
     }
     
     # Clean up temp files
