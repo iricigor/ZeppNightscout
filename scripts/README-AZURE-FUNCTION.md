@@ -238,13 +238,13 @@ To update the allowed IP address after deployment:
 # Remove old IP restriction
 Remove-AzWebAppAccessRestrictionRule `
     -ResourceGroupName "rg-zeppnightscout" `
-    -Name "func-zepptoken" `
-    -RuleName "AllowSpecificIP"
+    -WebAppName "func-zepptoken" `
+    -Name "AllowSpecificIP"
 
 # Add new IP restriction
 Add-AzWebAppAccessRestrictionRule `
     -ResourceGroupName "rg-zeppnightscout" `
-    -Name "func-zepptoken" `
+    -WebAppName "func-zepptoken" `
     -Name "AllowSpecificIP" `
     -Action Allow `
     -IpAddress "NEW.IP.ADDRESS.HERE" `

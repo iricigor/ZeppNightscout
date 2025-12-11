@@ -293,24 +293,15 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         Write-ColorOutput "Configuring IP access restrictions for $AllowedIpAddress..." "Yellow"
         
         try {
-            # Add IP restriction rule using Update-AzWebAppAccessRestrictionConfig
-            $webapp = Get-AzWebApp -ResourceGroupName $ResourceGroupName -Name $FunctionAppName
+            # Add IP restriction rule using Add-AzWebAppAccessRestrictionRule
+            Add-AzWebAppAccessRestrictionRule `
+                -ResourceGroupName $ResourceGroupName `
+                -WebAppName $FunctionAppName `
+                -Name "AllowSpecificIP" `
+                -Action Allow `
+                -IpAddress $AllowedIpAddress `
+                -Priority 100 | Out-Null
             
-            # Create IP security restriction
-            $ipRestriction = @{
-                Name = "AllowSpecificIP"
-                Action = "Allow"
-                IpAddress = $AllowedIpAddress
-                Priority = 100
-            }
-            
-            # Update access restriction config
-            $accessRestrictionConfig = @{
-                ResourceGroupName = $ResourceGroupName
-                Name = $FunctionAppName
-            }
-            
-            Add-AzWebAppAccessRestrictionRule @accessRestrictionConfig @ipRestriction | Out-Null
             Write-ColorOutput "✓ IP access restrictions configured" "Green"
         } catch {
             Write-ColorOutput "Warning: Failed to configure IP restrictions. You can configure this manually in the Azure Portal." "Yellow"
