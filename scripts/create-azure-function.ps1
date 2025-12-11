@@ -342,6 +342,11 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
                 }
             }
         }
+        
+        # Clear sensitive credentials from memory
+        $username = $null
+        $password = $null
+        $base64AuthInfo = $null
     } catch {
         Write-ColorOutput "Warning: Function deployment may have failed, but the function app is created." "Yellow"
         Write-ColorOutput "You can manually upload the function code through the Azure Portal." "Yellow"
