@@ -319,9 +319,6 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
             Authorization = "Basic $base64AuthInfo"
         }
         
-        # Read zip file as bytes
-        $zipBytes = [System.IO.File]::ReadAllBytes($zipPath)
-        
         # Deploy with retry logic
         $maxRetries = 3
         $retryCount = 0
@@ -329,7 +326,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         
         while (-not $deployed -and $retryCount -lt $maxRetries) {
             try {
-                Invoke-RestMethod -Uri $zipDeployUrl -Method Post -Headers $headers -Body $zipBytes -ContentType "application/zip" -TimeoutSec 300 | Out-Null
+                Invoke-RestMethod -Uri $zipDeployUrl -Method Post -Headers $headers -InFile $zipPath -ContentType "application/zip" -TimeoutSec 300 | Out-Null
                 $deployed = $true
                 Write-ColorOutput "✓ Function code deployed" "Green"
             } catch {
@@ -344,9 +341,9 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         }
         
         # Clear sensitive credentials from memory
-        $username = $null
-        $password = $null
-        $base64AuthInfo = $null
+        Remove-Variable -Name username -ErrorAction SilentlyContinue
+        Remove-Variable -Name password -ErrorAction SilentlyContinue
+        Remove-Variable -Name base64AuthInfo -ErrorAction SilentlyContinue
     } catch {
         Write-ColorOutput "Warning: Function deployment may have failed, but the function app is created." "Yellow"
         Write-ColorOutput "You can manually upload the function code through the Azure Portal." "Yellow"
