@@ -16,7 +16,7 @@ The `create-azure-function.ps1` script automates the creation of:
 Before running the script, ensure you have:
 
 1. **Azure CLI** installed
-   - Download from: https://docs.microsoft.com/cli/azure/install-azure-cli
+   - Download from: https://learn.microsoft.com/cli/azure/install-azure-cli
    - Verify installation: `az --version`
 
 2. **PowerShell** installed
@@ -197,7 +197,7 @@ For detailed pricing, see: https://azure.microsoft.com/pricing/details/functions
 
 ### Error: "Azure CLI is not installed"
 
-**Solution**: Install Azure CLI from https://docs.microsoft.com/cli/azure/install-azure-cli
+**Solution**: Install Azure CLI from https://learn.microsoft.com/cli/azure/install-azure-cli
 
 ### Error: "Not logged in to Azure"
 
@@ -256,9 +256,9 @@ This Azure Function is designed to provide an API token that can be used with th
 
 ## Additional Resources
 
-- [Azure Functions Documentation](https://docs.microsoft.com/azure/azure-functions/)
-- [Azure Functions Python Developer Guide](https://docs.microsoft.com/azure/azure-functions/functions-reference-python)
-- [Azure CLI Reference](https://docs.microsoft.com/cli/azure/)
+- [Azure Functions Documentation](https://learn.microsoft.com/azure/azure-functions/)
+- [Azure Functions Python Developer Guide](https://learn.microsoft.com/azure/azure-functions/functions-reference-python)
+- [Azure CLI Reference](https://learn.microsoft.com/cli/azure/)
 - [ZeppNightscout Project](https://github.com/iricigor/ZeppNightscout)
 
 ## Support

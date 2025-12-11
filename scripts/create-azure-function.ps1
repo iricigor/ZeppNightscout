@@ -79,7 +79,7 @@ try {
     Write-ColorOutput "Checking prerequisites..." "Yellow"
     $azVersion = az version 2>&1
     if ($LASTEXITCODE -ne 0) {
-        throw "Azure CLI is not installed or not in PATH. Please install from: https://docs.microsoft.com/cli/azure/install-azure-cli"
+        throw "Azure CLI is not installed or not in PATH. Please install from: https://learn.microsoft.com/cli/azure/install-azure-cli"
     }
     Write-ColorOutput "✓ Azure CLI is installed" "Green"
 
@@ -324,7 +324,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     Write-ColorOutput $functionUrl "Yellow"
     Write-Host ""
     Write-ColorOutput "To test the function, run:" "Cyan"
-    Write-ColorOutput '  curl "' + $functionUrl + '"' "White"
+    Write-ColorOutput "  curl `"$functionUrl`"" "White"
     Write-Host ""
     Write-ColorOutput "To edit the function in Azure Portal:" "Cyan"
     Write-ColorOutput "  1. Go to https://portal.azure.com" "White"
