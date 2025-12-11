@@ -9,6 +9,7 @@
     - HTTP trigger function that returns "DUMMY-TOKEN"
     - IP access restrictions to allow access from a specific IP address
     - Function code editable in the Azure Portal
+    - Uses Azure PowerShell (Az module) - designed for Azure Cloud Shell
 
 .PARAMETER ResourceGroupName
     Name of the Azure Resource Group. Will be created if it doesn't exist.
@@ -25,17 +26,23 @@
 .PARAMETER StorageAccountName
     Name of the storage account for the function app. If not provided, will be auto-generated.
 
+.PARAMETER DisableFunctionAuth
+    Disables function-level authentication. When enabled, relies solely on IP firewall for security.
+    WARNING: Only use this with proper IP restrictions configured!
+
 .EXAMPLE
     .\create-azure-function.ps1 -ResourceGroupName "rg-zeppnightscout" -FunctionAppName "func-zepptoken" -AllowedIpAddress "203.0.113.10"
 
 .EXAMPLE
-    .\create-azure-function.ps1 -ResourceGroupName "rg-zeppnightscout" -FunctionAppName "func-zepptoken" -Location "westeurope" -AllowedIpAddress "203.0.113.10"
+    .\create-azure-function.ps1 -ResourceGroupName "rg-zeppnightscout" -FunctionAppName "func-zepptoken" -Location "westeurope" -AllowedIpAddress "203.0.113.10" -DisableFunctionAuth
 
 .NOTES
     Prerequisites:
-    - Azure CLI must be installed and configured
-    - User must be logged in to Azure (az login)
+    - Azure PowerShell (Az module) - pre-installed in Azure Cloud Shell
+    - User must be logged in to Azure (Connect-AzAccount)
     - User must have permissions to create resources in the subscription
+    
+    This script is optimized for Azure Cloud Shell where Az module is pre-installed.
 #>
 
 [CmdletBinding()]
@@ -53,7 +60,10 @@ param(
     [string]$AllowedIpAddress = "0.0.0.0/0",
 
     [Parameter(Mandatory = $false)]
-    [string]$StorageAccountName
+    [string]$StorageAccountName,
+
+    [Parameter(Mandatory = $false)]
+    [switch]$DisableFunctionAuth
 )
 
 # Set error action preference
@@ -75,21 +85,34 @@ try {
     Write-ColorOutput "================================================" "Cyan"
     Write-Host ""
 
-    # Check if Azure CLI is installed
+    # Check if Az module is available
     Write-ColorOutput "Checking prerequisites..." "Yellow"
-    $azVersion = az version 2>&1
-    if ($LASTEXITCODE -ne 0) {
-        throw "Azure CLI is not installed or not in PATH. Please install from: https://learn.microsoft.com/cli/azure/install-azure-cli"
+    if (-not (Get-Module -ListAvailable -Name Az.Functions)) {
+        Write-ColorOutput "Az.Functions module not found. Installing..." "Yellow"
+        Install-Module -Name Az.Functions -Force -AllowClobber -Scope CurrentUser
     }
-    Write-ColorOutput "✓ Azure CLI is installed" "Green"
+    if (-not (Get-Module -ListAvailable -Name Az.Resources)) {
+        Write-ColorOutput "Az.Resources module not found. Installing..." "Yellow"
+        Install-Module -Name Az.Resources -Force -AllowClobber -Scope CurrentUser
+    }
+    if (-not (Get-Module -ListAvailable -Name Az.Storage)) {
+        Write-ColorOutput "Az.Storage module not found. Installing..." "Yellow"
+        Install-Module -Name Az.Storage -Force -AllowClobber -Scope CurrentUser
+    }
+    if (-not (Get-Module -ListAvailable -Name Az.Websites)) {
+        Write-ColorOutput "Az.Websites module not found. Installing..." "Yellow"
+        Install-Module -Name Az.Websites -Force -AllowClobber -Scope CurrentUser
+    }
+    
+    Write-ColorOutput "✓ Azure PowerShell modules available" "Green"
 
     # Check if logged in to Azure
     Write-ColorOutput "Checking Azure login status..." "Yellow"
-    $accountInfo = az account show 2>&1
-    if ($LASTEXITCODE -ne 0) {
-        throw "Not logged in to Azure. Please run 'az login' first."
+    $context = Get-AzContext
+    if (-not $context) {
+        throw "Not logged in to Azure. Please run 'Connect-AzAccount' first or use Azure Cloud Shell."
     }
-    Write-ColorOutput "✓ Logged in to Azure" "Green"
+    Write-ColorOutput "✓ Logged in to Azure (Subscription: $($context.Subscription.Name))" "Green"
     Write-Host ""
 
     # Generate storage account name if not provided
@@ -107,43 +130,45 @@ try {
 
     # Create Resource Group if it doesn't exist
     Write-ColorOutput "Creating/verifying resource group '$ResourceGroupName' in '$Location'..." "Yellow"
-    az group create --name $ResourceGroupName --location $Location | Out-Null
-    if ($LASTEXITCODE -ne 0) {
-        throw "Failed to create resource group"
+    $rg = Get-AzResourceGroup -Name $ResourceGroupName -ErrorAction SilentlyContinue
+    if (-not $rg) {
+        New-AzResourceGroup -Name $ResourceGroupName -Location $Location | Out-Null
     }
     Write-ColorOutput "✓ Resource group ready" "Green"
     Write-Host ""
 
     # Create Storage Account
     Write-ColorOutput "Creating storage account '$StorageAccountName'..." "Yellow"
-    az storage account create `
-        --name $StorageAccountName `
-        --location $Location `
-        --resource-group $ResourceGroupName `
-        --sku Standard_LRS `
-        --kind StorageV2 | Out-Null
-    
-    if ($LASTEXITCODE -ne 0) {
-        throw "Failed to create storage account"
+    $storageAccount = Get-AzStorageAccount -ResourceGroupName $ResourceGroupName -Name $StorageAccountName -ErrorAction SilentlyContinue
+    if (-not $storageAccount) {
+        New-AzStorageAccount `
+            -ResourceGroupName $ResourceGroupName `
+            -Name $StorageAccountName `
+            -Location $Location `
+            -SkuName Standard_LRS `
+            -Kind StorageV2 | Out-Null
     }
     Write-ColorOutput "✓ Storage account created" "Green"
     Write-Host ""
 
+    # Determine authentication level
+    $authLevel = if ($DisableFunctionAuth) { "anonymous" } else { "function" }
+    if ($DisableFunctionAuth) {
+        Write-ColorOutput "⚠ Function-level authentication disabled - relying on IP firewall only!" "Yellow"
+    }
+
     # Create Function App with Python runtime
     Write-ColorOutput "Creating Function App '$FunctionAppName' with Python 3.11 runtime..." "Yellow"
-    az functionapp create `
-        --name $FunctionAppName `
-        --resource-group $ResourceGroupName `
-        --storage-account $StorageAccountName `
-        --consumption-plan-location $Location `
-        --runtime python `
-        --runtime-version 3.11 `
-        --functions-version 4 `
-        --os-type Linux | Out-Null
+    New-AzFunctionApp `
+        -Name $FunctionAppName `
+        -ResourceGroupName $ResourceGroupName `
+        -StorageAccountName $StorageAccountName `
+        -Location $Location `
+        -Runtime Python `
+        -RuntimeVersion 3.11 `
+        -FunctionsVersion 4 `
+        -OSType Linux | Out-Null
     
-    if ($LASTEXITCODE -ne 0) {
-        throw "Failed to create function app"
-    }
     Write-ColorOutput "✓ Function App created" "Green"
     Write-Host ""
 
@@ -163,7 +188,7 @@ try {
     $functionJson = @{
         bindings = @(
             @{
-                authLevel = "function"
+                authLevel = $authLevel
                 type = "httpTrigger"
                 direction = "in"
                 name = "req"
@@ -248,17 +273,14 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     # Create zip using PowerShell compression
     Compress-Archive -Path "$tempDir\*" -DestinationPath $zipPath -Force
     
-    # Deploy using az functionapp deployment
-    az functionapp deployment source config-zip `
-        --resource-group $ResourceGroupName `
-        --name $FunctionAppName `
-        --src $zipPath | Out-Null
-    
-    if ($LASTEXITCODE -ne 0) {
+    # Deploy using Publish-AzWebApp
+    try {
+        Publish-AzWebApp -ResourceGroupName $ResourceGroupName -Name $FunctionAppName -ArchivePath $zipPath -Force | Out-Null
+        Write-ColorOutput "✓ Function code deployed" "Green"
+    } catch {
         Write-ColorOutput "Warning: Function deployment may have failed, but the function app is created." "Yellow"
         Write-ColorOutput "You can manually upload the function code through the Azure Portal." "Yellow"
-    } else {
-        Write-ColorOutput "✓ Function code deployed" "Green"
+        Write-ColorOutput "Error details: $($_.Exception.Message)" "Red"
     }
     
     # Clean up temp files
@@ -270,19 +292,29 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     if ($AllowedIpAddress -ne "0.0.0.0/0") {
         Write-ColorOutput "Configuring IP access restrictions for $AllowedIpAddress..." "Yellow"
         
-        # Add IP restriction rule
-        az functionapp config access-restriction add `
-            --resource-group $ResourceGroupName `
-            --name $FunctionAppName `
-            --rule-name "AllowSpecificIP" `
-            --action Allow `
-            --ip-address $AllowedIpAddress `
-            --priority 100 | Out-Null
-        
-        if ($LASTEXITCODE -ne 0) {
-            Write-ColorOutput "Warning: Failed to configure IP restrictions. You can configure this manually in the Azure Portal." "Yellow"
-        } else {
+        try {
+            # Add IP restriction rule using Update-AzWebAppAccessRestrictionConfig
+            $webapp = Get-AzWebApp -ResourceGroupName $ResourceGroupName -Name $FunctionAppName
+            
+            # Create IP security restriction
+            $ipRestriction = @{
+                Name = "AllowSpecificIP"
+                Action = "Allow"
+                IpAddress = $AllowedIpAddress
+                Priority = 100
+            }
+            
+            # Update access restriction config
+            $accessRestrictionConfig = @{
+                ResourceGroupName = $ResourceGroupName
+                Name = $FunctionAppName
+            }
+            
+            Add-AzWebAppAccessRestrictionRule @accessRestrictionConfig @ipRestriction | Out-Null
             Write-ColorOutput "✓ IP access restrictions configured" "Green"
+        } catch {
+            Write-ColorOutput "Warning: Failed to configure IP restrictions. You can configure this manually in the Azure Portal." "Yellow"
+            Write-ColorOutput "Error details: $($_.Exception.Message)" "Red"
         }
     } else {
         Write-ColorOutput "⚠ No IP restrictions configured - function is accessible from all IPs" "Yellow"
@@ -291,19 +323,27 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
 
     # Get function URL
     Write-ColorOutput "Retrieving function URL..." "Yellow"
-    $functionKeysJson = az functionapp function keys list `
-        --resource-group $ResourceGroupName `
-        --name $FunctionAppName `
-        --function-name GetToken 2>&1
     
-    if ($LASTEXITCODE -ne 0) {
-        Write-ColorOutput "Warning: Could not retrieve function keys. The function was created successfully." "Yellow"
-        Write-ColorOutput "You can find the function URL in the Azure Portal." "Yellow"
-        $functionUrl = "https://$FunctionAppName.azurewebsites.net/api/GetToken"
-    } else {
-        $functionKeys = $functionKeysJson | ConvertFrom-Json
-        $defaultKey = $functionKeys.default
-        $functionUrl = "https://$FunctionAppName.azurewebsites.net/api/GetToken?code=$defaultKey"
+    $functionUrl = "https://$FunctionAppName.azurewebsites.net/api/GetToken"
+    
+    if (-not $DisableFunctionAuth) {
+        try {
+            # Get function keys using Invoke-AzResourceAction
+            $keys = Invoke-AzResourceAction `
+                -ResourceType "Microsoft.Web/sites/functions" `
+                -ResourceGroupName $ResourceGroupName `
+                -ResourceName "$FunctionAppName/GetToken" `
+                -Action listkeys `
+                -ApiVersion "2022-03-01" `
+                -Force
+            
+            if ($keys.default) {
+                $functionUrl = "$functionUrl?code=$($keys.default)"
+            }
+        } catch {
+            Write-ColorOutput "Warning: Could not retrieve function keys. The function was created successfully." "Yellow"
+            Write-ColorOutput "You can find the function URL and keys in the Azure Portal." "Yellow"
+        }
     }
     
     Write-ColorOutput "================================================" "Cyan"
@@ -316,6 +356,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     Write-ColorOutput "Location:         $Location" "White"
     Write-ColorOutput "Runtime:          Python 3.11" "White"
     Write-ColorOutput "Function Name:    GetToken" "White"
+    Write-ColorOutput "Auth Level:       $authLevel" "White"
     if ($AllowedIpAddress -ne "0.0.0.0/0") {
         Write-ColorOutput "Allowed IP:       $AllowedIpAddress" "White"
     }

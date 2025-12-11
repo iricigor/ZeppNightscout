@@ -11,25 +11,38 @@ The `create-azure-function.ps1` script automates the creation of:
 - HTTP-triggered Python function that returns "DUMMY-TOKEN"
 - IP access restrictions for security
 
+**This script is designed for Azure Cloud Shell** where Azure PowerShell (Az module) is pre-installed and pre-authenticated.
+
 ## Prerequisites
 
-Before running the script, ensure you have:
+### Recommended: Azure Cloud Shell (No Installation Required!)
 
-1. **Azure CLI** installed
-   - Download from: https://learn.microsoft.com/cli/azure/install-azure-cli
-   - Verify installation: `az --version`
+The easiest way to run this script is through Azure Cloud Shell:
 
-2. **PowerShell** installed
-   - Windows: Built-in (PowerShell 5.1+) or PowerShell 7+
-   - Linux/macOS: Install PowerShell 7+ from https://github.com/PowerShell/PowerShell
+1. Go to [Azure Portal](https://portal.azure.com)
+2. Click the Cloud Shell icon (>_) in the top navigation bar
+3. Select **PowerShell** if prompted
+4. Upload the script or clone this repository
+5. Run the script directly - no installation or authentication needed!
+
+### Alternative: Local PowerShell
+
+If running locally, you need:
+
+1. **PowerShell** 7+ installed
+   - Download from: https://github.com/PowerShell/PowerShell
+
+2. **Azure PowerShell (Az module)**
+   - Install with: `Install-Module -Name Az -AllowClobber -Scope CurrentUser`
+   - Documentation: https://learn.microsoft.com/powershell/azure/
 
 3. **Azure Subscription**
    - Active Azure subscription with permissions to create resources
-   - Log in with: `az login`
+   - Log in with: `Connect-AzAccount`
 
 ## Usage
 
-### Basic Usage
+### Basic Usage (in Azure Cloud Shell)
 
 ```powershell
 .\scripts\create-azure-function.ps1 `
@@ -47,6 +60,7 @@ Before running the script, ensure you have:
 | `Location` | No | `eastus` | Azure region for resources (e.g., `eastus`, `westeurope`, `southeastasia`) |
 | `AllowedIpAddress` | No | `0.0.0.0/0` | IP address allowed to access the function (CIDR notation) |
 | `StorageAccountName` | No | Auto-generated | Storage account name (3-24 lowercase alphanumeric chars) |
+| `DisableFunctionAuth` | No | `false` | Switch to disable function-level authentication (relies only on IP firewall) |
 
 ### Examples
 
@@ -69,19 +83,24 @@ Before running the script, ensure you have:
     -AllowedIpAddress "198.51.100.42"
 ```
 
-#### Create function without IP restrictions (development only)
+#### Create function with IP restriction only (no function-level auth)
 
 ```powershell
 .\scripts\create-azure-function.ps1 `
-    -ResourceGroupName "rg-zeppnightscout-dev" `
-    -FunctionAppName "func-zepptoken-dev"
+    -ResourceGroupName "rg-zeppnightscout" `
+    -FunctionAppName "func-zepptoken-iponly" `
+    -AllowedIpAddress "198.51.100.42" `
+    -DisableFunctionAuth
 ```
+
+**Note:** This relies solely on IP firewall for security. Only use when you have a static IP and want simpler URLs without access keys.
 
 ## What the Script Does
 
 1. **Validates Prerequisites**
-   - Checks if Azure CLI is installed
+   - Checks if Azure PowerShell (Az module) is available
    - Verifies Azure login status
+   - Installs missing Az modules if needed (in Cloud Shell, they're pre-installed)
 
 2. **Creates Azure Resources**
    - Resource Group (if it doesn't exist)
@@ -96,8 +115,8 @@ Before running the script, ensure you have:
 
 4. **Configures Security**
    - Applies IP access restrictions (if specified)
-   - Uses function-level authentication
-   - Provides secure function URL with access key
+   - Configures function-level authentication (unless disabled with `-DisableFunctionAuth`)
+   - Provides secure function URL with access key (if auth enabled)
 
 ## Function Response
 
@@ -158,26 +177,117 @@ return func.HttpResponse(
 
 ## Security Considerations
 
+### Understanding Authentication Options
+
+Azure Functions provides two layers of security that can be used independently or together:
+
+#### 1. Function-Level Authentication (Default)
+
+When enabled (default), the function requires an access key in the URL:
+- **URL format:** `https://your-function.azurewebsites.net/api/GetToken?code=ACCESS_KEY`
+- **Pros:** 
+  - Works from any IP address
+  - Can rotate keys without infrastructure changes
+  - Multiple keys can be created for different clients
+- **Cons:**
+  - URL contains sensitive access key
+  - Key could be exposed in logs, browser history, etc.
+
+#### 2. IP Firewall Only (Use `-DisableFunctionAuth`)
+
+When you disable function authentication and use IP restrictions:
+- **URL format:** `https://your-function.azurewebsites.net/api/GetToken` (no access key needed)
+- **Pros:**
+  - Simpler URLs without sensitive data
+  - No risk of key exposure in logs/history
+  - Cleaner integration with applications
+- **Cons:**
+  - Requires static IP address
+  - Must update firewall rules if IP changes
+  - All traffic from allowed IP is trusted
+
+**Recommendation:** Use IP firewall only (`-DisableFunctionAuth`) when:
+- You have a static IP address
+- You want simpler URLs without access keys
+- You trust all applications/users from that IP
+
+Use function-level authentication when:
+- You need to access from multiple/dynamic IPs
+- You want granular access control with multiple keys
+- You need to rotate credentials without infrastructure changes
+
 ### IP Restrictions
 
 - **Recommended**: Always specify an IP address or CIDR range
 - The function will only accept requests from the allowed IP(s)
 - You can add multiple IP restrictions in the Azure Portal
 
+#### Changing IP Address After Deployment
+
+To update the allowed IP address after deployment:
+
+##### Option 1: Using Azure Portal (Easiest)
+1. Go to [Azure Portal](https://portal.azure.com)
+2. Navigate to your Function App
+3. Select **Networking** → **Access restriction**
+4. Edit the "AllowSpecificIP" rule or add new rules
+5. Click **Save**
+
+##### Option 2: Using PowerShell
+```powershell
+# Remove old IP restriction
+Remove-AzWebAppAccessRestrictionRule `
+    -ResourceGroupName "rg-zeppnightscout" `
+    -Name "func-zepptoken" `
+    -RuleName "AllowSpecificIP"
+
+# Add new IP restriction
+Add-AzWebAppAccessRestrictionRule `
+    -ResourceGroupName "rg-zeppnightscout" `
+    -Name "func-zepptoken" `
+    -Name "AllowSpecificIP" `
+    -Action Allow `
+    -IpAddress "NEW.IP.ADDRESS.HERE" `
+    -Priority 100
+```
+
+##### Option 3: Using Azure Cloud Shell
+Open Cloud Shell in Azure Portal and run:
+```bash
+# Remove old rule
+az functionapp config access-restriction remove \
+    --resource-group rg-zeppnightscout \
+    --name func-zepptoken \
+    --rule-name AllowSpecificIP
+
+# Add new rule
+az functionapp config access-restriction add \
+    --resource-group rg-zeppnightscout \
+    --name func-zepptoken \
+    --rule-name AllowSpecificIP \
+    --action Allow \
+    --ip-address NEW.IP.ADDRESS.HERE \
+    --priority 100
+```
+
 ### Function Key Authentication
 
-- The function uses function-level authentication
+- The function uses function-level authentication by default
 - The `code` parameter in the URL is required for access
 - Keep the function URL and key secure
-- Regenerate keys if compromised (in Azure Portal)
+- Regenerate keys if compromised:
+  1. Go to Azure Portal → Function App → Functions → GetToken
+  2. Select **Function Keys**
+  3. Click **Regenerate** on the default key
 
 ### Best Practices
 
 1. Use IP restrictions for production deployments
-2. Keep function keys secure (don't commit to source control)
-3. Use Azure Key Vault for sensitive configuration
-4. Enable Application Insights for monitoring
-5. Regularly review access logs
+2. Consider disabling function auth if using IP firewall only (simpler URLs)
+3. Keep function keys secure if using function-level auth (don't commit to source control)
+4. Use Azure Key Vault for sensitive configuration
+5. Enable Application Insights for monitoring
+6. Regularly review access logs
 
 ## Costs
 
@@ -195,13 +305,20 @@ For detailed pricing, see: https://azure.microsoft.com/pricing/details/functions
 
 ## Troubleshooting
 
-### Error: "Azure CLI is not installed"
+### Error: "Az module not found"
 
-**Solution**: Install Azure CLI from https://learn.microsoft.com/cli/azure/install-azure-cli
+**Solution**: If running locally (not in Cloud Shell), install Azure PowerShell:
+```powershell
+Install-Module -Name Az -AllowClobber -Scope CurrentUser
+```
+
+Or use Azure Cloud Shell where it's pre-installed.
 
 ### Error: "Not logged in to Azure"
 
-**Solution**: Run `az login` and follow the authentication prompts
+**Solution**: 
+- **In Azure Cloud Shell**: You're automatically authenticated - this shouldn't happen
+- **Running locally**: Run `Connect-AzAccount` and follow the authentication prompts
 
 ### Error: "Function app name is already taken"
 
@@ -221,27 +338,43 @@ For detailed pricing, see: https://azure.microsoft.com/pricing/details/functions
 
 The function app is created, but code deployment failed. You can:
 1. Manually upload the function code in Azure Portal
-2. Re-run the deployment using Azure Functions Core Tools
+2. Re-run the script
 3. Check Azure Function App logs for details
+
+### IP Restrictions Not Working
+
+If you can't access the function from your allowed IP:
+1. Verify your current public IP address: `curl ifconfig.me`
+2. Check the IP restriction rules in Azure Portal (Networking → Access restriction)
+3. Ensure the IP address format is correct (e.g., `1.2.3.4` or `1.2.3.0/24`)
+4. Wait a few minutes for changes to propagate
 
 ## Cleanup
 
 To delete all created resources:
 
+### Using PowerShell
+
 ```powershell
 # Delete the entire resource group (removes all resources)
-az group delete --name "rg-zeppnightscout" --yes
+Remove-AzResourceGroup -Name "rg-zeppnightscout" -Force
 ```
 
 Or delete individual resources:
 
 ```powershell
 # Delete only the function app
-az functionapp delete --name "func-zepptoken" --resource-group "rg-zeppnightscout"
+Remove-AzFunctionApp -Name "func-zepptoken" -ResourceGroupName "rg-zeppnightscout" -Force
 
 # Delete only the storage account
-az storage account delete --name "stzepptoken" --resource-group "rg-zeppnightscout" --yes
+Remove-AzStorageAccount -Name "stzepptoken" -ResourceGroupName "rg-zeppnightscout" -Force
 ```
+
+### Using Azure Cloud Shell (Azure CLI)
+
+```bash
+# Delete the entire resource group
+az group delete --name "rg-zeppnightscout" --yes
 
 ## Integration with ZeppNightscout
 
@@ -258,7 +391,7 @@ This Azure Function is designed to provide an API token that can be used with th
 
 - [Azure Functions Documentation](https://learn.microsoft.com/azure/azure-functions/)
 - [Azure Functions Python Developer Guide](https://learn.microsoft.com/azure/azure-functions/functions-reference-python)
-- [Azure CLI Reference](https://learn.microsoft.com/cli/azure/)
+- [Azure PowerShell Documentation](https://learn.microsoft.com/powershell/azure/)
 - [ZeppNightscout Project](https://github.com/iricigor/ZeppNightscout)
 
 ## Support
