@@ -1,82 +1,99 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-    Creates an Azure Function App with a Python HTTP trigger that returns a dummy API token.
+    Provides cmdlet to create Azure Function App for ZeppNightscout API token serving.
 
 .DESCRIPTION
-    This script creates an Azure Function App with the following features:
-    - Python runtime (version 3.11)
-    - HTTP trigger function that returns "DUMMY-TOKEN"
-    - IP access restrictions to allow access from a specific IP address
-    - Function code editable in the Azure Portal
-    - Uses Azure PowerShell (Az module) - designed for Azure Cloud Shell
-
-.PARAMETER ResourceGroupName
-    Name of the Azure Resource Group. Will be created if it doesn't exist.
-
-.PARAMETER FunctionAppName
-    Name of the Azure Function App. Must be globally unique.
-
-.PARAMETER Location
-    Azure region for the resources. Default: eastus
-
-.PARAMETER AllowedIpAddress
-    IP address that will be allowed to access the function. Default: 0.0.0.0/0 (all IPs)
-
-.PARAMETER StorageAccountName
-    Name of the storage account for the function app. If not provided, will be auto-generated.
-
-.PARAMETER DisableFunctionAuth
-    Disables function-level authentication. When enabled, relies solely on IP firewall for security.
-    WARNING: Only use this with proper IP restrictions configured!
-
-.EXAMPLE
-    .\create-azure-function.ps1 -ResourceGroupName "rg-zeppnightscout" -FunctionAppName "func-zepptoken" -AllowedIpAddress "203.0.113.10"
-
-.EXAMPLE
-    .\create-azure-function.ps1 -ResourceGroupName "rg-zeppnightscout" -FunctionAppName "func-zepptoken" -Location "westeurope" -AllowedIpAddress "203.0.113.10" -DisableFunctionAuth
+    This script defines the Set-ZeppAzureFunction cmdlet and can be downloaded and executed directly.
+    
+    Usage:
+    # Direct download and execute
+    iex (irm https://raw.githubusercontent.com/iricigor/ZeppNightscout/main/scripts/create-azure-function.ps1)
+    Set-ZeppAzureFunction -ResourceGroupName "rg-zepp" -FunctionAppName "func-zepp" -AllowedIpAddress "1.2.3.4"
 
 .NOTES
-    Prerequisites:
-    - Azure PowerShell (Az module) - pre-installed in Azure Cloud Shell
-    - User must be logged in to Azure (Connect-AzAccount)
-    - User must have permissions to create resources in the subscription
-    
     This script is optimized for Azure Cloud Shell where Az module is pre-installed.
 #>
 
-[CmdletBinding()]
-param(
-    [Parameter(Mandatory = $true)]
-    [string]$ResourceGroupName,
+function Set-ZeppAzureFunction {
+    <#
+    .SYNOPSIS
+        Creates an Azure Function App with a Python HTTP trigger that returns a dummy API token.
 
-    [Parameter(Mandatory = $true)]
-    [string]$FunctionAppName,
+    .DESCRIPTION
+        This cmdlet creates an Azure Function App with the following features:
+        - Python runtime (version 3.11)
+        - HTTP trigger function that returns "DUMMY-TOKEN"
+        - IP access restrictions to allow access from a specific IP address
+        - Function code editable in the Azure Portal
+        - Uses Azure PowerShell (Az module) - designed for Azure Cloud Shell
 
-    [Parameter(Mandatory = $false)]
-    [string]$Location = "eastus",
+    .PARAMETER ResourceGroupName
+        Name of the Azure Resource Group. Will be created if it doesn't exist.
 
-    [Parameter(Mandatory = $false)]
-    [string]$AllowedIpAddress = "0.0.0.0/0",
+    .PARAMETER FunctionAppName
+        Name of the Azure Function App. Must be globally unique.
 
-    [Parameter(Mandatory = $false)]
-    [string]$StorageAccountName,
+    .PARAMETER Location
+        Azure region for the resources. Default: eastus
 
-    [Parameter(Mandatory = $false)]
-    [switch]$DisableFunctionAuth
-)
+    .PARAMETER AllowedIpAddress
+        IP address that will be allowed to access the function. Default: 0.0.0.0/0 (all IPs)
 
-# Set error action preference
-$ErrorActionPreference = "Stop"
+    .PARAMETER StorageAccountName
+        Name of the storage account for the function app. If not provided, will be auto-generated.
 
-# Function to write colored output
-function Write-ColorOutput {
+    .PARAMETER DisableFunctionAuth
+        Disables function-level authentication. When enabled, relies solely on IP firewall for security.
+        WARNING: Only use this with proper IP restrictions configured!
+
+    .EXAMPLE
+        Set-ZeppAzureFunction -ResourceGroupName "rg-zeppnightscout" -FunctionAppName "func-zepptoken" -AllowedIpAddress "203.0.113.10"
+
+    .EXAMPLE
+        Set-ZeppAzureFunction -ResourceGroupName "rg-zeppnightscout" -FunctionAppName "func-zepptoken" -Location "westeurope" -AllowedIpAddress "203.0.113.10" -DisableFunctionAuth
+
+    .NOTES
+        Prerequisites:
+        - Azure PowerShell (Az module) - pre-installed in Azure Cloud Shell
+        - User must be logged in to Azure (Connect-AzAccount)
+        - User must have permissions to create resources in the subscription
+        
+        This cmdlet is optimized for Azure Cloud Shell where Az module is pre-installed.
+    #>
+
+    [CmdletBinding()]
     param(
-        [string]$Message,
-        [string]$Color = "White"
+        [Parameter(Mandatory = $true)]
+        [string]$ResourceGroupName,
+
+        [Parameter(Mandatory = $true)]
+        [string]$FunctionAppName,
+
+        [Parameter(Mandatory = $false)]
+        [string]$Location = "eastus",
+
+        [Parameter(Mandatory = $false)]
+        [string]$AllowedIpAddress = "0.0.0.0/0",
+
+        [Parameter(Mandatory = $false)]
+        [string]$StorageAccountName,
+
+        [Parameter(Mandatory = $false)]
+        [switch]$DisableFunctionAuth
     )
-    Write-Host $Message -ForegroundColor $Color
-}
+
+    # Set error action preference
+    $ErrorActionPreference = "Stop"
+
+    # Function to write colored output
+    function Write-ColorOutput {
+        param(
+            [string]$Message,
+            [string]$Color = "White"
+        )
+        Write-Host $Message -ForegroundColor $Color
+    }
 
 # Main script execution
 try {
@@ -371,5 +388,17 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     Write-ColorOutput "  ERROR: $($_.Exception.Message)" "Red"
     Write-ColorOutput "================================================" "Red"
     Write-Host ""
-    exit 1
+    throw
 }
+}
+
+# Display usage information when script is loaded
+Write-Host ""
+Write-Host "✓ Set-ZeppAzureFunction cmdlet loaded successfully!" -ForegroundColor Green
+Write-Host ""
+Write-Host "Usage:" -ForegroundColor Cyan
+Write-Host "  Set-ZeppAzureFunction -ResourceGroupName 'rg-zepp' -FunctionAppName 'func-zepp' -AllowedIpAddress '1.2.3.4'" -ForegroundColor White
+Write-Host ""
+Write-Host "For help:" -ForegroundColor Cyan
+Write-Host "  Get-Help Set-ZeppAzureFunction -Detailed" -ForegroundColor White
+Write-Host ""

@@ -1,10 +1,10 @@
 # Azure Function Creation Script
 
-This directory contains a PowerShell script to create an Azure Function that provides a dummy API token for the ZeppNightscout application.
+This directory contains a PowerShell script that provides the `Set-ZeppAzureFunction` cmdlet to create an Azure Function that provides a dummy API token for the ZeppNightscout application.
 
 ## Overview
 
-The `create-azure-function.ps1` script automates the creation of:
+The `create-azure-function.ps1` script provides the `Set-ZeppAzureFunction` cmdlet that automates the creation of:
 - Azure Resource Group
 - Azure Storage Account
 - Azure Function App (Python 3.11 runtime)
@@ -13,17 +13,49 @@ The `create-azure-function.ps1` script automates the creation of:
 
 **This script is designed for Azure Cloud Shell** where Azure PowerShell (Az module) is pre-installed and pre-authenticated.
 
-## Prerequisites
+## Quick Start
 
-### Recommended: Azure Cloud Shell (No Installation Required!)
+### Method 1: Direct Download and Execute (Recommended for Azure Cloud Shell)
 
-The easiest way to run this script is through Azure Cloud Shell:
+Open Azure Cloud Shell (PowerShell mode) and run:
+
+```powershell
+# Download and load the cmdlet
+iex (irm https://raw.githubusercontent.com/iricigor/ZeppNightscout/main/scripts/create-azure-function.ps1)
+
+# Create the Azure Function
+Set-ZeppAzureFunction -ResourceGroupName "rg-zeppnightscout" -FunctionAppName "func-zepptoken-unique123" -AllowedIpAddress "203.0.113.10"
+```
+
+This will:
+1. Download the script from GitHub
+2. Load the `Set-ZeppAzureFunction` cmdlet into your session
+3. Allow you to run the cmdlet with your parameters
+
+### Method 2: Clone Repository
 
 1. Go to [Azure Portal](https://portal.azure.com)
 2. Click the Cloud Shell icon (>_) in the top navigation bar
 3. Select **PowerShell** if prompted
-4. Upload the script or clone this repository
-5. Run the script directly - no installation or authentication needed!
+4. Clone the repository:
+   ```powershell
+   git clone https://github.com/iricigor/ZeppNightscout.git
+   cd ZeppNightscout
+   ```
+5. Load the cmdlet:
+   ```powershell
+   . ./scripts/create-azure-function.ps1
+   ```
+6. Run the cmdlet:
+   ```powershell
+   Set-ZeppAzureFunction -ResourceGroupName "rg-zeppnightscout" -FunctionAppName "func-zepptoken-unique123" -AllowedIpAddress "203.0.113.10"
+   ```
+
+## Prerequisites
+
+### Recommended: Azure Cloud Shell (No Installation Required!)
+
+The easiest way to run this script is through Azure Cloud Shell - no installation or authentication needed!
 
 ### Alternative: Local PowerShell
 
@@ -42,10 +74,10 @@ If running locally, you need:
 
 ## Usage
 
-### Basic Usage (in Azure Cloud Shell)
+### Basic Usage
 
 ```powershell
-.\scripts\create-azure-function.ps1 `
+Set-ZeppAzureFunction `
     -ResourceGroupName "rg-zeppnightscout" `
     -FunctionAppName "func-zepptoken-unique123" `
     -AllowedIpAddress "203.0.113.10"
@@ -67,7 +99,7 @@ If running locally, you need:
 #### Create function with specific IP restriction
 
 ```powershell
-.\scripts\create-azure-function.ps1 `
+Set-ZeppAzureFunction `
     -ResourceGroupName "rg-zeppnightscout" `
     -FunctionAppName "func-zepptoken-prod" `
     -AllowedIpAddress "198.51.100.42"
@@ -76,7 +108,7 @@ If running locally, you need:
 #### Create function in a different region
 
 ```powershell
-.\scripts\create-azure-function.ps1 `
+Set-ZeppAzureFunction `
     -ResourceGroupName "rg-zeppnightscout-eu" `
     -FunctionAppName "func-zepptoken-eu" `
     -Location "westeurope" `
@@ -86,7 +118,7 @@ If running locally, you need:
 #### Create function with IP restriction only (no function-level auth)
 
 ```powershell
-.\scripts\create-azure-function.ps1 `
+Set-ZeppAzureFunction `
     -ResourceGroupName "rg-zeppnightscout" `
     -FunctionAppName "func-zepptoken-iponly" `
     -AllowedIpAddress "198.51.100.42" `
@@ -94,6 +126,12 @@ If running locally, you need:
 ```
 
 **Note:** This relies solely on IP firewall for security. Only use when you have a static IP and want simpler URLs without access keys.
+
+#### Get help for the cmdlet
+
+```powershell
+Get-Help Set-ZeppAzureFunction -Detailed
+```
 
 ## What the Script Does
 
