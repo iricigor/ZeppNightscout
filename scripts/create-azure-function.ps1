@@ -164,8 +164,10 @@ try {
             -Location $Location `
             -SkuName Standard_LRS `
             -Kind StorageV2 | Out-Null
+        Write-ColorOutput "✓ Storage account created" "Green"
+    } else {
+        Write-ColorOutput "✓ Storage account already exists" "Green"
     }
-    Write-ColorOutput "✓ Storage account created" "Green"
     Write-Host ""
 
     # Determine authentication level
@@ -176,17 +178,21 @@ try {
 
     # Create Function App with Python runtime
     Write-ColorOutput "Creating Function App '$FunctionAppName' with Python 3.11 runtime..." "Yellow"
-    New-AzFunctionApp `
-        -Name $FunctionAppName `
-        -ResourceGroupName $ResourceGroupName `
-        -StorageAccountName $StorageAccountName `
-        -Location $Location `
-        -Runtime Python `
-        -RuntimeVersion 3.11 `
-        -FunctionsVersion 4 `
-        -OSType Linux | Out-Null
-    
-    Write-ColorOutput "✓ Function App created" "Green"
+    $functionApp = Get-AzFunctionApp -ResourceGroupName $ResourceGroupName -Name $FunctionAppName -ErrorAction SilentlyContinue
+    if (-not $functionApp) {
+        New-AzFunctionApp `
+            -Name $FunctionAppName `
+            -ResourceGroupName $ResourceGroupName `
+            -StorageAccountName $StorageAccountName `
+            -Location $Location `
+            -Runtime Python `
+            -RuntimeVersion 3.11 `
+            -FunctionsVersion 4 `
+            -OSType Linux | Out-Null
+        Write-ColorOutput "✓ Function App created" "Green"
+    } else {
+        Write-ColorOutput "✓ Function App already exists" "Green"
+    }
     Write-Host ""
 
     # Wait for function app to be fully provisioned
@@ -197,7 +203,7 @@ try {
 
     # Create Python function code directory structure
     Write-ColorOutput "Creating Python function code..." "Yellow"
-    $tempDir = Join-Path $env:TEMP "azure-function-$(Get-Random)"
+    $tempDir = Join-Path ([System.IO.Path]::GetTempPath()) "azure-function-$(Get-Random)"
     New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
     
     # Create function.json for HTTP trigger
@@ -285,7 +291,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     
     # Use timestamp and process ID for unique zip file name to avoid conflicts
     $timestamp = Get-Date -Format "yyyyMMddHHmmss"
-    $zipPath = Join-Path $env:TEMP "function-app-$timestamp-$PID.zip"
+    $zipPath = Join-Path ([System.IO.Path]::GetTempPath()) "function-app-$timestamp-$PID.zip"
     
     # Create zip using PowerShell compression
     Compress-Archive -Path "$tempDir\*" -DestinationPath $zipPath -Force
@@ -310,6 +316,22 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         Write-ColorOutput "Configuring IP access restrictions for $AllowedIpAddress..." "Yellow"
         
         try {
+            # Check if IP restriction rule already exists
+            $existingRules = Get-AzWebAppAccessRestrictionConfig -ResourceGroupName $ResourceGroupName -Name $FunctionAppName -ErrorAction SilentlyContinue
+            $ruleExists = $false
+            if ($existingRules -and $existingRules.MainSiteAccessRestrictions) {
+                $ruleExists = $existingRules.MainSiteAccessRestrictions | Where-Object { $_.RuleName -eq "AllowSpecificIP" }
+            }
+            
+            if ($ruleExists) {
+                # Update existing rule by removing and re-adding
+                Remove-AzWebAppAccessRestrictionRule `
+                    -ResourceGroupName $ResourceGroupName `
+                    -WebAppName $FunctionAppName `
+                    -Name "AllowSpecificIP" `
+                    -ErrorAction SilentlyContinue | Out-Null
+            }
+            
             # Add IP restriction rule using Add-AzWebAppAccessRestrictionRule
             Add-AzWebAppAccessRestrictionRule `
                 -ResourceGroupName $ResourceGroupName `
