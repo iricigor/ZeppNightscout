@@ -320,7 +320,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
             $existingRules = Get-AzWebAppAccessRestrictionConfig -ResourceGroupName $ResourceGroupName -Name $FunctionAppName -ErrorAction SilentlyContinue
             $ruleExists = $false
             if ($existingRules -and $existingRules.MainSiteAccessRestrictions) {
-                $ruleExists = $existingRules.MainSiteAccessRestrictions | Where-Object { $_.RuleName -eq "AllowSpecificIP" }
+                $ruleExists = ($existingRules.MainSiteAccessRestrictions | Where-Object { $_.RuleName -eq "AllowSpecificIP" }) -ne $null
             }
             
             if ($ruleExists) {
