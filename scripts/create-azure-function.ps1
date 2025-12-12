@@ -527,7 +527,7 @@ function Test-ZeppAzureFunction {
         Write-ColorOutput "URL: $FunctionUrl" "White"
         
         try {
-            $response = Invoke-RestMethod -Uri $FunctionUrl -Method Get -ErrorAction Stop
+            $response = Invoke-RestMethod -Uri $FunctionUrl -ErrorAction Stop
         } catch {
             Write-ColorOutput "✗ Failed to connect to the function" "Red"
             Write-ColorOutput "Error: $($_.Exception.Message)" "Red"
@@ -547,7 +547,7 @@ function Test-ZeppAzureFunction {
         Write-ColorOutput "Validating response structure..." "Yellow"
         
         # Check if response is an object (PowerShell converts JSON to PSCustomObject)
-        if (-not $response) {
+        if ($null -eq $response -or $response -eq '') {
             throw "Response is empty or null"
         }
         Write-ColorOutput "✓ Response is not empty" "Green"
@@ -558,7 +558,7 @@ function Test-ZeppAzureFunction {
         }
         Write-ColorOutput "✓ Response contains 'token' field" "Green"
         
-        $tokenValue = $response.token
+        $tokenValue = if ($null -eq $response.token) { '' } else { $response.token }
         Write-ColorOutput "  Token value: $tokenValue" "White"
         
         # Check for message field (optional but expected)
