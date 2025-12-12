@@ -1,6 +1,6 @@
 # Azure Function Creation Script
 
-This directory contains a PowerShell script that provides cmdlets to create and test an Azure Function that provides a dummy API token for the ZeppNightscout application.
+This PowerShell script provides cmdlets to create and test an Azure Function that provides a dummy API token for the ZeppNightscout application.
 
 ## Table of Contents
 

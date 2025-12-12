@@ -1,19 +1,29 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-    Provides cmdlet to create Azure Function App for ZeppNightscout API token serving.
+    Provides cmdlets to create and test Azure Function Apps for ZeppNightscout API token serving.
 
 .DESCRIPTION
-    This script defines the Set-ZeppAzureFunction cmdlet and can be downloaded and executed directly.
+    This script defines the Set-ZeppAzureFunction and Test-ZeppAzureFunction cmdlets and can be downloaded and executed directly.
     
     Usage:
     # Direct download and execute
     iex (irm https://raw.githubusercontent.com/iricigor/ZeppNightscout/main/scripts/create-azure-function.ps1)
     Set-ZeppAzureFunction -ResourceGroupName "rg-zepp" -FunctionAppName "func-zepp" -AllowedIpAddress "1.2.3.4"
+    Test-ZeppAzureFunction -FunctionUrl "https://func-zepp.azurewebsites.net/api/GetToken?code=abc123"
 
 .NOTES
     This script is optimized for Azure Cloud Shell where Az module is pre-installed.
 #>
+
+# Shared helper function for colored output
+function Write-ColorOutput {
+    param(
+        [string]$Message,
+        [string]$Color = "White"
+    )
+    Write-Host $Message -ForegroundColor $Color
+}
 
 function Set-ZeppAzureFunction {
     <#
@@ -85,15 +95,6 @@ function Set-ZeppAzureFunction {
 
     # Set error action preference
     $ErrorActionPreference = "Stop"
-
-    # Function to write colored output
-    function Write-ColorOutput {
-        param(
-            [string]$Message,
-            [string]$Color = "White"
-        )
-        Write-Host $Message -ForegroundColor $Color
-    }
 
 # Main script execution
 try {
@@ -507,15 +508,6 @@ function Test-ZeppAzureFunction {
     # Set error action preference
     $ErrorActionPreference = "Stop"
 
-    # Function to write colored output (reuse from Set-ZeppAzureFunction)
-    function Write-ColorOutput {
-        param(
-            [string]$Message,
-            [string]$Color = "White"
-        )
-        Write-Host $Message -ForegroundColor $Color
-    }
-
     try {
         Write-ColorOutput "================================================" "Cyan"
         Write-ColorOutput "  Azure Function Test" "Cyan"
@@ -535,7 +527,7 @@ function Test-ZeppAzureFunction {
         Write-ColorOutput "URL: $FunctionUrl" "White"
         
         try {
-            $response = Invoke-RestMethod -Uri $FunctionUrl -Method Get -ContentType "application/json" -ErrorAction Stop
+            $response = Invoke-RestMethod -Uri $FunctionUrl -Method Get -ErrorAction Stop
         } catch {
             Write-ColorOutput "✗ Failed to connect to the function" "Red"
             Write-ColorOutput "Error: $($_.Exception.Message)" "Red"
