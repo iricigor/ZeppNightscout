@@ -25,6 +25,67 @@ function Write-ColorOutput {
     Write-Host $Message -ForegroundColor $Color
 }
 
+# Helper function to get config file path
+function Get-ConfigFilePath {
+    param(
+        [string]$ConfigName = "zepp-azure-config"
+    )
+    
+    # Use script directory if available, otherwise use temp directory
+    $configDir = if ($PSScriptRoot) {
+        $PSScriptRoot
+    } else {
+        [System.IO.Path]::GetTempPath()
+    }
+    
+    return Join-Path $configDir "$ConfigName.json"
+}
+
+# Helper function to save configuration
+function Save-ZeppConfig {
+    param(
+        [hashtable]$Config,
+        [string]$ConfigPath
+    )
+    
+    try {
+        $Config | ConvertTo-Json -Depth 10 | Set-Content -Path $ConfigPath -Encoding UTF8
+        Write-ColorOutput "✓ Configuration saved to: $ConfigPath" "Green"
+        return $true
+    } catch {
+        Write-ColorOutput "⚠ Failed to save configuration: $($_.Exception.Message)" "Yellow"
+        return $false
+    }
+}
+
+# Helper function to load configuration
+function Load-ZeppConfig {
+    param(
+        [string]$ConfigPath
+    )
+    
+    try {
+        if (Test-Path $ConfigPath) {
+            $config = Get-Content -Path $ConfigPath -Raw -Encoding UTF8 | ConvertFrom-Json
+            Write-ColorOutput "✓ Configuration loaded from: $ConfigPath" "Green"
+            
+            # Convert PSCustomObject to hashtable for easier manipulation
+            $hashtable = @{}
+            $config.PSObject.Properties | ForEach-Object {
+                $hashtable[$_.Name] = $_.Value
+            }
+            
+            return $hashtable
+        } else {
+            Write-ColorOutput "⚠ Configuration file not found: $ConfigPath" "Yellow"
+            return $null
+        }
+    } catch {
+        Write-ColorOutput "⚠ Failed to load configuration: $($_.Exception.Message)" "Yellow"
+        return $null
+    }
+}
+
 # Helper function to validate IPv4 address
 function Test-IPv4Address {
     param(
@@ -94,6 +155,7 @@ function Set-ZeppAzureFunction {
         - IP access restrictions to allow access from specific IP addresses
         - Function code editable in the Azure Portal
         - Uses Azure PowerShell (Az module) - designed for Azure Cloud Shell
+        - Configuration save/load support for easier re-deployment
 
     .PARAMETER ResourceGroupName
         Name of the Azure Resource Group. Will be created if it doesn't exist.
@@ -118,6 +180,12 @@ function Set-ZeppAzureFunction {
         Disables function-level authentication. When enabled, relies solely on IP firewall for security.
         WARNING: Only use this with proper IP restrictions configured!
 
+    .PARAMETER SaveConfig
+        Saves the provided configuration to a local file for later reuse with -LoadConfig.
+
+    .PARAMETER LoadConfig
+        Loads configuration from a previously saved file (created with -SaveConfig).
+
     .EXAMPLE
         Set-ZeppAzureFunction -ResourceGroupName "rg-zeppnightscout" -FunctionAppName "func-zepptoken"
         
@@ -127,6 +195,16 @@ function Set-ZeppAzureFunction {
         Set-ZeppAzureFunction -ResourceGroupName "rg-zeppnightscout" -FunctionAppName "func-zepptoken" -AllowedIpAddress "203.0.113.10"
         
         Creates a function with specific IP restriction. In Azure Cloud Shell, both the detected IP and 203.0.113.10 will be allowed.
+
+    .EXAMPLE
+        Set-ZeppAzureFunction -ResourceGroupName "rg-zeppnightscout" -FunctionAppName "func-zepptoken" -SaveConfig
+        
+        Creates a function and saves the configuration for later reuse.
+
+    .EXAMPLE
+        Set-ZeppAzureFunction -LoadConfig
+        
+        Creates a function using previously saved configuration.
 
     .EXAMPLE
         Set-ZeppAzureFunction -ResourceGroupName "rg-zeppnightscout" -FunctionAppName "func-zepptoken" -Location "westeurope" -DisableFunctionAuth
@@ -143,29 +221,58 @@ function Set-ZeppAzureFunction {
         The script automatically detects your public IP using online services (ifconfig.me, ipify.org, icanhazip.com).
     #>
 
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName = "Direct")]
     param(
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true, ParameterSetName = "Direct")]
         [string]$ResourceGroupName,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true, ParameterSetName = "Direct")]
         [string]$FunctionAppName,
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, ParameterSetName = "Direct")]
         [string]$Location = "eastus",
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, ParameterSetName = "Direct")]
         [string]$AllowedIpAddress = "0.0.0.0/0",
 
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, ParameterSetName = "Direct")]
         [string]$StorageAccountName,
 
-        [Parameter(Mandatory = $false)]
-        [switch]$DisableFunctionAuth
+        [Parameter(Mandatory = $false, ParameterSetName = "Direct")]
+        [switch]$DisableFunctionAuth,
+
+        [Parameter(Mandatory = $false, ParameterSetName = "Direct")]
+        [switch]$SaveConfig,
+
+        [Parameter(Mandatory = $true, ParameterSetName = "LoadConfig")]
+        [switch]$LoadConfig
     )
 
     # Set error action preference
     $ErrorActionPreference = "Stop"
+
+    # Get config file path
+    $configPath = Get-ConfigFilePath
+
+    # Load configuration if requested
+    if ($LoadConfig) {
+        Write-ColorOutput "Loading configuration from file..." "Yellow"
+        $loadedConfig = Load-ZeppConfig -ConfigPath $configPath
+        
+        if ($null -eq $loadedConfig) {
+            throw "Failed to load configuration. Please run Set-ZeppAzureFunction with parameters and -SaveConfig first."
+        }
+        
+        # Apply loaded configuration
+        $ResourceGroupName = $loadedConfig.ResourceGroupName
+        $FunctionAppName = $loadedConfig.FunctionAppName
+        $Location = if ($loadedConfig.Location) { $loadedConfig.Location } else { "eastus" }
+        $AllowedIpAddress = if ($loadedConfig.AllowedIpAddress) { $loadedConfig.AllowedIpAddress } else { "0.0.0.0/0" }
+        $StorageAccountName = $loadedConfig.StorageAccountName
+        $DisableFunctionAuth = [bool]$loadedConfig.DisableFunctionAuth
+        
+        Write-Host ""
+    }
 
 # Main script execution
 try {
@@ -714,6 +821,23 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     Write-ColorOutput "  4. Edit __init__.py to change the response" "White"
     Write-Host ""
 
+    # Save configuration if requested
+    if ($SaveConfig) {
+        Write-Host ""
+        Write-ColorOutput "Saving configuration..." "Yellow"
+        $configToSave = @{
+            ResourceGroupName = $ResourceGroupName
+            FunctionAppName = $FunctionAppName
+            Location = $Location
+            AllowedIpAddress = $AllowedIpAddress
+            StorageAccountName = $StorageAccountName
+            DisableFunctionAuth = $DisableFunctionAuth.IsPresent
+        }
+        
+        Save-ZeppConfig -Config $configToSave -ConfigPath $configPath | Out-Null
+        Write-Host ""
+    }
+
 } catch {
     Write-ColorOutput "" "Red"
     Write-ColorOutput "================================================" "Red"
@@ -746,6 +870,10 @@ function Test-ZeppAzureFunction {
     .PARAMETER ExpectedToken
         Optional. The expected token value to verify. If not provided, only checks that a token field exists.
 
+    .PARAMETER LoadConfig
+        Loads configuration from a previously saved file (created with Set-ZeppAzureFunction -SaveConfig)
+        and constructs the function URL automatically.
+
     .EXAMPLE
         Test-ZeppAzureFunction -FunctionUrl "https://zeppnsapi.azurewebsites.net/api/GetToken?code=abc123"
         
@@ -756,22 +884,53 @@ function Test-ZeppAzureFunction {
         
         Tests the function and validates it returns "DUMMY-TOKEN" as the token value.
 
+    .EXAMPLE
+        Test-ZeppAzureFunction -LoadConfig
+        
+        Tests the function using configuration loaded from a previously saved file.
+
     .NOTES
         This cmdlet uses Invoke-RestMethod to make HTTP requests.
         Ensure you have network connectivity to the Azure Function endpoint.
     #>
 
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName = "Direct")]
     param(
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true, ParameterSetName = "Direct")]
         [string]$FunctionUrl,
 
-        [Parameter(Mandatory = $false)]
-        [string]$ExpectedToken
+        [Parameter(Mandatory = $false, ParameterSetName = "Direct")]
+        [string]$ExpectedToken,
+
+        [Parameter(Mandatory = $true, ParameterSetName = "LoadConfig")]
+        [switch]$LoadConfig
     )
 
     # Set error action preference
     $ErrorActionPreference = "Stop"
+
+    # Get config file path
+    $configPath = Get-ConfigFilePath
+
+    # Load configuration if requested
+    if ($LoadConfig) {
+        Write-ColorOutput "Loading configuration from file..." "Yellow"
+        $loadedConfig = Load-ZeppConfig -ConfigPath $configPath
+        
+        if ($null -eq $loadedConfig) {
+            throw "Failed to load configuration. Please run Set-ZeppAzureFunction with parameters and -SaveConfig first."
+        }
+        
+        # Build function URL from saved configuration
+        if (-not $loadedConfig.FunctionAppName) {
+            throw "Configuration file does not contain FunctionAppName."
+        }
+        
+        $FunctionUrl = "https://$($loadedConfig.FunctionAppName).azurewebsites.net/api/GetToken"
+        
+        Write-ColorOutput "✓ Function URL constructed from config: $FunctionUrl" "Green"
+        Write-Host ""
+    }
 
     try {
         Write-ColorOutput "================================================" "Cyan"
