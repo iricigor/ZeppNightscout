@@ -27,7 +27,7 @@
 $scriptDir = if ($PSScriptRoot) {
     $PSScriptRoot
 } elseif ($MyInvocation.MyCommand.Path) {
-    # Fallback for when script is executed in certain contexts
+    # Fallback for when script is executed via dot-sourcing or certain PowerShell hosts
     Split-Path -Parent $MyInvocation.MyCommand.Path
 } else {
     # When executed via iex/irm, we don't have a script directory
