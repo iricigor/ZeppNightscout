@@ -96,8 +96,8 @@ function Get-ConfigFilePath {
     return Join-Path $configDir "$ConfigName.json"
 }
 
-# Helper function to save configuration
-function Save-ZeppConfig {
+# Internal helper function to save configuration
+function SaveZeppConfigInternal {
     param(
         [hashtable]$Config,
         [string]$ConfigPath
@@ -113,8 +113,8 @@ function Save-ZeppConfig {
     }
 }
 
-# Helper function to load configuration
-function Load-ZeppConfig {
+# Internal helper function to load configuration
+function LoadZeppConfigInternal {
     param(
         [string]$ConfigPath
     )
@@ -312,7 +312,7 @@ function Set-ZeppAzureFunction {
     # Load configuration if requested
     if ($LoadConfig) {
         Write-ColorOutput "Loading configuration from file..." "Yellow"
-        $loadedConfig = Load-ZeppConfig -ConfigPath $configPath
+        $loadedConfig = LoadZeppConfigInternal -ConfigPath $configPath
         
         if ($null -eq $loadedConfig) {
             throw "Failed to load configuration. Please run Set-ZeppAzureFunction with parameters and -SaveConfig first."
@@ -889,7 +889,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
             DisableFunctionAuth = [bool]$DisableFunctionAuth
         }
         
-        Save-ZeppConfig -Config $configToSave -ConfigPath $configPath
+        SaveZeppConfigInternal -Config $configToSave -ConfigPath $configPath
         Write-Host ""
     }
 
@@ -970,7 +970,7 @@ function Test-ZeppAzureFunction {
     # Load configuration if requested
     if ($LoadConfig) {
         Write-ColorOutput "Loading configuration from file..." "Yellow"
-        $loadedConfig = Load-ZeppConfig -ConfigPath $configPath
+        $loadedConfig = LoadZeppConfigInternal -ConfigPath $configPath
         
         if ($null -eq $loadedConfig) {
             throw "Failed to load configuration. Please run Set-ZeppAzureFunction with parameters and -SaveConfig first."
@@ -1182,7 +1182,7 @@ function Get-ZeppConfig {
 
         # Load configuration
         Write-ColorOutput "Loading configuration from: $configPath" "Yellow"
-        $config = Load-ZeppConfig -ConfigPath $configPath
+        $config = LoadZeppConfigInternal -ConfigPath $configPath
 
         if ($null -eq $config) {
             throw "Failed to load configuration from file."
@@ -1310,7 +1310,7 @@ function Test-ZeppConfig {
         Write-ColorOutput "Loading configuration..." "Yellow"
         $config = $null
         try {
-            $config = Load-ZeppConfig -ConfigPath $configPath
+            $config = LoadZeppConfigInternal -ConfigPath $configPath
             if ($null -eq $config) {
                 throw "Configuration loaded as null"
             }
