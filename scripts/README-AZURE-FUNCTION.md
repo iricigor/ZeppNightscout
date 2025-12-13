@@ -20,6 +20,7 @@ This PowerShell script provides cmdlets to create and test an Azure Function tha
   - [Using PowerShell](#using-powershell)
   - [Using a Web Browser](#using-a-web-browser)
 - [Editing the Function](#editing-the-function)
+- [Debugging and Monitoring](#debugging-and-monitoring)
 - [Security Considerations](#security-considerations)
 - [Costs](#costs)
 - [Troubleshooting](#troubleshooting)
@@ -363,6 +364,85 @@ return func.HttpResponse(
 )
 ```
 
+## Debugging and Monitoring
+
+The function includes comprehensive debug logging to help diagnose issues.
+
+### Viewing Function Logs
+
+To view logs in the Azure Portal:
+
+1. Go to https://portal.azure.com
+2. Navigate to your Function App
+3. Select **Functions** → **GetToken**
+4. Click **Monitor** → **Logs**
+5. Run a test request and watch the logs in real-time
+
+### What Gets Logged
+
+The function automatically logs:
+
+- **Request Information**: HTTP method, URL, query parameters (with sensitive data masked)
+- **Headers**: All request headers (authorization tokens are masked)
+- **Request Body**: Size of the request body
+- **Response**: Success status and response size
+- **Errors**: Complete exception details including type, message, and traceback
+
+### Example Log Output (Success)
+
+```
+=== GetToken Function Invoked ===
+Request Method: GET
+Request URL: https://func-zepptoken.azurewebsites.net/api/GetToken
+Query Parameters: {'code': '***REDACTED***'}
+Request Headers: {'User-Agent': 'curl/7.68.0', 'Accept': '*/*'}
+Request Body Length: 0 bytes
+Generating token response...
+Response prepared successfully: 89 bytes
+=== GetToken Function Completed Successfully ===
+```
+
+### Example Log Output (Error)
+
+If an error occurs, you'll see detailed error information:
+
+```
+=== GetToken Function ERROR ===
+Exception Type: ValueError
+Exception Message: Invalid token format
+Traceback: <full stack trace>
+```
+
+### Common Issues and Solutions
+
+#### 500 Internal Server Error
+
+If you see a 500 error:
+
+1. Check the function logs in Azure Portal (Monitor → Logs)
+2. Look for the `=== GetToken Function ERROR ===` marker in logs
+3. Review the exception type, message, and traceback
+4. The error response will also include the error details in JSON format
+
+#### Missing Logs
+
+If logs aren't appearing:
+
+1. Ensure you've saved your changes to the function
+2. Wait a few seconds for logs to propagate
+3. Check Application Insights for historical logs
+4. Verify the logging level in `host.json` is set to "Information" or higher
+
+### Application Insights
+
+For long-term monitoring and analytics, enable Application Insights:
+
+1. Go to your Function App in Azure Portal
+2. Select **Application Insights** from the menu
+3. Click **Turn on Application Insights**
+4. Create a new Application Insights resource or use an existing one
+5. Access logs, traces, and performance metrics in Application Insights
+
 ## Security Considerations
 
 ### Understanding Authentication Options
@@ -538,6 +618,37 @@ If you can't access the function from your allowed IP:
 2. Check the IP restriction rules in Azure Portal (Networking → Access restriction)
 3. Ensure the IP address format is correct (e.g., `1.2.3.4` or `1.2.3.0/24`)
 4. Wait a few minutes for changes to propagate
+
+### Error: "500 Internal Server Error" when calling the function
+
+If you receive a 500 Internal Server Error when calling the function:
+
+**Solution**: The function now includes comprehensive debug logging to help diagnose the issue:
+
+1. Go to Azure Portal → Your Function App → Functions → GetToken
+2. Click **Monitor** → **Logs** to view real-time logs
+3. Make a test request to the function
+4. Look for detailed error information in the logs:
+   - The function will log `=== GetToken Function ERROR ===`
+   - Check the exception type, message, and full traceback
+   - The error response will also include error details in JSON format
+
+5. Common causes and solutions:
+   - **Missing dependencies**: Ensure all required Python packages are installed
+   - **Configuration issues**: Check Application Settings for missing or incorrect values
+   - **Runtime errors**: Review the traceback in logs to identify the exact line causing the issue
+   - **Timeout**: Check if the function is timing out (default is 5 minutes)
+
+6. To enable even more detailed logging:
+   - Go to Configuration → Application Settings
+   - Add or update `PYTHON_ENABLE_WORKER_EXTENSIONS` = `1`
+   - Add or update `FUNCTIONS_WORKER_RUNTIME` = `python`
+   - Restart the function app
+
+7. For persistent issues:
+   - Check the full logs in Application Insights (if enabled)
+   - Review the Diagnose and solve problems section in the Function App
+   - Ensure the Python runtime version matches (3.11)
 
 ## Cleanup
 

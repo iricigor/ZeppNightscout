@@ -362,6 +362,7 @@ try {
     $pythonCode = @'
 import logging
 import json
+import traceback
 import azure.functions as func
 
 def main(req: func.HttpRequest) -> func.HttpResponse:
@@ -372,17 +373,82 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     Simply navigate to your Function App, select this function,
     and use the Code + Test feature to modify the response.
     """
-    logging.info('Python HTTP trigger function processed a request.')
-
-    # Return the dummy token
-    return func.HttpResponse(
-        body=json.dumps({
+    try:
+        # Log function invocation with detailed request information
+        logging.info('=== GetToken Function Invoked ===')
+        logging.info(f'Request Method: {req.method}')
+        logging.info(f'Request URL: {req.url}')
+        
+        # Log query parameters (if any)
+        try:
+            params = dict(req.params)
+            # Mask sensitive data in logs (like 'code' parameter)
+            if 'code' in params:
+                params['code'] = '***REDACTED***'
+            logging.info(f'Query Parameters: {params}')
+        except Exception as e:
+            logging.warning(f'Could not parse query parameters: {str(e)}')
+        
+        # Log headers (exclude sensitive ones)
+        try:
+            safe_headers = {}
+            for key, value in req.headers.items():
+                if key.lower() in ['authorization', 'x-functions-key', 'cookie']:
+                    safe_headers[key] = '***REDACTED***'
+                else:
+                    safe_headers[key] = value
+            logging.info(f'Request Headers: {safe_headers}')
+        except Exception as e:
+            logging.warning(f'Could not parse headers: {str(e)}')
+        
+        # Log request body (if present)
+        try:
+            if req.get_body():
+                logging.info(f'Request Body Length: {len(req.get_body())} bytes')
+        except Exception as e:
+            logging.warning(f'Could not read request body: {str(e)}')
+        
+        logging.info('Generating token response...')
+        
+        # Prepare the response data
+        response_data = {
             "token": "DUMMY-TOKEN",
             "message": "This is a dummy API token for testing purposes"
-        }),
-        mimetype="application/json",
-        status_code=200
-    )
+        }
+        
+        # Convert to JSON
+        response_json = json.dumps(response_data)
+        logging.info(f'Response prepared successfully: {len(response_json)} bytes')
+        
+        # Return the dummy token
+        response = func.HttpResponse(
+            body=response_json,
+            mimetype="application/json",
+            status_code=200
+        )
+        
+        logging.info('=== GetToken Function Completed Successfully ===')
+        return response
+        
+    except Exception as e:
+        # Comprehensive error logging
+        logging.error('=== GetToken Function ERROR ===')
+        logging.error(f'Exception Type: {type(e).__name__}')
+        logging.error(f'Exception Message: {str(e)}')
+        logging.error(f'Traceback: {traceback.format_exc()}')
+        
+        # Return error response with details
+        error_response = {
+            "error": "Internal server error",
+            "message": str(e),
+            "type": type(e).__name__
+        }
+        
+        return func.HttpResponse(
+            body=json.dumps(error_response),
+            mimetype="application/json",
+            status_code=500
+        )
 '@
     
     Set-Content -Path $initPyPath -Value $pythonCode -Encoding UTF8
@@ -394,6 +460,19 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         extensionBundle = @{
             id = "Microsoft.Azure.Functions.ExtensionBundle"
             version = "[4.*, 5.0.0)"
+        }
+        logging = @{
+            logLevel = @{
+                default = "Information"
+                Function = "Information"
+                Host = "Information"
+            }
+            applicationInsights = @{
+                samplingSettings = @{
+                    isEnabled = $true
+                    maxTelemetryItemsPerSecond = 20
+                }
+            }
         }
     } | ConvertTo-Json -Depth 10
     
