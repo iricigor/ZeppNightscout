@@ -56,8 +56,8 @@ Open Azure Cloud Shell (PowerShell mode) and run:
 # Download and load the cmdlets
 iex (irm https://raw.githubusercontent.com/iricigor/ZeppNightscout/main/scripts/create-azure-function.ps1)
 
-# Create the Azure Function
-Set-ZeppAzureFunction -ResourceGroupName "rg-zeppnightscout" -FunctionAppName "func-zepptoken-unique123" -AllowedIpAddress "203.0.113.10"
+# Create the Azure Function (will auto-detect your IP address)
+Set-ZeppAzureFunction -ResourceGroupName "rg-zeppnightscout" -FunctionAppName "func-zepptoken-unique123"
 
 # Test the Azure Function (use the URL from previous command output)
 Test-ZeppAzureFunction -FunctionUrl "https://func-zepptoken-unique123.azurewebsites.net/api/GetToken?code=your-function-key"
@@ -66,7 +66,8 @@ Test-ZeppAzureFunction -FunctionUrl "https://func-zepptoken-unique123.azurewebsi
 This will:
 1. Download the script from GitHub
 2. Load the `Set-ZeppAzureFunction` and `Test-ZeppAzureFunction` cmdlets into your session
-3. Allow you to run the cmdlets with your parameters
+3. Auto-detect your current public IP address and configure firewall rules
+4. Allow you to run the cmdlets with your parameters
 
 ### Method 2: Clone Repository
 
@@ -128,11 +129,23 @@ Set-ZeppAzureFunction `
 | `ResourceGroupName` | Yes | - | Name of the Azure Resource Group (will be created if it doesn't exist) |
 | `FunctionAppName` | Yes | - | Name of the Function App (must be globally unique) |
 | `Location` | No | `eastus` | Azure region for resources (e.g., `eastus`, `westeurope`, `southeastasia`) |
-| `AllowedIpAddress` | No | `0.0.0.0/0` | IP address allowed to access the function (CIDR notation) |
+| `AllowedIpAddress` | No | Auto-detected | IP address allowed to access the function. If not specified, your current public IP is auto-detected and used. Set to `0.0.0.0/0` to allow all IPs (not recommended) |
 | `StorageAccountName` | No | Auto-generated | Storage account name (3-24 lowercase alphanumeric chars) |
 | `DisableFunctionAuth` | No | `false` | Switch to disable function-level authentication (relies only on IP firewall) |
 
+**Note:** When running in Azure Cloud Shell, the script automatically detects your public IP address and adds it to the firewall. If you specify a different IP with `-AllowedIpAddress`, both IPs will be added to ensure the function works from both your specified IP and Azure Cloud Shell.
+
 ### Examples
+
+#### Create function with auto-detected IP restriction (Recommended)
+
+```powershell
+Set-ZeppAzureFunction `
+    -ResourceGroupName "rg-zeppnightscout" `
+    -FunctionAppName "func-zepptoken-prod"
+```
+
+This will automatically detect your current public IP and configure the firewall accordingly.
 
 #### Create function with specific IP restriction
 
@@ -143,14 +156,15 @@ Set-ZeppAzureFunction `
     -AllowedIpAddress "198.51.100.42"
 ```
 
+**Note:** When running in Azure Cloud Shell, both your detected IP and the specified IP will be added to the firewall.
+
 #### Create function in a different region
 
 ```powershell
 Set-ZeppAzureFunction `
     -ResourceGroupName "rg-zeppnightscout-eu" `
     -FunctionAppName "func-zepptoken-eu" `
-    -Location "westeurope" `
-    -AllowedIpAddress "198.51.100.42"
+    -Location "westeurope"
 ```
 
 #### Create function with IP restriction only (no function-level auth)

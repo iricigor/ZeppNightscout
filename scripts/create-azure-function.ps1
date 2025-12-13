@@ -34,7 +34,8 @@ function Set-ZeppAzureFunction {
         This cmdlet creates an Azure Function App with the following features:
         - Python runtime (version 3.11)
         - HTTP trigger function that returns "DUMMY-TOKEN"
-        - IP access restrictions to allow access from a specific IP address
+        - Automatic IP detection and firewall configuration for Azure Cloud Shell compatibility
+        - IP access restrictions to allow access from specific IP addresses
         - Function code editable in the Azure Portal
         - Uses Azure PowerShell (Az module) - designed for Azure Cloud Shell
 
@@ -48,7 +49,11 @@ function Set-ZeppAzureFunction {
         Azure region for the resources. Default: eastus
 
     .PARAMETER AllowedIpAddress
-        IP address that will be allowed to access the function. Default: 0.0.0.0/0 (all IPs)
+        IP address that will be allowed to access the function. 
+        If not specified, your current public IP is automatically detected and used.
+        When specified and running in Azure Cloud Shell, both your detected IP and the specified IP will be added.
+        Set to "0.0.0.0/0" to allow all IPs (not recommended for production).
+        Default: Auto-detected from your current public IP
 
     .PARAMETER StorageAccountName
         Name of the storage account for the function app. If not provided, will be auto-generated.
@@ -58,10 +63,19 @@ function Set-ZeppAzureFunction {
         WARNING: Only use this with proper IP restrictions configured!
 
     .EXAMPLE
-        Set-ZeppAzureFunction -ResourceGroupName "rg-zeppnightscout" -FunctionAppName "func-zepptoken" -AllowedIpAddress "203.0.113.10"
+        Set-ZeppAzureFunction -ResourceGroupName "rg-zeppnightscout" -FunctionAppName "func-zepptoken"
+        
+        Creates a function with auto-detected IP restrictions (recommended for Azure Cloud Shell).
 
     .EXAMPLE
-        Set-ZeppAzureFunction -ResourceGroupName "rg-zeppnightscout" -FunctionAppName "func-zepptoken" -Location "westeurope" -AllowedIpAddress "203.0.113.10" -DisableFunctionAuth
+        Set-ZeppAzureFunction -ResourceGroupName "rg-zeppnightscout" -FunctionAppName "func-zepptoken" -AllowedIpAddress "203.0.113.10"
+        
+        Creates a function with specific IP restriction. In Azure Cloud Shell, both the detected IP and 203.0.113.10 will be allowed.
+
+    .EXAMPLE
+        Set-ZeppAzureFunction -ResourceGroupName "rg-zeppnightscout" -FunctionAppName "func-zepptoken" -Location "westeurope" -DisableFunctionAuth
+        
+        Creates a function in West Europe with auto-detected IP and no function-level authentication.
 
     .NOTES
         Prerequisites:
@@ -70,6 +84,7 @@ function Set-ZeppAzureFunction {
         - User must have permissions to create resources in the subscription
         
         This cmdlet is optimized for Azure Cloud Shell where Az module is pre-installed.
+        The script automatically detects your public IP using online services (ifconfig.me, ipify.org, icanhazip.com).
     #>
 
     [CmdletBinding()]
@@ -131,6 +146,58 @@ try {
         throw "Not logged in to Azure. Please run 'Connect-AzAccount' first or use Azure Cloud Shell."
     }
     Write-ColorOutput "✓ Logged in to Azure (Subscription: $($context.Subscription.Name))" "Green"
+    Write-Host ""
+
+    # Auto-detect current public IP address for Azure Cloud Shell compatibility
+    Write-ColorOutput "Detecting current public IP address..." "Yellow"
+    try {
+        # Try multiple services for reliability
+        $detectedIp = $null
+        $services = @(
+            "https://ifconfig.me/ip",
+            "https://api.ipify.org",
+            "https://icanhazip.com"
+        )
+        
+        foreach ($service in $services) {
+            try {
+                $detectedIp = (Invoke-RestMethod -Uri $service -TimeoutSec 5 -ErrorAction Stop).Trim()
+                if ($detectedIp -match '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$') {
+                    break
+                }
+            } catch {
+                continue
+            }
+        }
+        
+        if ($detectedIp) {
+            Write-ColorOutput "✓ Detected public IP: $detectedIp" "Green"
+            
+            # If AllowedIpAddress is default (0.0.0.0/0), use detected IP
+            # Otherwise, ensure detected IP is included
+            if ($AllowedIpAddress -eq "0.0.0.0/0") {
+                $AllowedIpAddress = $detectedIp
+                Write-ColorOutput "  Automatically setting IP restriction to detected IP" "Cyan"
+            } else {
+                # Check if the detected IP is different from the specified one
+                if ($AllowedIpAddress -ne $detectedIp) {
+                    Write-ColorOutput "  Note: Specified IP ($AllowedIpAddress) differs from detected IP ($detectedIp)" "Yellow"
+                    Write-ColorOutput "  Adding both IPs to firewall for Azure Cloud Shell compatibility" "Cyan"
+                    # We'll add both IPs later in the IP restriction configuration
+                }
+            }
+        } else {
+            Write-ColorOutput "⚠ Could not detect public IP address automatically" "Yellow"
+            if ($AllowedIpAddress -eq "0.0.0.0/0") {
+                Write-ColorOutput "  Function will be accessible from all IPs (0.0.0.0/0)" "Yellow"
+            }
+        }
+    } catch {
+        Write-ColorOutput "⚠ Error detecting public IP: $($_.Exception.Message)" "Yellow"
+        if ($AllowedIpAddress -eq "0.0.0.0/0") {
+            Write-ColorOutput "  Function will be accessible from all IPs (0.0.0.0/0)" "Yellow"
+        }
+    }
     Write-Host ""
 
     # Generate storage account name if not provided
@@ -358,35 +425,50 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
 
     # Configure IP restrictions
     if ($AllowedIpAddress -ne "0.0.0.0/0") {
-        Write-ColorOutput "Configuring IP access restrictions for $AllowedIpAddress..." "Yellow"
+        Write-ColorOutput "Configuring IP access restrictions..." "Yellow"
         
         try {
-            # Check if IP restriction rule already exists
-            $existingRules = Get-AzWebAppAccessRestrictionConfig -ResourceGroupName $ResourceGroupName -Name $FunctionAppName -ErrorAction SilentlyContinue
-            $ruleExists = $false
-            if ($existingRules -and $existingRules.MainSiteAccessRestrictions) {
-                $ruleExists = ($existingRules.MainSiteAccessRestrictions | Where-Object { $_.RuleName -eq "AllowSpecificIP" }) -ne $null
+            # Collect all IPs to add to firewall
+            $ipsToAdd = @()
+            
+            # Add the specified IP
+            $ipsToAdd += $AllowedIpAddress
+            Write-ColorOutput "  Adding specified IP: $AllowedIpAddress" "White"
+            
+            # If we detected a different IP earlier, add it too for Azure Cloud Shell compatibility
+            if ($detectedIp -and $detectedIp -ne $AllowedIpAddress -and $detectedIp -match '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$') {
+                $ipsToAdd += $detectedIp
+                Write-ColorOutput "  Adding detected IP: $detectedIp (for Azure Cloud Shell)" "White"
             }
             
-            if ($ruleExists) {
-                # Update existing rule by removing and re-adding
-                Remove-AzWebAppAccessRestrictionRule `
+            # Remove any existing rules with our names
+            $existingRules = Get-AzWebAppAccessRestrictionConfig -ResourceGroupName $ResourceGroupName -Name $FunctionAppName -ErrorAction SilentlyContinue
+            if ($existingRules -and $existingRules.MainSiteAccessRestrictions) {
+                foreach ($rule in $existingRules.MainSiteAccessRestrictions) {
+                    if ($rule.RuleName -like "AllowSpecificIP*") {
+                        Remove-AzWebAppAccessRestrictionRule `
+                            -ResourceGroupName $ResourceGroupName `
+                            -WebAppName $FunctionAppName `
+                            -Name $rule.RuleName `
+                            -ErrorAction SilentlyContinue | Out-Null
+                    }
+                }
+            }
+            
+            # Add IP restriction rules
+            $priority = 100
+            for ($i = 0; $i -lt $ipsToAdd.Count; $i++) {
+                $ruleName = if ($i -eq 0) { "AllowSpecificIP" } else { "AllowSpecificIP_$i" }
+                Add-AzWebAppAccessRestrictionRule `
                     -ResourceGroupName $ResourceGroupName `
                     -WebAppName $FunctionAppName `
-                    -Name "AllowSpecificIP" `
-                    -ErrorAction SilentlyContinue | Out-Null
+                    -Name $ruleName `
+                    -Action Allow `
+                    -IpAddress $ipsToAdd[$i] `
+                    -Priority ($priority + $i) | Out-Null
             }
             
-            # Add IP restriction rule using Add-AzWebAppAccessRestrictionRule
-            Add-AzWebAppAccessRestrictionRule `
-                -ResourceGroupName $ResourceGroupName `
-                -WebAppName $FunctionAppName `
-                -Name "AllowSpecificIP" `
-                -Action Allow `
-                -IpAddress $AllowedIpAddress `
-                -Priority 100 | Out-Null
-            
-            Write-ColorOutput "✓ IP access restrictions configured" "Green"
+            Write-ColorOutput "✓ IP access restrictions configured for $($ipsToAdd.Count) IP(s)" "Green"
         } catch {
             Write-ColorOutput "Warning: Failed to configure IP restrictions. You can configure this manually in the Azure Portal." "Yellow"
             Write-ColorOutput "Error details: $($_.Exception.Message)" "Red"
