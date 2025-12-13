@@ -329,6 +329,11 @@ try {
         try {
             $functionJson = Invoke-RestMethod -Uri $githubUrl -TimeoutSec 10 -ErrorAction Stop
             
+            # Validate that we got a valid structure
+            if (-not $functionJson.bindings -or $functionJson.bindings.Count -eq 0) {
+                throw "Downloaded template has no bindings"
+            }
+            
             # Modify authLevel if needed
             $functionJson.bindings[0].authLevel = $authLevel
             $functionJsonContent = $functionJson | ConvertTo-Json -Depth 10

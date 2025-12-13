@@ -530,6 +530,11 @@ try {
         try {
             $functionJson = Invoke-RestMethod -Uri $githubUrl -TimeoutSec 10 -ErrorAction Stop
             
+            # Validate that we got a valid structure
+            if (-not $functionJson.bindings -or $functionJson.bindings.Count -eq 0) {
+                throw "Downloaded template has no bindings"
+            }
+            
             # Modify authLevel if needed
             $functionJson.bindings[0].authLevel = $authLevel
             $functionJsonContent = $functionJson | ConvertTo-Json -Depth 10
@@ -703,7 +708,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     $hostJsonPath = Join-Path (Split-Path $tempDir -Parent) "host.json"
     
     # Try to locate the template file first
-    $hostJsonContent = $null
+    $hostJsonLoaded = $false
     if ($PSCommandPath) {
         $scriptDir = Split-Path -Parent $PSCommandPath
         $templatePath = Join-Path $scriptDir "azure-function-template" "host.json"
@@ -711,12 +716,12 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         if (Test-Path $templatePath) {
             Write-ColorOutput "  Reading host.json from template: $templatePath" "White"
             Copy-Item -Path $templatePath -Destination $hostJsonPath -Force
-            $hostJsonContent = "loaded"
+            $hostJsonLoaded = $true
         }
     }
     
     # If template not found locally, download from GitHub main branch
-    if (-not $hostJsonContent) {
+    if (-not $hostJsonLoaded) {
         Write-ColorOutput "  Downloading host.json from GitHub main branch..." "Yellow"
         $githubUrl = "https://raw.githubusercontent.com/iricigor/ZeppNightscout/main/scripts/azure-function-template/host.json"
         
