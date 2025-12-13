@@ -269,7 +269,7 @@ function Set-ZeppAzureFunction {
         $Location = if ($loadedConfig.Location) { $loadedConfig.Location } else { "eastus" }
         $AllowedIpAddress = if ($loadedConfig.AllowedIpAddress) { $loadedConfig.AllowedIpAddress } else { "0.0.0.0/0" }
         $StorageAccountName = $loadedConfig.StorageAccountName
-        $DisableFunctionAuth = if ($loadedConfig.DisableFunctionAuth) { $true } else { $false }
+        $DisableFunctionAuth = if ($null -ne $loadedConfig.DisableFunctionAuth -and $loadedConfig.DisableFunctionAuth) { $true } else { $false }
         
         Write-Host ""
     }
@@ -831,7 +831,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
             Location = $Location
             AllowedIpAddress = $AllowedIpAddress
             StorageAccountName = $StorageAccountName
-            DisableFunctionAuth = $DisableFunctionAuth
+            DisableFunctionAuth = [bool]$DisableFunctionAuth
         }
         
         Save-ZeppConfig -Config $configToSave -ConfigPath $configPath
