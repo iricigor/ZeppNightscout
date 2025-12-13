@@ -327,10 +327,9 @@ try {
         $githubUrl = "https://raw.githubusercontent.com/iricigor/ZeppNightscout/main/scripts/azure-function-template/function.json"
         
         try {
-            $functionJsonContent = Invoke-RestMethod -Uri $githubUrl -TimeoutSec 10 -ErrorAction Stop
+            $functionJson = Invoke-RestMethod -Uri $githubUrl -TimeoutSec 10 -ErrorAction Stop
             
-            # Parse JSON to modify authLevel if needed
-            $functionJson = $functionJsonContent | ConvertFrom-Json
+            # Modify authLevel if needed
             $functionJson.bindings[0].authLevel = $authLevel
             $functionJsonContent = $functionJson | ConvertTo-Json -Depth 10
             
