@@ -479,11 +479,12 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
                 Write-ColorOutput "  Adding detected IP: $detectedIp (for Azure Cloud Shell)" "White"
             }
             
-            # Remove any existing rules with our names
+            # Remove any existing rules with our names (including legacy names for backwards compatibility)
             $existingRules = Get-AzWebAppAccessRestrictionConfig -ResourceGroupName $ResourceGroupName -Name $FunctionAppName -ErrorAction SilentlyContinue
             if ($existingRules -and $existingRules.MainSiteAccessRestrictions) {
+                $ruleNamesToRemove = @("AllowSpecifiedIP", "AllowDetectedIP", "AllowSpecificIP")
                 foreach ($rule in $existingRules.MainSiteAccessRestrictions) {
-                    if ($rule.RuleName -in @("AllowSpecifiedIP", "AllowDetectedIP", "AllowSpecificIP")) {
+                    if ($rule.RuleName -in $ruleNamesToRemove -or $rule.RuleName -like "AllowSpecificIP_*") {
                         Remove-AzWebAppAccessRestrictionRule `
                             -ResourceGroupName $ResourceGroupName `
                             -WebAppName $FunctionAppName `
