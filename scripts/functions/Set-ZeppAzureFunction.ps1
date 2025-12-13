@@ -1,195 +1,3 @@
-#!/usr/bin/env pwsh
-<#
-.SYNOPSIS
-    Provides cmdlets to create and test Azure Function Apps for ZeppNightscout API token serving.
-
-.DESCRIPTION
-    This script loads cmdlets for managing Azure Functions for ZeppNightscout:
-    - Set-ZeppAzureFunction: Creates Azure Function App
-    - Test-ZeppAzureFunction: Tests Azure Function
-    - Get-ZeppConfig: Retrieves saved configuration
-    - Test-ZeppConfig: Validates saved configuration
-    
-    When run from repository, loads functions from separate files in functions/ directory.
-    When downloaded directly (via irm), includes all functions inline for backwards compatibility.
-    
-    Usage:
-    # Direct download and execute
-    iex (irm https://raw.githubusercontent.com/iricigor/ZeppNightscout/main/scripts/create-azure-function.ps1)
-    Set-ZeppAzureFunction -ResourceGroupName "rg-zepp" -FunctionAppName "func-zepp" -SaveConfig
-    Set-ZeppAzureFunction -LoadConfig
-
-.NOTES
-    This script is optimized for Azure Cloud Shell where Az module is pre-installed.
-#>
-
-# Determine the script directory
-$scriptDir = if ($PSScriptRoot) {
-    $PSScriptRoot
-} else {
-    # Fallback for when script is executed via iex/irm
-    Split-Path -Parent $MyInvocation.MyCommand.Path
-}
-
-# Load helper functions first
-$functionsDir = Join-Path $scriptDir "functions"
-
-# Check if we're running from repository (functions directory exists)
-if (Test-Path $functionsDir) {
-    # Load functions from separate files when running from repository
-    $functionFiles = @(
-        "Helper-Functions.ps1",
-        "Get-ZeppConfig.ps1",
-        "Test-ZeppConfig.ps1",
-        "Set-ZeppAzureFunction.ps1",
-        "Test-ZeppAzureFunction.ps1"
-    )
-
-    foreach ($file in $functionFiles) {
-        $filePath = Join-Path $functionsDir $file
-        if (Test-Path $filePath) {
-            . $filePath
-        } else {
-            Write-Warning "Function file not found: $filePath"
-        }
-    }
-} else {
-    # Running via irm or functions dir not available - load embedded functions
-    # This maintains backward compatibility
-    
-    # Shared helper function for colored output
-function Write-ColorOutput {
-    param(
-        [string]$Message,
-        [string]$Color = "White"
-    )
-    Write-Host $Message -ForegroundColor $Color
-}
-
-# Helper function to get config file path
-function Get-ConfigFilePath {
-    param(
-        [string]$ConfigName = "zepp-azure-config"
-    )
-    
-    # Use script directory if available, otherwise use user's home directory
-    $configDir = if ($PSScriptRoot) {
-        $PSScriptRoot
-    } elseif ($env:HOME) {
-        # Unix/Linux/macOS
-        $env:HOME
-    } elseif ($env:USERPROFILE) {
-        # Windows
-        $env:USERPROFILE
-    } else {
-        # Fallback to current directory
-        $PWD.Path
-    }
-    
-    return Join-Path $configDir "$ConfigName.json"
-}
-
-# Helper function to save configuration
-function Save-ZeppConfig {
-    param(
-        [hashtable]$Config,
-        [string]$ConfigPath
-    )
-    
-    try {
-        $Config | ConvertTo-Json -Depth 10 | Set-Content -Path $ConfigPath -Encoding UTF8
-        Write-ColorOutput "✓ Configuration saved to: $ConfigPath" "Green"
-        return $true
-    } catch {
-        Write-ColorOutput "⚠ Failed to save configuration: $($_.Exception.Message)" "Yellow"
-        return $false
-    }
-}
-
-# Helper function to load configuration
-function Load-ZeppConfig {
-    param(
-        [string]$ConfigPath
-    )
-    
-    try {
-        if (Test-Path $ConfigPath) {
-            $config = Get-Content -Path $ConfigPath -Raw -Encoding UTF8 | ConvertFrom-Json
-            Write-ColorOutput "✓ Configuration loaded from: $ConfigPath" "Green"
-            
-            # Convert PSCustomObject to hashtable for easier manipulation
-            $hashtable = @{}
-            $config.PSObject.Properties | ForEach-Object {
-                $hashtable[$_.Name] = $_.Value
-            }
-            
-            return $hashtable
-        } else {
-            Write-ColorOutput "⚠ Configuration file not found: $ConfigPath" "Yellow"
-            return $null
-        }
-    } catch {
-        Write-ColorOutput "⚠ Failed to load configuration: $($_.Exception.Message)" "Yellow"
-        return $null
-    }
-}
-
-# Helper function to validate IPv4 address
-function Test-IPv4Address {
-    param(
-        [string]$IpAddress
-    )
-    
-    if ([string]::IsNullOrWhiteSpace($IpAddress)) {
-        return $false
-    }
-    
-    # Check format and validate each octet
-    if ($IpAddress -match '^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$') {
-        $octets = $IpAddress.Split('.')
-        foreach ($octet in $octets) {
-            $num = [int]$octet
-            if ($num -lt 0 -or $num -gt 255) {
-                return $false
-            }
-        }
-        return $true
-    }
-    
-    return $false
-}
-
-# Helper function to ensure IP address is in CIDR format
-function ConvertTo-CIDRFormat {
-    param(
-        [string]$IpAddress
-    )
-    
-    if ([string]::IsNullOrWhiteSpace($IpAddress)) {
-        return $IpAddress
-    }
-    
-    # If already in CIDR format (IP/prefix), validate and return as-is
-    # Check for IP address format followed by / and prefix length
-    if ($IpAddress -match '^([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})/(\d{1,2})$') {
-        $ip = $Matches[1]
-        $prefix = [int]$Matches[2]
-        
-        # Validate prefix length is 0-32 for IPv4
-        if ($prefix -ge 0 -and $prefix -le 32 -and (Test-IPv4Address -IpAddress $ip)) {
-            return $IpAddress
-        }
-    }
-    
-    # If it's a plain IP address (without /), append /32
-    if (Test-IPv4Address -IpAddress $IpAddress) {
-        return "$IpAddress/32"
-    }
-    
-    # Return as-is if it's not a valid IP (let Azure handle the error)
-    return $IpAddress
-}
-
 function Set-ZeppAzureFunction {
     <#
     .SYNOPSIS
@@ -491,26 +299,50 @@ try {
     $tempDir = Join-Path ([System.IO.Path]::GetTempPath()) "azure-function-$(Get-Random)"
     New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
     
+    # Try to locate the template directory
+    $templateDir = $null
+    if ($PSCommandPath) {
+        $scriptDir = Split-Path -Parent $PSCommandPath
+        $parentScriptDir = Split-Path -Parent $scriptDir
+        $templateDir = Join-Path $parentScriptDir "azure-function-template"
+    }
+    
     # Create function.json for HTTP trigger
     $functionJsonPath = Join-Path $tempDir "function.json"
-    $functionJson = @{
-        bindings = @(
-            @{
-                authLevel = $authLevel
-                type = "httpTrigger"
-                direction = "in"
-                name = "req"
-                methods = @("get", "post")
-            }
-            @{
-                type = "http"
-                direction = "out"
-                name = "res"
-            }
-        )
-    } | ConvertTo-Json -Depth 10
+    $functionJsonTemplatePath = if ($templateDir) { Join-Path $templateDir "function.json" } else { $null }
     
-    Set-Content -Path $functionJsonPath -Value $functionJson -Encoding UTF8
+    if ($functionJsonTemplatePath -and (Test-Path $functionJsonTemplatePath)) {
+        Write-ColorOutput "  Reading function.json from template: $functionJsonTemplatePath" "White"
+        $functionJsonContent = Get-Content -Path $functionJsonTemplatePath -Raw -Encoding UTF8
+        
+        # Parse JSON to modify authLevel if needed
+        $functionJson = $functionJsonContent | ConvertFrom-Json
+        $functionJson.bindings[0].authLevel = $authLevel
+        $functionJsonContent = $functionJson | ConvertTo-Json -Depth 10
+        
+        Set-Content -Path $functionJsonPath -Value $functionJsonContent -Encoding UTF8
+    } else {
+        # Fallback: generate inline (for backwards compatibility when downloaded via irm)
+        Write-ColorOutput "  Using embedded function.json (template not found)" "Yellow"
+        $functionJson = @{
+            bindings = @(
+                @{
+                    authLevel = $authLevel
+                    type = "httpTrigger"
+                    direction = "in"
+                    name = "req"
+                    methods = @("get", "post")
+                }
+                @{
+                    type = "http"
+                    direction = "out"
+                    name = "res"
+                }
+            )
+        } | ConvertTo-Json -Depth 10
+        
+        Set-Content -Path $functionJsonPath -Value $functionJson -Encoding UTF8
+    }
     
     # Create __init__.py with the function code
     # Read the Python code from the separate template file
@@ -518,14 +350,11 @@ try {
     
     # Try to locate the template file (handles both normal execution and direct download scenarios)
     $pythonCode = $null
-    if ($PSCommandPath) {
-        $scriptDir = Split-Path -Parent $PSCommandPath
-        $templatePath = Join-Path $scriptDir "azure-function-template" "__init__.py"
-        
-        if (Test-Path $templatePath) {
-            Write-ColorOutput "  Reading Python code from template: $templatePath" "White"
-            $pythonCode = Get-Content -Path $templatePath -Raw -Encoding UTF8
-        }
+    $pythonTemplatePath = if ($templateDir) { Join-Path $templateDir "__init__.py" } else { $null }
+    
+    if ($pythonTemplatePath -and (Test-Path $pythonTemplatePath)) {
+        Write-ColorOutput "  Reading Python code from template: $pythonTemplatePath" "White"
+        $pythonCode = Get-Content -Path $pythonTemplatePath -Raw -Encoding UTF8
     }
     
     # If template not found, use embedded code (for backwards compatibility, e.g., when downloaded via irm)
@@ -641,28 +470,37 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     
     # Create host.json
     $hostJsonPath = Join-Path (Split-Path $tempDir -Parent) "host.json"
-    $hostJson = @{
-        version = "2.0"
-        extensionBundle = @{
-            id = "Microsoft.Azure.Functions.ExtensionBundle"
-            version = "[4.*, 5.0.0)"
-        }
-        logging = @{
-            logLevel = @{
-                default = "Information"
-                Function = "Information"
-                Host = "Information"
+    $hostJsonTemplatePath = if ($templateDir) { Join-Path $templateDir "host.json" } else { $null }
+    
+    if ($hostJsonTemplatePath -and (Test-Path $hostJsonTemplatePath)) {
+        Write-ColorOutput "  Reading host.json from template: $hostJsonTemplatePath" "White"
+        Copy-Item -Path $hostJsonTemplatePath -Destination $hostJsonPath -Force
+    } else {
+        # Fallback: generate inline (for backwards compatibility when downloaded via irm)
+        Write-ColorOutput "  Using embedded host.json (template not found)" "Yellow"
+        $hostJson = @{
+            version = "2.0"
+            extensionBundle = @{
+                id = "Microsoft.Azure.Functions.ExtensionBundle"
+                version = "[4.*, 5.0.0)"
             }
-            applicationInsights = @{
-                samplingSettings = @{
-                    isEnabled = $true
-                    maxTelemetryItemsPerSecond = 20
+            logging = @{
+                logLevel = @{
+                    default = "Information"
+                    Function = "Debug"
+                    Host = "Information"
+                }
+                applicationInsights = @{
+                    samplingSettings = @{
+                        isEnabled = $true
+                        maxTelemetryItemsPerSecond = 20
+                    }
                 }
             }
-        }
-    } | ConvertTo-Json -Depth 10
-    
-    Set-Content -Path $hostJsonPath -Value $hostJson -Encoding UTF8
+        } | ConvertTo-Json -Depth 10
+        
+        Set-Content -Path $hostJsonPath -Value $hostJson -Encoding UTF8
+    }
     
     Write-ColorOutput "✓ Function code created locally" "Green"
     Write-Host ""
@@ -894,223 +732,4 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     Write-Host ""
     throw
 }
-}
-
-function Test-ZeppAzureFunction {
-    <#
-    .SYNOPSIS
-        Tests a deployed Azure Function to verify it returns the expected API token response.
-
-    .DESCRIPTION
-        This cmdlet tests a deployed Azure Function by making an HTTP request to the function URL
-        and validating that it returns the expected JSON payload with a token field.
-        
-        The function validates:
-        - HTTP connectivity to the function endpoint
-        - Valid JSON response format
-        - Presence of required 'token' field
-        - Optional validation of 'message' field
-
-    .PARAMETER FunctionUrl
-        The complete URL of the Azure Function to test, including any query parameters (like the code parameter).
-        Example: https://zeppnsapi.azurewebsites.net/api/GetToken?code=your-function-key
-
-    .PARAMETER ExpectedToken
-        Optional. The expected token value to verify. If not provided, only checks that a token field exists.
-
-    .PARAMETER LoadConfig
-        Loads configuration from a previously saved file (created with Set-ZeppAzureFunction -SaveConfig)
-        and constructs the function URL automatically.
-
-    .EXAMPLE
-        Test-ZeppAzureFunction -FunctionUrl "https://zeppnsapi.azurewebsites.net/api/GetToken?code=abc123"
-        
-        Tests the function and validates it returns a JSON response with a token field.
-
-    .EXAMPLE
-        Test-ZeppAzureFunction -FunctionUrl "https://zeppnsapi.azurewebsites.net/api/GetToken?code=abc123" -ExpectedToken "DUMMY-TOKEN"
-        
-        Tests the function and validates it returns "DUMMY-TOKEN" as the token value.
-
-    .EXAMPLE
-        Test-ZeppAzureFunction -LoadConfig
-        
-        Tests the function using configuration loaded from a previously saved file.
-
-    .NOTES
-        This cmdlet uses Invoke-RestMethod to make HTTP requests.
-        Ensure you have network connectivity to the Azure Function endpoint.
-    #>
-
-    [CmdletBinding(DefaultParameterSetName = "Direct")]
-    param(
-        [Parameter(Mandatory = $true, ParameterSetName = "Direct")]
-        [string]$FunctionUrl,
-
-        [Parameter(Mandatory = $false, ParameterSetName = "Direct")]
-        [string]$ExpectedToken,
-
-        [Parameter(Mandatory = $true, ParameterSetName = "LoadConfig")]
-        [switch]$LoadConfig
-    )
-
-    # Set error action preference
-    $ErrorActionPreference = "Stop"
-
-    # Get config file path
-    $configPath = Get-ConfigFilePath
-
-    # Load configuration if requested
-    if ($LoadConfig) {
-        Write-ColorOutput "Loading configuration from file..." "Yellow"
-        $loadedConfig = Load-ZeppConfig -ConfigPath $configPath
-        
-        if ($null -eq $loadedConfig) {
-            throw "Failed to load configuration. Please run Set-ZeppAzureFunction with parameters and -SaveConfig first."
-        }
-        
-        # Build function URL from saved configuration
-        if (-not $loadedConfig.FunctionAppName) {
-            throw "Configuration file does not contain FunctionAppName."
-        }
-        
-        # Validate FunctionAppName format (alphanumeric and hyphens only)
-        if ($loadedConfig.FunctionAppName -notmatch '^[a-zA-Z0-9\-]+$') {
-            throw "Invalid FunctionAppName in configuration: contains invalid characters."
-        }
-        
-        $FunctionUrl = "https://$($loadedConfig.FunctionAppName).azurewebsites.net/api/GetToken"
-        
-        Write-ColorOutput "✓ Function URL constructed from config: $FunctionUrl" "Green"
-        Write-Host ""
-    }
-
-    try {
-        Write-ColorOutput "================================================" "Cyan"
-        Write-ColorOutput "  Azure Function Test" "Cyan"
-        Write-ColorOutput "================================================" "Cyan"
-        Write-Host ""
-
-        # Validate URL format
-        Write-ColorOutput "Validating function URL..." "Yellow"
-        if ($FunctionUrl -notmatch '^https?://') {
-            throw "Function URL must start with http:// or https://"
-        }
-        Write-ColorOutput "✓ URL format is valid" "Green"
-        Write-Host ""
-
-        # Make HTTP request to the function
-        Write-ColorOutput "Testing HTTP connectivity..." "Yellow"
-        Write-ColorOutput "URL: $FunctionUrl" "White"
-        
-        try {
-            $response = Invoke-RestMethod -Uri $FunctionUrl -ErrorAction Stop
-        } catch {
-            Write-ColorOutput "✗ Failed to connect to the function" "Red"
-            Write-ColorOutput "Error: $($_.Exception.Message)" "Red"
-            
-            if ($_.Exception.Response) {
-                $statusCode = [int]$_.Exception.Response.StatusCode
-                Write-ColorOutput "HTTP Status Code: $statusCode" "Red"
-            }
-            
-            throw "Failed to connect to Azure Function"
-        }
-        
-        Write-ColorOutput "✓ Successfully connected to function" "Green"
-        Write-Host ""
-
-        # Validate response structure
-        Write-ColorOutput "Validating response structure..." "Yellow"
-        
-        # Check if response is an object (PowerShell converts JSON to PSCustomObject)
-        if ($null -eq $response -or $response -eq '') {
-            throw "Response is empty or null"
-        }
-        Write-ColorOutput "✓ Response is not empty" "Green"
-        
-        # Check for token field
-        if (-not ($response.PSObject.Properties.Name -contains "token")) {
-            throw "Response does not contain required 'token' field"
-        }
-        Write-ColorOutput "✓ Response contains 'token' field" "Green"
-        
-        $tokenValue = if ($null -eq $response.token) { '<null>' } else { $response.token }
-        Write-ColorOutput "  Token value: $tokenValue" "White"
-        
-        # Check for message field (optional but expected)
-        if ($response.PSObject.Properties.Name -contains "message") {
-            Write-ColorOutput "✓ Response contains 'message' field" "Green"
-            Write-ColorOutput "  Message: $($response.message)" "White"
-        } else {
-            Write-ColorOutput "⚠ Response does not contain 'message' field (optional)" "Yellow"
-        }
-        Write-Host ""
-
-        # Validate expected token if provided
-        if ($ExpectedToken) {
-            Write-ColorOutput "Validating token value..." "Yellow"
-            if ($tokenValue -eq $ExpectedToken) {
-                Write-ColorOutput "✓ Token matches expected value: $ExpectedToken" "Green"
-            } else {
-                Write-ColorOutput "✗ Token mismatch!" "Red"
-                Write-ColorOutput "  Expected: $ExpectedToken" "Red"
-                Write-ColorOutput "  Actual:   $tokenValue" "Red"
-                throw "Token value does not match expected value"
-            }
-            Write-Host ""
-        }
-
-        # Success summary
-        Write-ColorOutput "================================================" "Cyan"
-        Write-ColorOutput "  Test Completed Successfully! ✓" "Green"
-        Write-ColorOutput "================================================" "Cyan"
-        Write-Host ""
-        Write-ColorOutput "Summary:" "Cyan"
-        Write-ColorOutput "  Function URL: $FunctionUrl" "White"
-        Write-ColorOutput "  Status: Passed ✓" "Green"
-        Write-ColorOutput "  Token: $tokenValue" "White"
-        if ($response.message) {
-            Write-ColorOutput "  Message: $($response.message)" "White"
-        }
-        Write-Host ""
-
-        return $true
-
-    } catch {
-        Write-ColorOutput "" "Red"
-        Write-ColorOutput "================================================" "Red"
-        Write-ColorOutput "  TEST FAILED: $($_.Exception.Message)" "Red"
-        Write-ColorOutput "================================================" "Red"
-        Write-Host ""
-        return $false
-    }
-}
-
-}
-
-# Display usage information when script is loaded (only in interactive sessions)
-if ([Environment]::UserInteractive -and -not $PSBoundParameters.Count) {
-    Write-Host ""
-    Write-Host "✓ Azure Function cmdlets loaded successfully!" -ForegroundColor Green
-    Write-Host ""
-    Write-Host "Available cmdlets:" -ForegroundColor Cyan
-    Write-Host "  1. Set-ZeppAzureFunction  - Create Azure Function" -ForegroundColor White
-    Write-Host "  2. Test-ZeppAzureFunction - Test Azure Function" -ForegroundColor White
-    Write-Host "  3. Get-ZeppConfig         - Retrieve saved configuration" -ForegroundColor White
-    Write-Host "  4. Test-ZeppConfig        - Validate saved configuration" -ForegroundColor White
-    Write-Host ""
-    Write-Host "Usage examples:" -ForegroundColor Cyan
-    Write-Host "  Set-ZeppAzureFunction -ResourceGroupName 'rg-zepp' -FunctionAppName 'func-zepp' -SaveConfig" -ForegroundColor White
-    Write-Host "  Set-ZeppAzureFunction -LoadConfig" -ForegroundColor White
-    Write-Host "  Test-ZeppAzureFunction -LoadConfig" -ForegroundColor White
-    Write-Host "  Get-ZeppConfig" -ForegroundColor White
-    Write-Host "  Test-ZeppConfig -Detailed" -ForegroundColor White
-    Write-Host ""
-    Write-Host "For help:" -ForegroundColor Cyan
-    Write-Host "  Get-Help Set-ZeppAzureFunction -Detailed" -ForegroundColor White
-    Write-Host "  Get-Help Test-ZeppAzureFunction -Detailed" -ForegroundColor White
-    Write-Host "  Get-Help Get-ZeppConfig -Detailed" -ForegroundColor White
-    Write-Host "  Get-Help Test-ZeppConfig -Detailed" -ForegroundColor White
-    Write-Host ""
 }
