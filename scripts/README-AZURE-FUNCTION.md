@@ -37,7 +37,7 @@ The `create-azure-function.ps1` script provides five cmdlets:
 1. **`Set-ZeppAzureFunction`** - Automates the creation of:
    - Azure Resource Group
    - Azure Storage Account
-   - Azure Function App (Python 3.11 runtime on Consumption plan)
+   - Azure Function App (Python 3.11 runtime on Flex Consumption plan)
    - HTTP-triggered Python function that returns "DUMMY-TOKEN"
    - IP access restrictions for security
    - Configuration save/load support with `-SaveConfig` and `-LoadConfig`
@@ -426,7 +426,7 @@ Test-ZeppAzureFunction -LoadConfig
    - Resource Group (if it doesn't exist)
    - Storage Account (required for Azure Functions)
    - Function App with Python 3.11 runtime
-   - Consumption plan for cost-effective hosting
+   - Flex Consumption plan for cost-effective hosting
 
 3. **Deploys Function Code**
    - Creates HTTP-triggered Python function named "GetToken"
@@ -773,7 +773,7 @@ az functionapp config access-restriction add \
 
 ## Costs
 
-The script creates resources on Azure **Consumption Plan**:
+The script creates resources on Azure **Flex Consumption Plan**:
 
 - **Free Tier Includes**:
   - 1 million requests per month
