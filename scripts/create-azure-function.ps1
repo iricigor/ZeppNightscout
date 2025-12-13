@@ -179,6 +179,7 @@ try {
         # Try multiple services for reliability
         $detectedIp = $null
         $services = @(
+            "https://iiric.azurewebsites.net/MyIP",
             "https://ifconfig.me/ip",
             "https://api.ipify.org",
             "https://icanhazip.com"
