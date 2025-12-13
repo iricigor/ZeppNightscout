@@ -404,7 +404,7 @@ Response prepared successfully: 89 bytes
 
 ### Example Log Output (Error)
 
-If an error occurs, you'll see detailed error information:
+If an error occurs, you'll see detailed error information in the logs (error details are not exposed to clients for security):
 
 ```
 === GetToken Function ERROR ===
@@ -412,6 +412,8 @@ Exception Type: ValueError
 Exception Message: Invalid token format
 Traceback: <full stack trace>
 ```
+
+**Note**: For security reasons, error responses to clients contain a generic error message. Detailed error information (exception type, message, and traceback) is only available in the function logs.
 
 ### Common Issues and Solutions
 

@@ -382,9 +382,11 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         # Log query parameters (if any)
         try:
             params = dict(req.params)
-            # Mask sensitive data in logs (like 'code' parameter)
-            if 'code' in params:
-                params['code'] = '***REDACTED***'
+            # Mask sensitive data in logs
+            sensitive_params = ['code', 'key', 'token', 'secret', 'password', 'api_key', 'apikey', 'auth']
+            for param_name in sensitive_params:
+                if param_name in params:
+                    params[param_name] = '***REDACTED***'
             logging.info(f'Query Parameters: {params}')
         except Exception as e:
             logging.warning(f'Could not parse query parameters: {str(e)}')
@@ -403,8 +405,9 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         
         # Log request body (if present)
         try:
-            if req.get_body():
-                logging.info(f'Request Body Length: {len(req.get_body())} bytes')
+            body = req.get_body()
+            if body:
+                logging.info(f'Request Body Length: {len(body)} bytes')
         except Exception as e:
             logging.warning(f'Could not read request body: {str(e)}')
         
@@ -437,11 +440,10 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         logging.error(f'Exception Message: {str(e)}')
         logging.error(f'Traceback: {traceback.format_exc()}')
         
-        # Return error response with details
+        # Return generic error response (detailed error info is in logs only)
         error_response = {
             "error": "Internal server error",
-            "message": str(e),
-            "type": type(e).__name__
+            "message": "An error occurred while processing your request. Please check the function logs for details."
         }
         
         return func.HttpResponse(
