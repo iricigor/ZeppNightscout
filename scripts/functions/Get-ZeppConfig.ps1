@@ -72,7 +72,7 @@ function Get-ZeppConfig {
 
         # Load configuration
         Write-ColorOutput "Loading configuration from: $configPath" "Yellow"
-        $config = Load-ZeppConfig -ConfigPath $configPath
+        $config = LoadZeppConfigInternal -ConfigPath $configPath
 
         if ($null -eq $config) {
             throw "Failed to load configuration from file."

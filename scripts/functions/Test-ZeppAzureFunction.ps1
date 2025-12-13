@@ -65,7 +65,7 @@ function Test-ZeppAzureFunction {
     # Load configuration if requested
     if ($LoadConfig) {
         Write-ColorOutput "Loading configuration from file..." "Yellow"
-        $loadedConfig = Load-ZeppConfig -ConfigPath $configPath
+        $loadedConfig = LoadZeppConfigInternal -ConfigPath $configPath
         
         if ($null -eq $loadedConfig) {
             throw "Failed to load configuration. Please run Set-ZeppAzureFunction with parameters and -SaveConfig first."

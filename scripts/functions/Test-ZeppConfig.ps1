@@ -85,7 +85,7 @@ function Test-ZeppConfig {
         Write-ColorOutput "Loading configuration..." "Yellow"
         $config = $null
         try {
-            $config = Load-ZeppConfig -ConfigPath $configPath
+            $config = LoadZeppConfigInternal -ConfigPath $configPath
             if ($null -eq $config) {
                 throw "Configuration loaded as null"
             }

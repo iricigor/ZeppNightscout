@@ -32,8 +32,8 @@ function Get-ConfigFilePath {
     return Join-Path $configDir "$ConfigName.json"
 }
 
-# Helper function to save configuration
-function Save-ZeppConfig {
+# Internal helper function to save configuration
+function SaveZeppConfigInternal {
     param(
         [hashtable]$Config,
         [string]$ConfigPath
@@ -49,8 +49,8 @@ function Save-ZeppConfig {
     }
 }
 
-# Helper function to load configuration
-function Load-ZeppConfig {
+# Internal helper function to load configuration
+function LoadZeppConfigInternal {
     param(
         [string]$ConfigPath
     )
