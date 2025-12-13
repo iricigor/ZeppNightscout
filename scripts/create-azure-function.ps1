@@ -1273,16 +1273,19 @@ function Update-ZeppAzureToken {
         Write-ColorOutput "Updating token value..." "Yellow"
         
         # Escape special characters in token and message for JSON
-        $escapedToken = $Token -replace '\\', '\\' -replace '"', '\"' -replace "`n", '\n' -replace "`r", '\r' -replace "`t", '\t'
-        $escapedMessage = $Message -replace '\\', '\\' -replace '"', '\"' -replace "`n", '\n' -replace "`r", '\r' -replace "`t", '\t'
+        # Note: Backslash must be escaped last to avoid double-escaping
+        $escapedToken = $Token -replace '"', '\"' -replace "`n", '\n' -replace "`r", '\r' -replace "`t", '\t' -replace '\\', '\\'
+        $escapedMessage = $Message -replace '"', '\"' -replace "`n", '\n' -replace "`r", '\r' -replace "`t", '\t' -replace '\\', '\\'
         
         if ($currentCode) {
             # Update existing code - preserve everything except the token and message values
-            $updatedCode = $currentCode -replace '"token":\s*"[^"]*"', "`"token`": `"$escapedToken`""
-            $updatedCode = $updatedCode -replace '"message":\s*"[^"]*"', "`"message`": `"$escapedMessage`""
+            # Use a more robust regex that handles escaped quotes within the value
+            $updatedCode = $currentCode -replace '("token":\s*")(?:[^"\\]|\\.)*(")', "`${1}$escapedToken`${2}"
+            $updatedCode = $updatedCode -replace '("message":\s*")(?:[^"\\]|\\.)*(")', "`${1}$escapedMessage`${2}"
         } else {
             # Use template code with new token
-            $updatedCode = @"
+            # Use single-quoted here-string to avoid variable expansion, then replace placeholders
+            $templateCode = @'
 import logging
 import json
 import traceback
@@ -1349,8 +1352,8 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         
         # Prepare the response data
         response_data = {
-            "token": "$escapedToken",
-            "message": "$escapedMessage"
+            "token": "{{TOKEN_PLACEHOLDER}}",
+            "message": "{{MESSAGE_PLACEHOLDER}}"
         }
         
         # Convert to JSON
@@ -1385,7 +1388,10 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
             mimetype="application/json",
             status_code=500
         )
-"@
+'@
+            # Replace placeholders with actual values
+            $updatedCode = $templateCode -replace '\{\{TOKEN_PLACEHOLDER\}\}', $escapedToken
+            $updatedCode = $updatedCode -replace '\{\{MESSAGE_PLACEHOLDER\}\}', $escapedMessage
         }
         
         Write-ColorOutput "✓ Token updated in code" "Green"
@@ -1828,8 +1834,9 @@ if ([Environment]::UserInteractive -and -not $PSBoundParameters.Count) {
     Write-Host "Available cmdlets:" -ForegroundColor Cyan
     Write-Host "  1. Set-ZeppAzureFunction  - Create Azure Function" -ForegroundColor White
     Write-Host "  2. Test-ZeppAzureFunction - Test Azure Function" -ForegroundColor White
-    Write-Host "  3. Get-ZeppConfig         - Retrieve saved configuration" -ForegroundColor White
-    Write-Host "  4. Test-ZeppConfig        - Validate saved configuration" -ForegroundColor White
+    Write-Host "  3. Update-ZeppAzureToken  - Update API token securely" -ForegroundColor White
+    Write-Host "  4. Get-ZeppConfig         - Retrieve saved configuration" -ForegroundColor White
+    Write-Host "  5. Test-ZeppConfig        - Validate saved configuration" -ForegroundColor White
     Write-Host ""
     Write-Host "Usage examples:" -ForegroundColor Cyan
     Write-Host "  Set-ZeppAzureFunction -ResourceGroupName 'rg-zepp' -FunctionAppName 'func-zepp' -SaveConfig" -ForegroundColor White
