@@ -60,10 +60,16 @@ function ConvertTo-CIDRFormat {
         return $IpAddress
     }
     
-    # If already in CIDR format (IP/prefix), return as-is
-    # Validate CIDR format: IP address followed by / and prefix length (0-32)
-    if ($IpAddress -match '^(\d{1,3}\.){3}\d{1,3}/\d{1,2}$') {
-        return $IpAddress
+    # If already in CIDR format (IP/prefix), validate and return as-is
+    # Basic format check: IP address followed by / and prefix length
+    if ($IpAddress -match '^(.+)/(\d{1,2})$') {
+        $ip = $Matches[1]
+        $prefix = [int]$Matches[2]
+        
+        # Validate prefix length is 0-32 for IPv4
+        if ($prefix -ge 0 -and $prefix -le 32 -and (Test-IPv4Address -IpAddress $ip)) {
+            return $IpAddress
+        }
     }
     
     # If it's a plain IP address (without /), append /32
