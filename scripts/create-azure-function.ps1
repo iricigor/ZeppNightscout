@@ -25,6 +25,31 @@ function Write-ColorOutput {
     Write-Host $Message -ForegroundColor $Color
 }
 
+# Helper function to validate IPv4 address
+function Test-IPv4Address {
+    param(
+        [string]$IpAddress
+    )
+    
+    if ([string]::IsNullOrWhiteSpace($IpAddress)) {
+        return $false
+    }
+    
+    # Check format and validate each octet
+    if ($IpAddress -match '^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$') {
+        $octets = $IpAddress.Split('.')
+        foreach ($octet in $octets) {
+            $num = [int]$octet
+            if ($num -lt 0 -or $num -gt 255) {
+                return $false
+            }
+        }
+        return $true
+    }
+    
+    return $false
+}
+
 function Set-ZeppAzureFunction {
     <#
     .SYNOPSIS
@@ -161,11 +186,16 @@ try {
         
         foreach ($service in $services) {
             try {
-                $detectedIp = (Invoke-RestMethod -Uri $service -TimeoutSec 5 -ErrorAction Stop).Trim()
-                if ($detectedIp -match '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$') {
-                    break
+                $response = Invoke-RestMethod -Uri $service -TimeoutSec 5 -ErrorAction Stop
+                if ($null -ne $response) {
+                    $ipCandidate = $response.ToString().Trim()
+                    if (Test-IPv4Address -IpAddress $ipCandidate) {
+                        $detectedIp = $ipCandidate
+                        break
+                    }
                 }
             } catch {
+                # Service failed, try next one
                 continue
             }
         }
@@ -428,16 +458,24 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         Write-ColorOutput "Configuring IP access restrictions..." "Yellow"
         
         try {
-            # Collect all IPs to add to firewall
-            $ipsToAdd = @()
+            # Collect all IPs to add to firewall with descriptive names
+            $ipRules = @()
             
             # Add the specified IP
-            $ipsToAdd += $AllowedIpAddress
+            $ipRules += @{
+                IpAddress = $AllowedIpAddress
+                RuleName = "AllowSpecifiedIP"
+                Description = "Specified IP"
+            }
             Write-ColorOutput "  Adding specified IP: $AllowedIpAddress" "White"
             
             # If we detected a different IP earlier, add it too for Azure Cloud Shell compatibility
-            if ($detectedIp -and $detectedIp -ne $AllowedIpAddress -and $detectedIp -match '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$') {
-                $ipsToAdd += $detectedIp
+            if ($detectedIp -and $detectedIp -ne $AllowedIpAddress -and (Test-IPv4Address -IpAddress $detectedIp)) {
+                $ipRules += @{
+                    IpAddress = $detectedIp
+                    RuleName = "AllowDetectedIP"
+                    Description = "Auto-detected IP (Azure Cloud Shell)"
+                }
                 Write-ColorOutput "  Adding detected IP: $detectedIp (for Azure Cloud Shell)" "White"
             }
             
@@ -445,7 +483,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
             $existingRules = Get-AzWebAppAccessRestrictionConfig -ResourceGroupName $ResourceGroupName -Name $FunctionAppName -ErrorAction SilentlyContinue
             if ($existingRules -and $existingRules.MainSiteAccessRestrictions) {
                 foreach ($rule in $existingRules.MainSiteAccessRestrictions) {
-                    if ($rule.RuleName -like "AllowSpecificIP*") {
+                    if ($rule.RuleName -in @("AllowSpecifiedIP", "AllowDetectedIP", "AllowSpecificIP")) {
                         Remove-AzWebAppAccessRestrictionRule `
                             -ResourceGroupName $ResourceGroupName `
                             -WebAppName $FunctionAppName `
@@ -457,18 +495,18 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
             
             # Add IP restriction rules
             $priority = 100
-            for ($i = 0; $i -lt $ipsToAdd.Count; $i++) {
-                $ruleName = if ($i -eq 0) { "AllowSpecificIP" } else { "AllowSpecificIP_$i" }
+            foreach ($ipRule in $ipRules) {
                 Add-AzWebAppAccessRestrictionRule `
                     -ResourceGroupName $ResourceGroupName `
                     -WebAppName $FunctionAppName `
-                    -Name $ruleName `
+                    -Name $ipRule.RuleName `
                     -Action Allow `
-                    -IpAddress $ipsToAdd[$i] `
-                    -Priority ($priority + $i) | Out-Null
+                    -IpAddress $ipRule.IpAddress `
+                    -Priority $priority | Out-Null
+                $priority += 10
             }
             
-            Write-ColorOutput "✓ IP access restrictions configured for $($ipsToAdd.Count) IP(s)" "Green"
+            Write-ColorOutput "✓ IP access restrictions configured for $($ipRules.Count) IP(s)" "Green"
         } catch {
             Write-ColorOutput "Warning: Failed to configure IP restrictions. You can configure this manually in the Azure Portal." "Yellow"
             Write-ColorOutput "Error details: $($_.Exception.Message)" "Red"
@@ -640,7 +678,7 @@ function Test-ZeppAzureFunction {
         }
         Write-ColorOutput "✓ Response contains 'token' field" "Green"
         
-        $tokenValue = if ($null -eq $response.token) { '' } else { $response.token }
+        $tokenValue = if ($null -eq $response.token) { '<null>' } else { $response.token }
         Write-ColorOutput "  Token value: $tokenValue" "White"
         
         # Check for message field (optional but expected)
