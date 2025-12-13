@@ -588,6 +588,22 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     Remove-Item -Path $zipPath -Force -ErrorAction SilentlyContinue
     Write-Host ""
 
+    # Enable portal editing by setting WEBSITE_RUN_FROM_PACKAGE to 0
+    # This allows users to edit the function code directly in the Azure Portal
+    Write-ColorOutput "Enabling portal editing..." "Yellow"
+    try {
+        Update-AzFunctionAppSetting `
+            -ResourceGroupName $ResourceGroupName `
+            -Name $FunctionAppName `
+            -AppSetting @{"WEBSITE_RUN_FROM_PACKAGE" = "0"} `
+            -Force | Out-Null
+        Write-ColorOutput "✓ Portal editing enabled" "Green"
+    } catch {
+        Write-ColorOutput "Warning: Could not enable portal editing. You can manually set WEBSITE_RUN_FROM_PACKAGE=0 in Application Settings." "Yellow"
+        Write-ColorOutput "Error details: $($_.Exception.Message)" "Red"
+    }
+    Write-Host ""
+
     # Configure IP restrictions
     if ($AllowedIpAddress -ne "0.0.0.0/0") {
         Write-ColorOutput "Configuring IP access restrictions..." "Yellow"
