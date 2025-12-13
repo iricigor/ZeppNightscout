@@ -31,11 +31,18 @@ function Get-ConfigFilePath {
         [string]$ConfigName = "zepp-azure-config"
     )
     
-    # Use script directory if available, otherwise use temp directory
+    # Use script directory if available, otherwise use user's home directory
     $configDir = if ($PSScriptRoot) {
         $PSScriptRoot
+    } elseif ($env:HOME) {
+        # Unix/Linux/macOS
+        $env:HOME
+    } elseif ($env:USERPROFILE) {
+        # Windows
+        $env:USERPROFILE
     } else {
-        [System.IO.Path]::GetTempPath()
+        # Fallback to current directory
+        $PWD.Path
     }
     
     return Join-Path $configDir "$ConfigName.json"
@@ -269,7 +276,7 @@ function Set-ZeppAzureFunction {
         $Location = if ($loadedConfig.Location) { $loadedConfig.Location } else { "eastus" }
         $AllowedIpAddress = if ($loadedConfig.AllowedIpAddress) { $loadedConfig.AllowedIpAddress } else { "0.0.0.0/0" }
         $StorageAccountName = $loadedConfig.StorageAccountName
-        $DisableFunctionAuth = if ($null -ne $loadedConfig.DisableFunctionAuth -and $loadedConfig.DisableFunctionAuth) { $true } else { $false }
+        $DisableFunctionAuth = [bool]$loadedConfig.DisableFunctionAuth
         
         Write-Host ""
     }
@@ -924,6 +931,11 @@ function Test-ZeppAzureFunction {
         # Build function URL from saved configuration
         if (-not $loadedConfig.FunctionAppName) {
             throw "Configuration file does not contain FunctionAppName."
+        }
+        
+        # Validate FunctionAppName format (alphanumeric and hyphens only)
+        if ($loadedConfig.FunctionAppName -notmatch '^[a-zA-Z0-9\-]+$') {
+            throw "Invalid FunctionAppName in configuration: contains invalid characters."
         }
         
         $FunctionUrl = "https://$($loadedConfig.FunctionAppName).azurewebsites.net/api/GetToken"
