@@ -1,19 +1,54 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-    Provides cmdlet to create Azure Function App for ZeppNightscout API token serving.
+    Provides cmdlets to create and test Azure Function Apps for ZeppNightscout API token serving.
 
 .DESCRIPTION
-    This script defines the Set-ZeppAzureFunction cmdlet and can be downloaded and executed directly.
+    This script defines the Set-ZeppAzureFunction and Test-ZeppAzureFunction cmdlets and can be downloaded and executed directly.
     
     Usage:
     # Direct download and execute
     iex (irm https://raw.githubusercontent.com/iricigor/ZeppNightscout/main/scripts/create-azure-function.ps1)
     Set-ZeppAzureFunction -ResourceGroupName "rg-zepp" -FunctionAppName "func-zepp" -AllowedIpAddress "1.2.3.4"
+    Test-ZeppAzureFunction -FunctionUrl "https://func-zepp.azurewebsites.net/api/GetToken?code=abc123"
 
 .NOTES
     This script is optimized for Azure Cloud Shell where Az module is pre-installed.
 #>
+
+# Shared helper function for colored output
+function Write-ColorOutput {
+    param(
+        [string]$Message,
+        [string]$Color = "White"
+    )
+    Write-Host $Message -ForegroundColor $Color
+}
+
+# Helper function to validate IPv4 address
+function Test-IPv4Address {
+    param(
+        [string]$IpAddress
+    )
+    
+    if ([string]::IsNullOrWhiteSpace($IpAddress)) {
+        return $false
+    }
+    
+    # Check format and validate each octet
+    if ($IpAddress -match '^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$') {
+        $octets = $IpAddress.Split('.')
+        foreach ($octet in $octets) {
+            $num = [int]$octet
+            if ($num -lt 0 -or $num -gt 255) {
+                return $false
+            }
+        }
+        return $true
+    }
+    
+    return $false
+}
 
 function Set-ZeppAzureFunction {
     <#
@@ -24,7 +59,8 @@ function Set-ZeppAzureFunction {
         This cmdlet creates an Azure Function App with the following features:
         - Python runtime (version 3.11)
         - HTTP trigger function that returns "DUMMY-TOKEN"
-        - IP access restrictions to allow access from a specific IP address
+        - Automatic IP detection and firewall configuration for Azure Cloud Shell compatibility
+        - IP access restrictions to allow access from specific IP addresses
         - Function code editable in the Azure Portal
         - Uses Azure PowerShell (Az module) - designed for Azure Cloud Shell
 
@@ -38,7 +74,11 @@ function Set-ZeppAzureFunction {
         Azure region for the resources. Default: eastus
 
     .PARAMETER AllowedIpAddress
-        IP address that will be allowed to access the function. Default: 0.0.0.0/0 (all IPs)
+        IP address that will be allowed to access the function. 
+        If not specified, your current public IP is automatically detected and used.
+        When specified and running in Azure Cloud Shell, both your detected IP and the specified IP will be added.
+        Set to "0.0.0.0/0" to allow all IPs (not recommended for production).
+        Default: Auto-detected from your current public IP
 
     .PARAMETER StorageAccountName
         Name of the storage account for the function app. If not provided, will be auto-generated.
@@ -48,10 +88,19 @@ function Set-ZeppAzureFunction {
         WARNING: Only use this with proper IP restrictions configured!
 
     .EXAMPLE
-        Set-ZeppAzureFunction -ResourceGroupName "rg-zeppnightscout" -FunctionAppName "func-zepptoken" -AllowedIpAddress "203.0.113.10"
+        Set-ZeppAzureFunction -ResourceGroupName "rg-zeppnightscout" -FunctionAppName "func-zepptoken"
+        
+        Creates a function with auto-detected IP restrictions (recommended for Azure Cloud Shell).
 
     .EXAMPLE
-        Set-ZeppAzureFunction -ResourceGroupName "rg-zeppnightscout" -FunctionAppName "func-zepptoken" -Location "westeurope" -AllowedIpAddress "203.0.113.10" -DisableFunctionAuth
+        Set-ZeppAzureFunction -ResourceGroupName "rg-zeppnightscout" -FunctionAppName "func-zepptoken" -AllowedIpAddress "203.0.113.10"
+        
+        Creates a function with specific IP restriction. In Azure Cloud Shell, both the detected IP and 203.0.113.10 will be allowed.
+
+    .EXAMPLE
+        Set-ZeppAzureFunction -ResourceGroupName "rg-zeppnightscout" -FunctionAppName "func-zepptoken" -Location "westeurope" -DisableFunctionAuth
+        
+        Creates a function in West Europe with auto-detected IP and no function-level authentication.
 
     .NOTES
         Prerequisites:
@@ -60,6 +109,7 @@ function Set-ZeppAzureFunction {
         - User must have permissions to create resources in the subscription
         
         This cmdlet is optimized for Azure Cloud Shell where Az module is pre-installed.
+        The script automatically detects your public IP using online services (ifconfig.me, ipify.org, icanhazip.com).
     #>
 
     [CmdletBinding()]
@@ -85,15 +135,6 @@ function Set-ZeppAzureFunction {
 
     # Set error action preference
     $ErrorActionPreference = "Stop"
-
-    # Function to write colored output
-    function Write-ColorOutput {
-        param(
-            [string]$Message,
-            [string]$Color = "White"
-        )
-        Write-Host $Message -ForegroundColor $Color
-    }
 
 # Main script execution
 try {
@@ -130,6 +171,63 @@ try {
         throw "Not logged in to Azure. Please run 'Connect-AzAccount' first or use Azure Cloud Shell."
     }
     Write-ColorOutput "✓ Logged in to Azure (Subscription: $($context.Subscription.Name))" "Green"
+    Write-Host ""
+
+    # Auto-detect current public IP address for Azure Cloud Shell compatibility
+    Write-ColorOutput "Detecting current public IP address..." "Yellow"
+    try {
+        # Try multiple services for reliability
+        $detectedIp = $null
+        $services = @(
+            "https://ifconfig.me/ip",
+            "https://api.ipify.org",
+            "https://icanhazip.com"
+        )
+        
+        foreach ($service in $services) {
+            try {
+                $response = Invoke-RestMethod -Uri $service -TimeoutSec 5 -ErrorAction Stop
+                if ($null -ne $response) {
+                    $ipCandidate = $response.ToString().Trim()
+                    if (Test-IPv4Address -IpAddress $ipCandidate) {
+                        $detectedIp = $ipCandidate
+                        break
+                    }
+                }
+            } catch {
+                # Service failed, try next one
+                continue
+            }
+        }
+        
+        if ($detectedIp) {
+            Write-ColorOutput "✓ Detected public IP: $detectedIp" "Green"
+            
+            # If AllowedIpAddress is default (0.0.0.0/0), use detected IP
+            # Otherwise, ensure detected IP is included
+            if ($AllowedIpAddress -eq "0.0.0.0/0") {
+                $AllowedIpAddress = $detectedIp
+                Write-ColorOutput "  Automatically setting IP restriction to detected IP" "Cyan"
+            } else {
+                # Check if the detected IP is different from the specified one
+                if ($AllowedIpAddress -ne $detectedIp) {
+                    Write-ColorOutput "  Note: Specified IP ($AllowedIpAddress) differs from detected IP ($detectedIp)" "Yellow"
+                    Write-ColorOutput "  Adding both IPs to firewall for Azure Cloud Shell compatibility" "Cyan"
+                    # We'll add both IPs later in the IP restriction configuration
+                }
+            }
+        } else {
+            Write-ColorOutput "⚠ Could not detect public IP address automatically" "Yellow"
+            if ($AllowedIpAddress -eq "0.0.0.0/0") {
+                Write-ColorOutput "  Function will be accessible from all IPs (0.0.0.0/0)" "Yellow"
+            }
+        }
+    } catch {
+        Write-ColorOutput "⚠ Error detecting public IP: $($_.Exception.Message)" "Yellow"
+        if ($AllowedIpAddress -eq "0.0.0.0/0") {
+            Write-ColorOutput "  Function will be accessible from all IPs (0.0.0.0/0)" "Yellow"
+        }
+    }
     Write-Host ""
 
     # Generate storage account name if not provided
@@ -357,35 +455,59 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
 
     # Configure IP restrictions
     if ($AllowedIpAddress -ne "0.0.0.0/0") {
-        Write-ColorOutput "Configuring IP access restrictions for $AllowedIpAddress..." "Yellow"
+        Write-ColorOutput "Configuring IP access restrictions..." "Yellow"
         
         try {
-            # Check if IP restriction rule already exists
-            $existingRules = Get-AzWebAppAccessRestrictionConfig -ResourceGroupName $ResourceGroupName -Name $FunctionAppName -ErrorAction SilentlyContinue
-            $ruleExists = $false
-            if ($existingRules -and $existingRules.MainSiteAccessRestrictions) {
-                $ruleExists = ($existingRules.MainSiteAccessRestrictions | Where-Object { $_.RuleName -eq "AllowSpecificIP" }) -ne $null
+            # Collect all IPs to add to firewall with descriptive names
+            $ipRules = @()
+            
+            # Add the specified IP
+            $ipRules += @{
+                IpAddress = $AllowedIpAddress
+                RuleName = "AllowSpecifiedIP"
+                Description = "Specified IP"
+            }
+            Write-ColorOutput "  Adding specified IP: $AllowedIpAddress" "White"
+            
+            # If we detected a different IP earlier, add it too for Azure Cloud Shell compatibility
+            if ($detectedIp -and $detectedIp -ne $AllowedIpAddress -and (Test-IPv4Address -IpAddress $detectedIp)) {
+                $ipRules += @{
+                    IpAddress = $detectedIp
+                    RuleName = "AllowDetectedIP"
+                    Description = "Auto-detected IP (Azure Cloud Shell)"
+                }
+                Write-ColorOutput "  Adding detected IP: $detectedIp (for Azure Cloud Shell)" "White"
             }
             
-            if ($ruleExists) {
-                # Update existing rule by removing and re-adding
-                Remove-AzWebAppAccessRestrictionRule `
+            # Remove any existing rules with our names (including legacy names for backwards compatibility)
+            $existingRules = Get-AzWebAppAccessRestrictionConfig -ResourceGroupName $ResourceGroupName -Name $FunctionAppName -ErrorAction SilentlyContinue
+            if ($existingRules -and $existingRules.MainSiteAccessRestrictions) {
+                $ruleNamesToRemove = @("AllowSpecifiedIP", "AllowDetectedIP", "AllowSpecificIP")
+                foreach ($rule in $existingRules.MainSiteAccessRestrictions) {
+                    if ($rule.RuleName -in $ruleNamesToRemove -or $rule.RuleName -like "AllowSpecificIP_*") {
+                        Remove-AzWebAppAccessRestrictionRule `
+                            -ResourceGroupName $ResourceGroupName `
+                            -WebAppName $FunctionAppName `
+                            -Name $rule.RuleName `
+                            -ErrorAction SilentlyContinue | Out-Null
+                    }
+                }
+            }
+            
+            # Add IP restriction rules
+            $priority = 100
+            foreach ($ipRule in $ipRules) {
+                Add-AzWebAppAccessRestrictionRule `
                     -ResourceGroupName $ResourceGroupName `
                     -WebAppName $FunctionAppName `
-                    -Name "AllowSpecificIP" `
-                    -ErrorAction SilentlyContinue | Out-Null
+                    -Name $ipRule.RuleName `
+                    -Action Allow `
+                    -IpAddress $ipRule.IpAddress `
+                    -Priority $priority | Out-Null
+                $priority += 10
             }
             
-            # Add IP restriction rule using Add-AzWebAppAccessRestrictionRule
-            Add-AzWebAppAccessRestrictionRule `
-                -ResourceGroupName $ResourceGroupName `
-                -WebAppName $FunctionAppName `
-                -Name "AllowSpecificIP" `
-                -Action Allow `
-                -IpAddress $AllowedIpAddress `
-                -Priority 100 | Out-Null
-            
-            Write-ColorOutput "✓ IP access restrictions configured" "Green"
+            Write-ColorOutput "✓ IP access restrictions configured for $($ipRules.Count) IP(s)" "Green"
         } catch {
             Write-ColorOutput "Warning: Failed to configure IP restrictions. You can configure this manually in the Azure Portal." "Yellow"
             Write-ColorOutput "Error details: $($_.Exception.Message)" "Red"
@@ -458,15 +580,172 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
 }
 }
 
+function Test-ZeppAzureFunction {
+    <#
+    .SYNOPSIS
+        Tests a deployed Azure Function to verify it returns the expected API token response.
+
+    .DESCRIPTION
+        This cmdlet tests a deployed Azure Function by making an HTTP request to the function URL
+        and validating that it returns the expected JSON payload with a token field.
+        
+        The function validates:
+        - HTTP connectivity to the function endpoint
+        - Valid JSON response format
+        - Presence of required 'token' field
+        - Optional validation of 'message' field
+
+    .PARAMETER FunctionUrl
+        The complete URL of the Azure Function to test, including any query parameters (like the code parameter).
+        Example: https://zeppnsapi.azurewebsites.net/api/GetToken?code=your-function-key
+
+    .PARAMETER ExpectedToken
+        Optional. The expected token value to verify. If not provided, only checks that a token field exists.
+
+    .EXAMPLE
+        Test-ZeppAzureFunction -FunctionUrl "https://zeppnsapi.azurewebsites.net/api/GetToken?code=abc123"
+        
+        Tests the function and validates it returns a JSON response with a token field.
+
+    .EXAMPLE
+        Test-ZeppAzureFunction -FunctionUrl "https://zeppnsapi.azurewebsites.net/api/GetToken?code=abc123" -ExpectedToken "DUMMY-TOKEN"
+        
+        Tests the function and validates it returns "DUMMY-TOKEN" as the token value.
+
+    .NOTES
+        This cmdlet uses Invoke-RestMethod to make HTTP requests.
+        Ensure you have network connectivity to the Azure Function endpoint.
+    #>
+
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$FunctionUrl,
+
+        [Parameter(Mandatory = $false)]
+        [string]$ExpectedToken
+    )
+
+    # Set error action preference
+    $ErrorActionPreference = "Stop"
+
+    try {
+        Write-ColorOutput "================================================" "Cyan"
+        Write-ColorOutput "  Azure Function Test" "Cyan"
+        Write-ColorOutput "================================================" "Cyan"
+        Write-Host ""
+
+        # Validate URL format
+        Write-ColorOutput "Validating function URL..." "Yellow"
+        if ($FunctionUrl -notmatch '^https?://') {
+            throw "Function URL must start with http:// or https://"
+        }
+        Write-ColorOutput "✓ URL format is valid" "Green"
+        Write-Host ""
+
+        # Make HTTP request to the function
+        Write-ColorOutput "Testing HTTP connectivity..." "Yellow"
+        Write-ColorOutput "URL: $FunctionUrl" "White"
+        
+        try {
+            $response = Invoke-RestMethod -Uri $FunctionUrl -ErrorAction Stop
+        } catch {
+            Write-ColorOutput "✗ Failed to connect to the function" "Red"
+            Write-ColorOutput "Error: $($_.Exception.Message)" "Red"
+            
+            if ($_.Exception.Response) {
+                $statusCode = [int]$_.Exception.Response.StatusCode
+                Write-ColorOutput "HTTP Status Code: $statusCode" "Red"
+            }
+            
+            throw "Failed to connect to Azure Function"
+        }
+        
+        Write-ColorOutput "✓ Successfully connected to function" "Green"
+        Write-Host ""
+
+        # Validate response structure
+        Write-ColorOutput "Validating response structure..." "Yellow"
+        
+        # Check if response is an object (PowerShell converts JSON to PSCustomObject)
+        if ($null -eq $response -or $response -eq '') {
+            throw "Response is empty or null"
+        }
+        Write-ColorOutput "✓ Response is not empty" "Green"
+        
+        # Check for token field
+        if (-not ($response.PSObject.Properties.Name -contains "token")) {
+            throw "Response does not contain required 'token' field"
+        }
+        Write-ColorOutput "✓ Response contains 'token' field" "Green"
+        
+        $tokenValue = if ($null -eq $response.token) { '<null>' } else { $response.token }
+        Write-ColorOutput "  Token value: $tokenValue" "White"
+        
+        # Check for message field (optional but expected)
+        if ($response.PSObject.Properties.Name -contains "message") {
+            Write-ColorOutput "✓ Response contains 'message' field" "Green"
+            Write-ColorOutput "  Message: $($response.message)" "White"
+        } else {
+            Write-ColorOutput "⚠ Response does not contain 'message' field (optional)" "Yellow"
+        }
+        Write-Host ""
+
+        # Validate expected token if provided
+        if ($ExpectedToken) {
+            Write-ColorOutput "Validating token value..." "Yellow"
+            if ($tokenValue -eq $ExpectedToken) {
+                Write-ColorOutput "✓ Token matches expected value: $ExpectedToken" "Green"
+            } else {
+                Write-ColorOutput "✗ Token mismatch!" "Red"
+                Write-ColorOutput "  Expected: $ExpectedToken" "Red"
+                Write-ColorOutput "  Actual:   $tokenValue" "Red"
+                throw "Token value does not match expected value"
+            }
+            Write-Host ""
+        }
+
+        # Success summary
+        Write-ColorOutput "================================================" "Cyan"
+        Write-ColorOutput "  Test Completed Successfully! ✓" "Green"
+        Write-ColorOutput "================================================" "Cyan"
+        Write-Host ""
+        Write-ColorOutput "Summary:" "Cyan"
+        Write-ColorOutput "  Function URL: $FunctionUrl" "White"
+        Write-ColorOutput "  Status: Passed ✓" "Green"
+        Write-ColorOutput "  Token: $tokenValue" "White"
+        if ($response.message) {
+            Write-ColorOutput "  Message: $($response.message)" "White"
+        }
+        Write-Host ""
+
+        return $true
+
+    } catch {
+        Write-ColorOutput "" "Red"
+        Write-ColorOutput "================================================" "Red"
+        Write-ColorOutput "  TEST FAILED: $($_.Exception.Message)" "Red"
+        Write-ColorOutput "================================================" "Red"
+        Write-Host ""
+        return $false
+    }
+}
+
 # Display usage information when script is loaded (only in interactive sessions)
 if ([Environment]::UserInteractive -and -not $PSBoundParameters.Count) {
     Write-Host ""
-    Write-Host "✓ Set-ZeppAzureFunction cmdlet loaded successfully!" -ForegroundColor Green
+    Write-Host "✓ Azure Function cmdlets loaded successfully!" -ForegroundColor Green
     Write-Host ""
-    Write-Host "Usage:" -ForegroundColor Cyan
+    Write-Host "Available cmdlets:" -ForegroundColor Cyan
+    Write-Host "  1. Set-ZeppAzureFunction  - Create Azure Function" -ForegroundColor White
+    Write-Host "  2. Test-ZeppAzureFunction - Test Azure Function" -ForegroundColor White
+    Write-Host ""
+    Write-Host "Usage examples:" -ForegroundColor Cyan
     Write-Host "  Set-ZeppAzureFunction -ResourceGroupName 'rg-zepp' -FunctionAppName 'func-zepp' -AllowedIpAddress '1.2.3.4'" -ForegroundColor White
+    Write-Host "  Test-ZeppAzureFunction -FunctionUrl 'https://func-zepp.azurewebsites.net/api/GetToken?code=abc123'" -ForegroundColor White
     Write-Host ""
     Write-Host "For help:" -ForegroundColor Cyan
     Write-Host "  Get-Help Set-ZeppAzureFunction -Detailed" -ForegroundColor White
+    Write-Host "  Get-Help Test-ZeppAzureFunction -Detailed" -ForegroundColor White
     Write-Host ""
 }

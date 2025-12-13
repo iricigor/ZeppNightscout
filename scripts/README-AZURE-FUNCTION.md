@@ -1,15 +1,48 @@
 # Azure Function Creation Script
 
-This directory contains a PowerShell script that provides the `Set-ZeppAzureFunction` cmdlet to create an Azure Function that provides a dummy API token for the ZeppNightscout application.
+This PowerShell script provides cmdlets to create and test an Azure Function that provides a dummy API token for the ZeppNightscout application.
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Quick Start](#quick-start)
+  - [Method 1: Direct Download and Execute](#method-1-direct-download-and-execute-recommended-for-azure-cloud-shell)
+  - [Method 2: Clone Repository](#method-2-clone-repository)
+- [Prerequisites](#prerequisites)
+- [Usage](#usage)
+  - [Creating Azure Function](#creating-azure-function)
+  - [Testing Azure Function](#testing-azure-function)
+- [What the Script Does](#what-the-script-does)
+- [Function Response](#function-response)
+- [Testing the Function](#testing-the-function)
+  - [Using Test-ZeppAzureFunction Cmdlet](#using-test-zeppazurefunction-cmdlet)
+  - [Using curl](#using-curl)
+  - [Using PowerShell](#using-powershell)
+  - [Using a Web Browser](#using-a-web-browser)
+- [Editing the Function](#editing-the-function)
+- [Security Considerations](#security-considerations)
+- [Costs](#costs)
+- [Troubleshooting](#troubleshooting)
+- [Cleanup](#cleanup)
+- [Integration with ZeppNightscout](#integration-with-zeppnightscout)
+- [Additional Resources](#additional-resources)
+- [Support](#support)
 
 ## Overview
 
-The `create-azure-function.ps1` script provides the `Set-ZeppAzureFunction` cmdlet that automates the creation of:
-- Azure Resource Group
-- Azure Storage Account
-- Azure Function App (Python 3.11 runtime)
-- HTTP-triggered Python function that returns "DUMMY-TOKEN"
-- IP access restrictions for security
+The `create-azure-function.ps1` script provides two cmdlets:
+
+1. **`Set-ZeppAzureFunction`** - Automates the creation of:
+   - Azure Resource Group
+   - Azure Storage Account
+   - Azure Function App (Python 3.11 runtime)
+   - HTTP-triggered Python function that returns "DUMMY-TOKEN"
+   - IP access restrictions for security
+
+2. **`Test-ZeppAzureFunction`** - Tests a deployed Azure Function to:
+   - Verify HTTP connectivity
+   - Validate JSON response format
+   - Confirm proper token payload is returned
 
 **This script is designed for Azure Cloud Shell** where Azure PowerShell (Az module) is pre-installed and pre-authenticated.
 
@@ -20,17 +53,21 @@ The `create-azure-function.ps1` script provides the `Set-ZeppAzureFunction` cmdl
 Open Azure Cloud Shell (PowerShell mode) and run:
 
 ```powershell
-# Download and load the cmdlet
+# Download and load the cmdlets
 iex (irm https://raw.githubusercontent.com/iricigor/ZeppNightscout/main/scripts/create-azure-function.ps1)
 
-# Create the Azure Function
-Set-ZeppAzureFunction -ResourceGroupName "rg-zeppnightscout" -FunctionAppName "func-zepptoken-unique123" -AllowedIpAddress "203.0.113.10"
+# Create the Azure Function (will auto-detect your IP address)
+Set-ZeppAzureFunction -ResourceGroupName "rg-zeppnightscout" -FunctionAppName "func-zepptoken-unique123"
+
+# Test the Azure Function (use the URL from previous command output)
+Test-ZeppAzureFunction -FunctionUrl "https://func-zepptoken-unique123.azurewebsites.net/api/GetToken?code=your-function-key"
 ```
 
 This will:
 1. Download the script from GitHub
-2. Load the `Set-ZeppAzureFunction` cmdlet into your session
-3. Allow you to run the cmdlet with your parameters
+2. Load the `Set-ZeppAzureFunction` and `Test-ZeppAzureFunction` cmdlets into your session
+3. Auto-detect your current public IP address and configure firewall rules
+4. Allow you to run the cmdlets with your parameters
 
 ### Method 2: Clone Repository
 
@@ -74,7 +111,9 @@ If running locally, you need:
 
 ## Usage
 
-### Basic Usage
+### Creating Azure Function
+
+#### Basic Usage
 
 ```powershell
 Set-ZeppAzureFunction `
@@ -83,18 +122,30 @@ Set-ZeppAzureFunction `
     -AllowedIpAddress "203.0.113.10"
 ```
 
-### Parameters
+#### Parameters
 
 | Parameter | Required | Default | Description |
 |-----------|----------|---------|-------------|
 | `ResourceGroupName` | Yes | - | Name of the Azure Resource Group (will be created if it doesn't exist) |
 | `FunctionAppName` | Yes | - | Name of the Function App (must be globally unique) |
 | `Location` | No | `eastus` | Azure region for resources (e.g., `eastus`, `westeurope`, `southeastasia`) |
-| `AllowedIpAddress` | No | `0.0.0.0/0` | IP address allowed to access the function (CIDR notation) |
+| `AllowedIpAddress` | No | Auto-detected | IP address allowed to access the function. If not specified, your current public IP is auto-detected and used. Set to `0.0.0.0/0` to allow all IPs (not recommended) |
 | `StorageAccountName` | No | Auto-generated | Storage account name (3-24 lowercase alphanumeric chars) |
 | `DisableFunctionAuth` | No | `false` | Switch to disable function-level authentication (relies only on IP firewall) |
 
+**Note:** When running in Azure Cloud Shell, the script automatically detects your public IP address and adds it to the firewall. If you specify a different IP with `-AllowedIpAddress`, both IPs will be added to ensure the function works from both your specified IP and Azure Cloud Shell.
+
 ### Examples
+
+#### Create function with auto-detected IP restriction (Recommended)
+
+```powershell
+Set-ZeppAzureFunction `
+    -ResourceGroupName "rg-zeppnightscout" `
+    -FunctionAppName "func-zepptoken-prod"
+```
+
+This will automatically detect your current public IP and configure the firewall accordingly.
 
 #### Create function with specific IP restriction
 
@@ -105,14 +156,15 @@ Set-ZeppAzureFunction `
     -AllowedIpAddress "198.51.100.42"
 ```
 
+**Note:** When running in Azure Cloud Shell, both your detected IP and the specified IP will be added to the firewall.
+
 #### Create function in a different region
 
 ```powershell
 Set-ZeppAzureFunction `
     -ResourceGroupName "rg-zeppnightscout-eu" `
     -FunctionAppName "func-zepptoken-eu" `
-    -Location "westeurope" `
-    -AllowedIpAddress "198.51.100.42"
+    -Location "westeurope"
 ```
 
 #### Create function with IP restriction only (no function-level auth)
@@ -131,6 +183,88 @@ Set-ZeppAzureFunction `
 
 ```powershell
 Get-Help Set-ZeppAzureFunction -Detailed
+```
+
+### Testing Azure Function
+
+After deploying an Azure Function, you can test it using the `Test-ZeppAzureFunction` cmdlet to verify it's working correctly.
+
+#### Basic Usage
+
+```powershell
+Test-ZeppAzureFunction -FunctionUrl "https://your-function-app.azurewebsites.net/api/GetToken?code=your-function-key"
+```
+
+This will:
+- Test HTTP connectivity to the function
+- Validate the response is valid JSON
+- Check that the response contains a `token` field
+- Optionally validate the `message` field if present
+- Display a summary of the test results
+
+#### Parameters
+
+| Parameter | Required | Default | Description |
+|-----------|----------|---------|-------------|
+| `FunctionUrl` | Yes | - | Complete URL of the Azure Function to test, including query parameters (like the code parameter) |
+| `ExpectedToken` | No | - | Optional expected token value. If provided, validates the token matches this value |
+
+#### Examples
+
+##### Test function connectivity and response structure
+
+```powershell
+Test-ZeppAzureFunction -FunctionUrl "https://func-zepptoken.azurewebsites.net/api/GetToken?code=abc123xyz"
+```
+
+This checks that:
+- The function is accessible
+- Returns valid JSON
+- Contains a `token` field
+
+##### Test function with expected token value
+
+```powershell
+Test-ZeppAzureFunction `
+    -FunctionUrl "https://func-zepptoken.azurewebsites.net/api/GetToken?code=abc123xyz" `
+    -ExpectedToken "DUMMY-TOKEN"
+```
+
+This additionally validates that the token value matches "DUMMY-TOKEN".
+
+##### Test function without authentication (IP firewall only)
+
+If you deployed with `-DisableFunctionAuth`, the URL doesn't need a code parameter:
+
+```powershell
+Test-ZeppAzureFunction -FunctionUrl "https://func-zepptoken.azurewebsites.net/api/GetToken"
+```
+
+#### Understanding Test Results
+
+The cmdlet will output:
+- ✓ Green checkmarks for successful validations
+- ✗ Red X marks for failures
+- ⚠ Yellow warnings for optional items
+- A summary showing the function URL, status, and token value
+
+**Example successful output:**
+```
+================================================
+  Test Completed Successfully! ✓
+================================================
+
+Summary:
+  Function URL: https://func-zepptoken.azurewebsites.net/api/GetToken?code=...
+  Status: Passed ✓
+  Token: DUMMY-TOKEN
+  Message: This is a dummy API token for testing purposes
+```
+
+#### Get help for the cmdlet
+
+```powershell
+Get-Help Test-ZeppAzureFunction -Detailed
 ```
 
 ## What the Script Does
@@ -169,7 +303,23 @@ The deployed function returns the following JSON response:
 
 ## Testing the Function
 
-After deployment, the script will output a function URL. Test it using:
+After deployment, the script will output a function URL. You can test it using several methods:
+
+### Using Test-ZeppAzureFunction Cmdlet
+
+**Recommended:** Use the built-in test cmdlet for comprehensive validation:
+
+```powershell
+# Basic test
+Test-ZeppAzureFunction -FunctionUrl "https://your-function-app.azurewebsites.net/api/GetToken?code=your-function-key"
+
+# Test with expected token validation
+Test-ZeppAzureFunction `
+    -FunctionUrl "https://your-function-app.azurewebsites.net/api/GetToken?code=your-function-key" `
+    -ExpectedToken "DUMMY-TOKEN"
+```
+
+See the [Testing Azure Function](#testing-azure-function) section above for more details and examples.
 
 ### Using curl
 
