@@ -12,6 +12,7 @@ This PowerShell script provides cmdlets to create and test an Azure Function tha
 - [Usage](#usage)
   - [Creating Azure Function](#creating-azure-function)
   - [Testing Azure Function](#testing-azure-function)
+  - [Managing Configuration Files](#managing-configuration-files)
 - [What the Script Does](#what-the-script-does)
 - [Function Response](#function-response)
 - [Testing the Function](#testing-the-function)
@@ -31,7 +32,7 @@ This PowerShell script provides cmdlets to create and test an Azure Function tha
 
 ## Overview
 
-The `create-azure-function.ps1` script provides two cmdlets:
+The `create-azure-function.ps1` script provides four cmdlets:
 
 1. **`Set-ZeppAzureFunction`** - Automates the creation of:
    - Azure Resource Group
@@ -39,11 +40,23 @@ The `create-azure-function.ps1` script provides two cmdlets:
    - Azure Function App (Python 3.11 runtime)
    - HTTP-triggered Python function that returns "DUMMY-TOKEN"
    - IP access restrictions for security
+   - Configuration save/load support with `-SaveConfig` and `-LoadConfig`
 
 2. **`Test-ZeppAzureFunction`** - Tests a deployed Azure Function to:
    - Verify HTTP connectivity
    - Validate JSON response format
    - Confirm proper token payload is returned
+   - Supports `-LoadConfig` to automatically test using saved configuration
+
+3. **`Get-ZeppConfig`** - Retrieves saved deployment configuration:
+   - Displays all saved configuration parameters
+   - Supports JSON output with `-AsJson`
+   - Helps verify configuration before deployment
+
+4. **`Test-ZeppConfig`** - Validates saved deployment configuration:
+   - Checks required fields (ResourceGroupName, FunctionAppName)
+   - Validates IP address and storage account name formats
+   - Provides detailed validation output with `-Detailed`
 
 **This script is designed for Azure Cloud Shell** where Azure PowerShell (Az module) is pre-installed and pre-authenticated.
 
@@ -57,12 +70,16 @@ Open Azure Cloud Shell (PowerShell mode) and run:
 # Download and load the cmdlets
 iex (irm https://raw.githubusercontent.com/iricigor/ZeppNightscout/main/scripts/create-azure-function.ps1)
 
-# Create the Azure Function (will auto-detect your IP address)
-Set-ZeppAzureFunction -ResourceGroupName "rg-zeppnightscout" -FunctionAppName "func-zepptoken-unique123"
+# Create the Azure Function and save configuration (will auto-detect your IP address)
+Set-ZeppAzureFunction -ResourceGroupName "rg-zeppnightscout" -FunctionAppName "func-zepptoken-unique123" -SaveConfig
 
-# Test the Azure Function (use the URL from previous command output)
-Test-ZeppAzureFunction -FunctionUrl "https://func-zepptoken-unique123.azurewebsites.net/api/GetToken?code=your-function-key"
+# Test the Azure Function using saved configuration
+Test-ZeppAzureFunction -LoadConfig
 ```
+
+**Using `-SaveConfig` and `-LoadConfig`:**
+- `-SaveConfig`: Saves deployment parameters to a local config file for reuse
+- `-LoadConfig`: Loads parameters from the saved config file, making redeployment easy
 
 This will:
 1. Download the script from GitHub
@@ -133,6 +150,8 @@ Set-ZeppAzureFunction `
 | `AllowedIpAddress` | No | Auto-detected | IP address allowed to access the function. If not specified, your current public IP is auto-detected and used. Set to `0.0.0.0/0` to allow all IPs (not recommended) |
 | `StorageAccountName` | No | Auto-generated | Storage account name (3-24 lowercase alphanumeric chars) |
 | `DisableFunctionAuth` | No | `false` | Switch to disable function-level authentication (relies only on IP firewall) |
+| `SaveConfig` | No | `false` | Switch to save deployment configuration to a local file for reuse with `-LoadConfig` |
+| `LoadConfig` | No | `false` | Switch to load configuration from a previously saved file (created with `-SaveConfig`) |
 
 **Note:** When running in Azure Cloud Shell, the script automatically detects your public IP address and adds it to the firewall. If you specify a different IP with `-AllowedIpAddress`, both IPs will be added to ensure the function works from both your specified IP and Azure Cloud Shell.
 
@@ -180,6 +199,25 @@ Set-ZeppAzureFunction `
 
 **Note:** This relies solely on IP firewall for security. Only use when you have a static IP and want simpler URLs without access keys.
 
+#### Save configuration for reuse
+
+```powershell
+Set-ZeppAzureFunction `
+    -ResourceGroupName "rg-zeppnightscout" `
+    -FunctionAppName "func-zepptoken-prod" `
+    -SaveConfig
+```
+
+This saves the configuration to a local file (default: `zepp-azure-config.json`) for easy redeployment.
+
+#### Deploy using saved configuration
+
+```powershell
+Set-ZeppAzureFunction -LoadConfig
+```
+
+This loads all parameters from the saved configuration file and deploys/updates the function.
+
 #### Get help for the cmdlet
 
 ```powershell
@@ -207,8 +245,11 @@ This will:
 
 | Parameter | Required | Default | Description |
 |-----------|----------|---------|-------------|
-| `FunctionUrl` | Yes | - | Complete URL of the Azure Function to test, including query parameters (like the code parameter) |
+| `FunctionUrl` | Yes* | - | Complete URL of the Azure Function to test, including query parameters (like the code parameter) |
 | `ExpectedToken` | No | - | Optional expected token value. If provided, validates the token matches this value |
+| `LoadConfig` | No | `false` | Switch to load configuration from saved file and automatically construct the function URL |
+
+*Not required when using `-LoadConfig`
 
 #### Examples
 
@@ -222,6 +263,14 @@ This checks that:
 - The function is accessible
 - Returns valid JSON
 - Contains a `token` field
+
+##### Test using saved configuration
+
+```powershell
+Test-ZeppAzureFunction -LoadConfig
+```
+
+This automatically constructs the function URL from your saved configuration and tests the function.
 
 ##### Test function with expected token value
 
@@ -266,6 +315,92 @@ Summary:
 
 ```powershell
 Get-Help Test-ZeppAzureFunction -Detailed
+```
+
+### Managing Configuration Files
+
+The deployment scripts support saving and loading configuration to make redeployments easier.
+
+#### Get-ZeppConfig - Retrieve Saved Configuration
+
+Retrieves the saved deployment configuration that was created with `Set-ZeppAzureFunction -SaveConfig`.
+
+**Usage:**
+
+```powershell
+# View saved configuration
+Get-ZeppConfig
+
+# Get configuration as JSON
+Get-ZeppConfig -AsJson
+
+# Use custom config file name
+Get-ZeppConfig -ConfigName "my-custom-config"
+```
+
+**Parameters:**
+
+| Parameter | Required | Default | Description |
+|-----------|----------|---------|-------------|
+| `ConfigName` | No | `zepp-azure-config` | Optional custom configuration file name |
+| `AsJson` | No | `false` | Returns configuration as JSON string instead of PowerShell object |
+
+**What it displays:**
+- ResourceGroupName
+- FunctionAppName
+- Location
+- AllowedIpAddress
+- StorageAccountName
+- DisableFunctionAuth setting
+
+#### Test-ZeppConfig - Validate Configuration
+
+Validates the saved deployment configuration before using it.
+
+**Usage:**
+
+```powershell
+# Basic validation
+Test-ZeppConfig
+
+# Detailed validation with recommendations
+Test-ZeppConfig -Detailed
+
+# Validate custom config file
+Test-ZeppConfig -ConfigName "my-custom-config" -Detailed
+```
+
+**Parameters:**
+
+| Parameter | Required | Default | Description |
+|-----------|----------|---------|-------------|
+| `ConfigName` | No | `zepp-azure-config` | Optional custom configuration file name |
+| `Detailed` | No | `false` | Shows detailed validation results for each field |
+
+**What it validates:**
+- ✓ Configuration file exists and is readable
+- ✓ Required fields are present (ResourceGroupName, FunctionAppName)
+- ✓ IP address format is valid
+- ✓ Storage account name format is correct (3-24 lowercase alphanumeric)
+- ⚠ Provides warnings for security best practices
+
+**Example workflow:**
+
+```powershell
+# 1. Deploy and save configuration
+Set-ZeppAzureFunction -ResourceGroupName "rg-zepp" -FunctionAppName "func-zepp" -SaveConfig
+
+# 2. Verify saved configuration
+Get-ZeppConfig
+
+# 3. Validate before redeployment
+Test-ZeppConfig -Detailed
+
+# 4. Redeploy using saved configuration
+Set-ZeppAzureFunction -LoadConfig
+
+# 5. Test using saved configuration
+Test-ZeppAzureFunction -LoadConfig
 ```
 
 ## What the Script Does
