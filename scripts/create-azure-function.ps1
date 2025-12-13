@@ -388,8 +388,9 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         try:
             params = dict(req.params)
             # Mask sensitive data in logs (using set for O(1) lookup performance)
-            for param_name in params.keys():
-                if param_name.lower() in SENSITIVE_PARAM_NAMES:
+            for param_name in params:
+                param_name_lower = param_name.lower()
+                if param_name_lower in SENSITIVE_PARAM_NAMES:
                     params[param_name] = '***REDACTED***'
             logging.info(f'Query Parameters: {params}')
         except Exception as e:
@@ -399,7 +400,8 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         try:
             safe_headers = {}
             for key, value in req.headers.items():
-                if key.lower() in SENSITIVE_HEADER_NAMES:
+                key_lower = key.lower()
+                if key_lower in SENSITIVE_HEADER_NAMES:
                     safe_headers[key] = '***REDACTED***'
                 else:
                     safe_headers[key] = value
