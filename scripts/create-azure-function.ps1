@@ -367,6 +367,8 @@ import azure.functions as func
 
 # Configuration constants
 MAX_BODY_LOG_SIZE = 1024 * 1024  # 1MB
+SENSITIVE_PARAM_NAMES = {'code', 'key', 'token', 'secret', 'password', 'api_key', 'apikey', 'auth'}
+SENSITIVE_HEADER_NAMES = {'authorization', 'x-functions-key', 'cookie'}
 
 def main(req: func.HttpRequest) -> func.HttpResponse:
     """
@@ -386,9 +388,8 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         try:
             params = dict(req.params)
             # Mask sensitive data in logs (using set for O(1) lookup performance)
-            sensitive_params = {'code', 'key', 'token', 'secret', 'password', 'api_key', 'apikey', 'auth'}
-            for param_name in list(params.keys()):
-                if param_name.lower() in sensitive_params:
+            for param_name in params.keys():
+                if param_name.lower() in SENSITIVE_PARAM_NAMES:
                     params[param_name] = '***REDACTED***'
             logging.info(f'Query Parameters: {params}')
         except Exception as e:
@@ -397,9 +398,8 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         # Log headers (exclude sensitive ones - using set for O(1) lookup performance)
         try:
             safe_headers = {}
-            sensitive_header_names = {'authorization', 'x-functions-key', 'cookie'}
             for key, value in req.headers.items():
-                if key.lower() in sensitive_header_names:
+                if key.lower() in SENSITIVE_HEADER_NAMES:
                     safe_headers[key] = '***REDACTED***'
                 else:
                     safe_headers[key] = value
