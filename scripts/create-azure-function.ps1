@@ -358,8 +358,25 @@ try {
     Set-Content -Path $functionJsonPath -Value $functionJson -Encoding UTF8
     
     # Create __init__.py with the function code
+    # Read the Python code from the separate template file
     $initPyPath = Join-Path $tempDir "__init__.py"
-    $pythonCode = @'
+    
+    # Try to locate the template file (handles both normal execution and direct download scenarios)
+    $pythonCode = $null
+    if ($PSCommandPath) {
+        $scriptDir = Split-Path -Parent $PSCommandPath
+        $templatePath = Join-Path $scriptDir "azure-function-template" "__init__.py"
+        
+        if (Test-Path $templatePath) {
+            Write-ColorOutput "  Reading Python code from template: $templatePath" "White"
+            $pythonCode = Get-Content -Path $templatePath -Raw -Encoding UTF8
+        }
+    }
+    
+    # If template not found, use embedded code (for backwards compatibility, e.g., when downloaded via irm)
+    if (-not $pythonCode) {
+        Write-ColorOutput "  Using embedded Python code (template not found)" "Yellow"
+        $pythonCode = @'
 import logging
 import json
 import traceback
@@ -463,6 +480,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
             status_code=500
         )
 '@
+    }
     
     Set-Content -Path $initPyPath -Value $pythonCode -Encoding UTF8
     

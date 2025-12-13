@@ -340,6 +340,21 @@ Simply paste the function URL (including the code parameter) into your browser.
 
 ## Editing the Function
 
+The Azure Function Python code is stored in a separate file in the repository: `scripts/azure-function-template/__init__.py`. This allows you to:
+
+- Edit the code with proper Python syntax highlighting
+- Track changes in version control
+- Deploy updates by re-running the PowerShell script
+
+### Option 1: Edit Before Deployment (Recommended)
+
+To modify the function before deploying:
+
+1. Edit `scripts/azure-function-template/__init__.py` in the repository
+2. Run the PowerShell deployment script to deploy the updated code
+
+### Option 2: Edit After Deployment (Azure Portal)
+
 To modify the function's response in the Azure Portal:
 
 1. Go to https://portal.azure.com
@@ -351,7 +366,7 @@ To modify the function's response in the Azure Portal:
 
 ### Example: Changing the Token Value
 
-In the Azure Portal, modify the return statement in `__init__.py`:
+In the Azure Portal or in `scripts/azure-function-template/__init__.py`, modify the return statement:
 
 ```python
 return func.HttpResponse(
