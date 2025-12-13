@@ -50,6 +50,37 @@ function Test-IPv4Address {
     return $false
 }
 
+# Helper function to ensure IP address is in CIDR format
+function ConvertTo-CIDRFormat {
+    param(
+        [string]$IpAddress
+    )
+    
+    if ([string]::IsNullOrWhiteSpace($IpAddress)) {
+        return $IpAddress
+    }
+    
+    # If already in CIDR format (IP/prefix), validate and return as-is
+    # Check for IP address format followed by / and prefix length
+    if ($IpAddress -match '^([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})/(\d{1,2})$') {
+        $ip = $Matches[1]
+        $prefix = [int]$Matches[2]
+        
+        # Validate prefix length is 0-32 for IPv4
+        if ($prefix -ge 0 -and $prefix -le 32 -and (Test-IPv4Address -IpAddress $ip)) {
+            return $IpAddress
+        }
+    }
+    
+    # If it's a plain IP address (without /), append /32
+    if (Test-IPv4Address -IpAddress $IpAddress) {
+        return "$IpAddress/32"
+    }
+    
+    # Return as-is if it's not a valid IP (let Azure handle the error)
+    return $IpAddress
+}
+
 function Set-ZeppAzureFunction {
     <#
     .SYNOPSIS
@@ -207,7 +238,7 @@ try {
             # If AllowedIpAddress is default (0.0.0.0/0), use detected IP
             # Otherwise, ensure detected IP is included
             if ($AllowedIpAddress -eq "0.0.0.0/0") {
-                $AllowedIpAddress = $detectedIp
+                $AllowedIpAddress = ConvertTo-CIDRFormat -IpAddress $detectedIp
                 Write-ColorOutput "  Automatically setting IP restriction to detected IP" "Cyan"
             } else {
                 # Check if the detected IP is different from the specified one
@@ -462,22 +493,24 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
             # Collect all IPs to add to firewall with descriptive names
             $ipRules = @()
             
-            # Add the specified IP
+            # Add the specified IP (ensure it's in CIDR format)
+            $convertedIp = ConvertTo-CIDRFormat -IpAddress $AllowedIpAddress
             $ipRules += @{
-                IpAddress = $AllowedIpAddress
+                IpAddress = $convertedIp
                 RuleName = "AllowSpecifiedIP"
                 Description = "Specified IP"
             }
-            Write-ColorOutput "  Adding specified IP: $AllowedIpAddress" "White"
+            Write-ColorOutput "  Adding specified IP: $convertedIp" "White"
             
             # If we detected a different IP earlier, add it too for Azure Cloud Shell compatibility
             if ($detectedIp -and $detectedIp -ne $AllowedIpAddress -and (Test-IPv4Address -IpAddress $detectedIp)) {
+                $convertedDetectedIp = ConvertTo-CIDRFormat -IpAddress $detectedIp
                 $ipRules += @{
-                    IpAddress = $detectedIp
+                    IpAddress = $convertedDetectedIp
                     RuleName = "AllowDetectedIP"
                     Description = "Auto-detected IP (Azure Cloud Shell)"
                 }
-                Write-ColorOutput "  Adding detected IP: $detectedIp (for Azure Cloud Shell)" "White"
+                Write-ColorOutput "  Adding detected IP: $convertedDetectedIp (for Azure Cloud Shell)" "White"
             }
             
             # Remove any existing rules with our names (including legacy names for backwards compatibility)
