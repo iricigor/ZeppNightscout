@@ -1273,15 +1273,15 @@ function Update-ZeppAzureToken {
         Write-ColorOutput "Updating token value..." "Yellow"
         
         # Escape special characters in token and message for JSON
-        # Note: Backslash must be escaped last to avoid double-escaping
-        $escapedToken = $Token -replace '"', '\"' -replace "`n", '\n' -replace "`r", '\r' -replace "`t", '\t' -replace '\\', '\\'
-        $escapedMessage = $Message -replace '"', '\"' -replace "`n", '\n' -replace "`r", '\r' -replace "`t", '\t' -replace '\\', '\\'
+        # Backslash must be escaped FIRST to avoid double-escaping other characters
+        $escapedToken = $Token -replace '\\', '\\\\' -replace '"', '\"' -replace "`n", '\n' -replace "`r", '\r' -replace "`t", '\t'
+        $escapedMessage = $Message -replace '\\', '\\\\' -replace '"', '\"' -replace "`n", '\n' -replace "`r", '\r' -replace "`t", '\t'
         
         if ($currentCode) {
             # Update existing code - preserve everything except the token and message values
-            # Use a more robust regex that handles escaped quotes within the value
-            $updatedCode = $currentCode -replace '("token":\s*")(?:[^"\\]|\\.)*(")', "`${1}$escapedToken`${2}"
-            $updatedCode = $updatedCode -replace '("message":\s*")(?:[^"\\]|\\.)*(")', "`${1}$escapedMessage`${2}"
+            # Regex matches the field name, opening quote, any content (including escaped chars), and closing quote
+            $updatedCode = $currentCode -replace '("token":\s*")[^"]*(?:\\.[^"]*)*(")', "`${1}$escapedToken`${2}"
+            $updatedCode = $updatedCode -replace '("message":\s*")[^"]*(?:\\.[^"]*)*(")', "`${1}$escapedMessage`${2}"
         } else {
             # Use template code with new token
             # Use single-quoted here-string to avoid variable expansion, then replace placeholders

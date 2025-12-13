@@ -592,11 +592,11 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     # This allows users to edit the function code directly in the Azure Portal
     Write-ColorOutput "Enabling portal editing..." "Yellow"
     try {
-        Update-AzFunctionAppSetting `
+        $null = Update-AzFunctionAppSetting `
             -ResourceGroupName $ResourceGroupName `
             -Name $FunctionAppName `
             -AppSetting @{"WEBSITE_RUN_FROM_PACKAGE" = "0"} `
-            -Force | Out-Null
+            -Force
         Write-ColorOutput "✓ Portal editing enabled" "Green"
     } catch {
         Write-ColorOutput "Warning: Could not enable portal editing. You can manually set WEBSITE_RUN_FROM_PACKAGE=0 in Application Settings." "Yellow"
