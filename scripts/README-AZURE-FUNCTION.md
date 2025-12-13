@@ -423,8 +423,25 @@ If you see a 500 error:
 
 1. Check the function logs in Azure Portal (Monitor → Logs)
 2. Look for the `=== GetToken Function ERROR ===` marker in logs
-3. Review the exception type, message, and traceback
-4. The error response will also include the error details in JSON format
+3. Review the exception type, message, and full traceback in the logs
+4. Note: For security reasons, error responses to clients contain only a generic message. Detailed error information (exception type, message, and traceback) is available only in the function logs.
+
+5. Common causes and solutions:
+   - **Missing dependencies**: Ensure all required Python packages are installed
+   - **Configuration issues**: Check Application Settings for missing or incorrect values
+   - **Runtime errors**: Review the traceback in logs to identify the exact line causing the issue
+   - **Timeout**: Check if the function is timing out (default is 5 minutes)
+
+6. To enable even more detailed logging:
+   - Go to Configuration → Application Settings
+   - Add or update `PYTHON_ENABLE_WORKER_EXTENSIONS` = `1`
+   - Add or update `FUNCTIONS_WORKER_RUNTIME` = `python`
+   - Restart the function app
+
+7. For persistent issues:
+   - Check the full logs in Application Insights (if enabled)
+   - Review the Diagnose and solve problems section in the Function App
+   - Ensure the Python runtime version matches (3.11)
 
 #### Missing Logs
 
@@ -633,7 +650,7 @@ If you receive a 500 Internal Server Error when calling the function:
 4. Look for detailed error information in the logs:
    - The function will log `=== GetToken Function ERROR ===`
    - Check the exception type, message, and full traceback
-   - The error response will also include error details in JSON format
+   - Note: For security reasons, error responses to clients contain only a generic message. Detailed error information is available only in the function logs.
 
 5. Common causes and solutions:
    - **Missing dependencies**: Ensure all required Python packages are installed

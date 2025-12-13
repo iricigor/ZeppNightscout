@@ -365,6 +365,9 @@ import json
 import traceback
 import azure.functions as func
 
+# Configuration constants
+MAX_BODY_LOG_SIZE = 1024 * 1024  # 1MB
+
 def main(req: func.HttpRequest) -> func.HttpResponse:
     """
     HTTP trigger function that returns a dummy API token.
@@ -409,8 +412,8 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
             body = req.get_body()
             if body:
                 body_len = len(body)
-                # Protect against logging very large bodies (> 1MB)
-                if body_len > 1024 * 1024:
+                # Protect against logging very large bodies
+                if body_len > MAX_BODY_LOG_SIZE:
                     logging.info(f'Request Body Length: {body_len} bytes (too large for detailed logging)')
                 else:
                     logging.info(f'Request Body Length: {body_len} bytes')
