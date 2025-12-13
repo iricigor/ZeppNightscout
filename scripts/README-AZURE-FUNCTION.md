@@ -32,7 +32,7 @@ This PowerShell script provides cmdlets to create and test an Azure Function tha
 
 ## Overview
 
-The `create-azure-function.ps1` script provides four cmdlets:
+The `create-azure-function.ps1` script provides five cmdlets:
 
 1. **`Set-ZeppAzureFunction`** - Automates the creation of:
    - Azure Resource Group
@@ -41,6 +41,7 @@ The `create-azure-function.ps1` script provides four cmdlets:
    - HTTP-triggered Python function that returns "DUMMY-TOKEN"
    - IP access restrictions for security
    - Configuration save/load support with `-SaveConfig` and `-LoadConfig`
+   - **Portal editing enabled** - function code can be edited directly in Azure Portal
 
 2. **`Test-ZeppAzureFunction`** - Tests a deployed Azure Function to:
    - Verify HTTP connectivity
@@ -48,12 +49,18 @@ The `create-azure-function.ps1` script provides four cmdlets:
    - Confirm proper token payload is returned
    - Supports `-LoadConfig` to automatically test using saved configuration
 
-3. **`Get-ZeppConfig`** - Retrieves saved deployment configuration:
+3. **`Update-ZeppAzureToken`** - Securely updates the API token from command line:
+   - Prompts for secure token input (hidden entry)
+   - Updates token without needing portal access
+   - Supports `-LoadConfig` for easy configuration management
+   - Ideal for updating the Nightscout API token after deployment
+
+4. **`Get-ZeppConfig`** - Retrieves saved deployment configuration:
    - Displays all saved configuration parameters
    - Supports JSON output with `-AsJson`
    - Helps verify configuration before deployment
 
-4. **`Test-ZeppConfig`** - Validates saved deployment configuration:
+5. **`Test-ZeppConfig`** - Validates saved deployment configuration:
    - Checks required fields (ResourceGroupName, FunctionAppName)
    - Validates IP address and storage account name formats
    - Provides detailed validation output with `-Detailed`
@@ -73,19 +80,24 @@ iex (irm https://raw.githubusercontent.com/iricigor/ZeppNightscout/main/scripts/
 # Create the Azure Function and save configuration (will auto-detect your IP address)
 Set-ZeppAzureFunction -ResourceGroupName "rg-zeppnightscout" -FunctionAppName "func-zepptoken-unique123" -SaveConfig
 
+# Update the token to your actual Nightscout token (secure prompt)
+Update-ZeppAzureToken -LoadConfig
+
 # Test the Azure Function using saved configuration
 Test-ZeppAzureFunction -LoadConfig
 ```
 
 **Using `-SaveConfig` and `-LoadConfig`:**
 - `-SaveConfig`: Saves deployment parameters to a local config file for reuse
-- `-LoadConfig`: Loads parameters from the saved config file, making redeployment easy
+- `-LoadConfig`: Loads parameters from the saved config file, making management easy
 
 This will:
 1. Download the script from GitHub
-2. Load the `Set-ZeppAzureFunction` and `Test-ZeppAzureFunction` cmdlets into your session
+2. Load the cmdlets into your session
 3. Auto-detect your current public IP address and configure firewall rules
-4. Allow you to run the cmdlets with your parameters
+4. Deploy the Azure Function with portal editing enabled
+5. Prompt you to securely enter your Nightscout API token
+6. Test the function to verify it's working correctly
 
 ### Method 2: Clone Repository
 
@@ -473,46 +485,77 @@ Invoke-RestMethod -Uri "https://your-function-app.azurewebsites.net/api/GetToken
 
 Simply paste the function URL (including the code parameter) into your browser.
 
-## Editing the Function
+## Updating the Token
 
-The Azure Function Python code is stored in a separate file in the repository: `scripts/azure-function-template/__init__.py`. This allows you to:
+There are three ways to update the token value in your Azure Function:
 
-- Edit the code with proper Python syntax highlighting
-- Track changes in version control
-- Deploy updates by re-running the PowerShell script
+### Option 1: Using Update-ZeppAzureToken Cmdlet (Recommended)
 
-### Option 1: Edit Before Deployment (Recommended)
+**This is the recommended and most secure method.** Use the `Update-ZeppAzureToken` cmdlet to update the token directly from the command line without needing portal access.
 
-To modify the function before deploying:
+```powershell
+# Update token with prompt for secure input (recommended)
+Update-ZeppAzureToken -ResourceGroupName "rg-zeppnightscout" -FunctionAppName "func-zepptoken"
 
-1. Edit `scripts/azure-function-template/__init__.py` in the repository
-2. Run the PowerShell deployment script to deploy the updated code
+# Update using saved configuration (easiest)
+Update-ZeppAzureToken -LoadConfig
 
-### Option 2: Edit After Deployment (Azure Portal)
+# Update with token as parameter (less secure - visible in command history)
+Update-ZeppAzureToken -LoadConfig -Token "your-actual-nightscout-token-here"
+```
 
-To modify the function's response in the Azure Portal:
+**Benefits:**
+- ✅ Secure token entry (hidden input when prompted)
+- ✅ No need for portal access
+- ✅ Works from command line or scripts
+- ✅ Uses saved configuration for convenience
+- ✅ Changes take effect immediately
+
+**Getting help:**
+```powershell
+Get-Help Update-ZeppAzureToken -Detailed
+```
+
+### Option 2: Edit in Azure Portal
+
+The deployment script automatically enables portal editing by setting `WEBSITE_RUN_FROM_PACKAGE=0`.
+
+To edit the function in the Azure Portal:
 
 1. Go to https://portal.azure.com
 2. Navigate to your Function App
 3. Select **Functions** → **GetToken**
 4. Click **Code + Test**
-5. Edit the `__init__.py` file
+5. Edit the `__init__.py` file to change the token value:
+   ```python
+   response_data = {
+       "token": "YOUR-ACTUAL-TOKEN-HERE",
+       "message": "This is a Nightscout API token"
+   }
+   ```
 6. Click **Save** to deploy your changes
 
-### Example: Changing the Token Value
+**Note:** If you see the message "This function has been edited through an external editor. Portal editing is disabled", you can either:
+- Use Option 1 above (Update-ZeppAzureToken cmdlet) - **recommended**
+- Or manually set `WEBSITE_RUN_FROM_PACKAGE` to `0` in Application Settings:
+  1. Go to your Function App → **Configuration** → **Application settings**
+  2. Find or add `WEBSITE_RUN_FROM_PACKAGE` setting
+  3. Set its value to `0`
+  4. Click **Save** and restart the function app
 
-In the Azure Portal or in `scripts/azure-function-template/__init__.py`, modify the return statement:
+### Option 3: Edit Before Deployment
 
-```python
-return func.HttpResponse(
-    body=json.dumps({
-        "token": "YOUR-CUSTOM-TOKEN-HERE",
-        "message": "Custom message"
-    }),
-    mimetype="application/json",
-    status_code=200
-)
-```
+To modify the function before deploying:
+
+1. Edit `scripts/azure-function-template/__init__.py` in the repository
+2. Change the token value in the response:
+   ```python
+   response_data = {
+       "token": "YOUR-ACTUAL-TOKEN-HERE",
+       "message": "This is a Nightscout API token"
+   }
+   ```
+3. Run the PowerShell deployment script to deploy the updated code
 
 ## Debugging and Monitoring
 
