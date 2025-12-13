@@ -181,7 +181,7 @@ function Test-ZeppConfig {
         if ([string]::IsNullOrWhiteSpace($config.StorageAccountName)) {
             Write-ColorOutput "⚠ StorageAccountName is not set (will be auto-generated)" "Yellow"
         } else {
-            if ($config.StorageAccountName -match '^[a-z0-9]{3,24}$') {
+            if (Test-StorageAccountName -StorageAccountName $config.StorageAccountName) {
                 Write-ColorOutput "✓ StorageAccountName format is valid" "Green"
                 if ($Detailed) {
                     Write-ColorOutput "  Value: $($config.StorageAccountName)" "White"

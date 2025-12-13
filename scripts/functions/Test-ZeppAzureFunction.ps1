@@ -77,7 +77,7 @@ function Test-ZeppAzureFunction {
         }
         
         # Validate FunctionAppName format (alphanumeric and hyphens only)
-        if ($loadedConfig.FunctionAppName -notmatch '^[a-zA-Z0-9\-]+$') {
+        if (-not (Test-FunctionAppName -FunctionAppName $loadedConfig.FunctionAppName)) {
             throw "Invalid FunctionAppName in configuration: contains invalid characters."
         }
         

@@ -132,3 +132,31 @@ function ConvertTo-CIDRFormat {
     # Return as-is if it's not a valid IP (let Azure handle the error)
     return $IpAddress
 }
+
+# Helper function to validate storage account name
+function Test-StorageAccountName {
+    param(
+        [string]$StorageAccountName
+    )
+    
+    if ([string]::IsNullOrWhiteSpace($StorageAccountName)) {
+        return $false
+    }
+    
+    # Storage account name must be 3-24 characters, lowercase letters and numbers only
+    return $StorageAccountName -match '^[a-z0-9]{3,24}$'
+}
+
+# Helper function to validate Function App name
+function Test-FunctionAppName {
+    param(
+        [string]$FunctionAppName
+    )
+    
+    if ([string]::IsNullOrWhiteSpace($FunctionAppName)) {
+        return $false
+    }
+    
+    # Function app name must contain only alphanumeric characters and hyphens
+    return $FunctionAppName -match '^[a-zA-Z0-9\-]+$'
+}

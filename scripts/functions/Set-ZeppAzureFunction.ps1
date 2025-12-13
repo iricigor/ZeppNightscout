@@ -234,7 +234,7 @@ try {
     }
 
     # Validate storage account name
-    if ($StorageAccountName -notmatch '^[a-z0-9]{3,24}$') {
+    if (-not (Test-StorageAccountName -StorageAccountName $StorageAccountName)) {
         throw "Storage account name must be 3-24 characters, lowercase letters and numbers only."
     }
 
