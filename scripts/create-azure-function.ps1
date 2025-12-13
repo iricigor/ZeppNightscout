@@ -382,20 +382,21 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         # Log query parameters (if any)
         try:
             params = dict(req.params)
-            # Mask sensitive data in logs
-            sensitive_params = ['code', 'key', 'token', 'secret', 'password', 'api_key', 'apikey', 'auth']
-            for param_name in sensitive_params:
-                if param_name in params:
+            # Mask sensitive data in logs (using set for O(1) lookup performance)
+            sensitive_params = {'code', 'key', 'token', 'secret', 'password', 'api_key', 'apikey', 'auth'}
+            for param_name in list(params.keys()):
+                if param_name.lower() in sensitive_params:
                     params[param_name] = '***REDACTED***'
             logging.info(f'Query Parameters: {params}')
         except Exception as e:
             logging.warning(f'Could not parse query parameters: {str(e)}')
         
-        # Log headers (exclude sensitive ones)
+        # Log headers (exclude sensitive ones - using set for O(1) lookup performance)
         try:
             safe_headers = {}
+            sensitive_header_names = {'authorization', 'x-functions-key', 'cookie'}
             for key, value in req.headers.items():
-                if key.lower() in ['authorization', 'x-functions-key', 'cookie']:
+                if key.lower() in sensitive_header_names:
                     safe_headers[key] = '***REDACTED***'
                 else:
                     safe_headers[key] = value
@@ -403,11 +404,16 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         except Exception as e:
             logging.warning(f'Could not parse headers: {str(e)}')
         
-        # Log request body (if present)
+        # Log request body (if present, with size limit protection)
         try:
             body = req.get_body()
             if body:
-                logging.info(f'Request Body Length: {len(body)} bytes')
+                body_len = len(body)
+                # Protect against logging very large bodies (> 1MB)
+                if body_len > 1024 * 1024:
+                    logging.info(f'Request Body Length: {body_len} bytes (too large for detailed logging)')
+                else:
+                    logging.info(f'Request Body Length: {body_len} bytes')
         except Exception as e:
             logging.warning(f'Could not read request body: {str(e)}')
         
