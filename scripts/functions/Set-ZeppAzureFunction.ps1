@@ -508,7 +508,8 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         $githubUrl = "https://raw.githubusercontent.com/iricigor/ZeppNightscout/main/scripts/azure-function-template/host.json"
         
         try {
-            $hostJsonContent = Invoke-RestMethod -Uri $githubUrl -TimeoutSec 10 -ErrorAction Stop
+            $hostJson = Invoke-RestMethod -Uri $githubUrl -TimeoutSec 10 -ErrorAction Stop
+            $hostJsonContent = $hostJson | ConvertTo-Json -Depth 10
             Set-Content -Path $hostJsonPath -Value $hostJsonContent -Encoding UTF8
             Write-ColorOutput "  ✓ Downloaded host.json from main branch" "Green"
         } catch {
