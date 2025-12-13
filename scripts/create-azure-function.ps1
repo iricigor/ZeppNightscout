@@ -206,7 +206,7 @@ function Set-ZeppAzureFunction {
 
     .DESCRIPTION
         This cmdlet creates an Azure Function App with the following features:
-        - Python runtime (version 3.11)
+        - Python runtime (version 3.11) on Flex Consumption plan
         - HTTP trigger function that returns "DUMMY-TOKEN"
         - Automatic IP detection and firewall configuration for Azure Cloud Shell compatibility
         - IP access restrictions to allow access from specific IP addresses
@@ -470,8 +470,8 @@ try {
         Write-ColorOutput "⚠ Function-level authentication disabled - relying on IP firewall only!" "Yellow"
     }
 
-    # Create Function App with Python runtime
-    Write-ColorOutput "Creating Function App '$FunctionAppName' with Python 3.11 runtime..." "Yellow"
+    # Create Function App with Python runtime on Flex Consumption plan
+    Write-ColorOutput "Creating Function App '$FunctionAppName' with Python 3.11 runtime on Flex Consumption plan..." "Yellow"
     $functionApp = Get-AzFunctionApp -ResourceGroupName $ResourceGroupName -Name $FunctionAppName -ErrorAction SilentlyContinue
     if (-not $functionApp) {
         New-AzFunctionApp `
@@ -482,8 +482,9 @@ try {
             -Runtime Python `
             -RuntimeVersion 3.11 `
             -FunctionsVersion 4 `
-            -OSType Linux | Out-Null
-        Write-ColorOutput "✓ Function App created" "Green"
+            -OSType Linux `
+            -PlanType FlexConsumption | Out-Null
+        Write-ColorOutput "✓ Function App created on Flex Consumption plan" "Green"
     } else {
         Write-ColorOutput "✓ Function App already exists" "Green"
     }
@@ -858,7 +859,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     Write-ColorOutput "Function App:     $FunctionAppName" "White"
     Write-ColorOutput "Storage Account:  $StorageAccountName" "White"
     Write-ColorOutput "Location:         $Location" "White"
-    Write-ColorOutput "Runtime:          Python 3.11" "White"
+    Write-ColorOutput "Runtime:          Python 3.11 on Flex Consumption" "White"
     Write-ColorOutput "Function Name:    GetToken" "White"
     Write-ColorOutput "Auth Level:       $authLevel" "White"
     if ($AllowedIpAddress -ne "0.0.0.0/0") {
