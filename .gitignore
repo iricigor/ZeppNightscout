@@ -40,3 +40,6 @@ qr_test*.png
 qr_terminal_render.png
 __pycache__/
 release_notes.md
+
+# Azure deployment config files
+zepp-azure-config.json
