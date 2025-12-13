@@ -61,8 +61,8 @@ function ConvertTo-CIDRFormat {
     }
     
     # If already in CIDR format (IP/prefix), validate and return as-is
-    # Basic format check: IP address followed by / and prefix length
-    if ($IpAddress -match '^(.+)/(\d{1,2})$') {
+    # Check for IP address format followed by / and prefix length
+    if ($IpAddress -match '^([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})/(\d{1,2})$') {
         $ip = $Matches[1]
         $prefix = [int]$Matches[2]
         
@@ -493,21 +493,23 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
             $ipRules = @()
             
             # Add the specified IP (ensure it's in CIDR format)
+            $convertedIp = ConvertTo-CIDRFormat -IpAddress $AllowedIpAddress
             $ipRules += @{
-                IpAddress = ConvertTo-CIDRFormat -IpAddress $AllowedIpAddress
+                IpAddress = $convertedIp
                 RuleName = "AllowSpecifiedIP"
                 Description = "Specified IP"
             }
-            Write-ColorOutput "  Adding specified IP: $AllowedIpAddress" "White"
+            Write-ColorOutput "  Adding specified IP: $convertedIp" "White"
             
             # If we detected a different IP earlier, add it too for Azure Cloud Shell compatibility
             if ($detectedIp -and $detectedIp -ne $AllowedIpAddress -and (Test-IPv4Address -IpAddress $detectedIp)) {
+                $convertedDetectedIp = ConvertTo-CIDRFormat -IpAddress $detectedIp
                 $ipRules += @{
-                    IpAddress = ConvertTo-CIDRFormat -IpAddress $detectedIp
+                    IpAddress = $convertedDetectedIp
                     RuleName = "AllowDetectedIP"
                     Description = "Auto-detected IP (Azure Cloud Shell)"
                 }
-                Write-ColorOutput "  Adding detected IP: $detectedIp (for Azure Cloud Shell)" "White"
+                Write-ColorOutput "  Adding detected IP: $convertedDetectedIp (for Azure Cloud Shell)" "White"
             }
             
             # Remove any existing rules with our names (including legacy names for backwards compatibility)
