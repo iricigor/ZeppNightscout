@@ -502,24 +502,66 @@ try {
     
     # Create function.json for HTTP trigger
     $functionJsonPath = Join-Path $tempDir "function.json"
-    $functionJson = @{
-        bindings = @(
-            @{
-                authLevel = $authLevel
-                type = "httpTrigger"
-                direction = "in"
-                name = "req"
-                methods = @("get", "post")
-            }
-            @{
-                type = "http"
-                direction = "out"
-                name = "res"
-            }
-        )
-    } | ConvertTo-Json -Depth 10
     
-    Set-Content -Path $functionJsonPath -Value $functionJson -Encoding UTF8
+    # Try to locate the template file first
+    $functionJsonContent = $null
+    if ($PSCommandPath) {
+        $scriptDir = Split-Path -Parent $PSCommandPath
+        $templatePath = Join-Path $scriptDir "azure-function-template" "function.json"
+        
+        if (Test-Path $templatePath) {
+            Write-ColorOutput "  Reading function.json from template: $templatePath" "White"
+            $functionJsonContent = Get-Content -Path $templatePath -Raw -Encoding UTF8
+            
+            # Parse JSON to modify authLevel if needed
+            $functionJson = $functionJsonContent | ConvertFrom-Json
+            $functionJson.bindings[0].authLevel = $authLevel
+            $functionJsonContent = $functionJson | ConvertTo-Json -Depth 10
+            
+            Set-Content -Path $functionJsonPath -Value $functionJsonContent -Encoding UTF8
+        }
+    }
+    
+    # If template not found locally, download from GitHub main branch
+    if (-not $functionJsonContent) {
+        Write-ColorOutput "  Downloading function.json from GitHub main branch..." "Yellow"
+        $githubUrl = "https://raw.githubusercontent.com/iricigor/ZeppNightscout/main/scripts/azure-function-template/function.json"
+        
+        try {
+            $functionJsonContent = Invoke-RestMethod -Uri $githubUrl -TimeoutSec 10 -ErrorAction Stop
+            
+            # Parse JSON to modify authLevel if needed
+            $functionJson = $functionJsonContent | ConvertFrom-Json
+            $functionJson.bindings[0].authLevel = $authLevel
+            $functionJsonContent = $functionJson | ConvertTo-Json -Depth 10
+            
+            Set-Content -Path $functionJsonPath -Value $functionJsonContent -Encoding UTF8
+            Write-ColorOutput "  ✓ Downloaded and configured function.json from main branch" "Green"
+        } catch {
+            Write-ColorOutput "  Warning: Could not download template from GitHub: $($_.Exception.Message)" "Yellow"
+            Write-ColorOutput "  Using embedded fallback (this may be outdated)" "Yellow"
+            
+            # Final fallback: generate inline (for backwards compatibility)
+            $functionJson = @{
+                bindings = @(
+                    @{
+                        authLevel = $authLevel
+                        type = "httpTrigger"
+                        direction = "in"
+                        name = "req"
+                        methods = @("get", "post")
+                    }
+                    @{
+                        type = "http"
+                        direction = "out"
+                        name = "res"
+                    }
+                )
+            } | ConvertTo-Json -Depth 10
+            
+            Set-Content -Path $functionJsonPath -Value $functionJson -Encoding UTF8
+        }
+    }
     
     # Create __init__.py with the function code
     # Read the Python code from the separate template file
@@ -537,10 +579,20 @@ try {
         }
     }
     
-    # If template not found, use embedded code (for backwards compatibility, e.g., when downloaded via irm)
+    # If template not found locally, download from GitHub main branch
     if (-not $pythonCode) {
-        Write-ColorOutput "  Using embedded Python code (template not found)" "Yellow"
-        $pythonCode = @'
+        Write-ColorOutput "  Downloading __init__.py from GitHub main branch..." "Yellow"
+        $githubUrl = "https://raw.githubusercontent.com/iricigor/ZeppNightscout/main/scripts/azure-function-template/__init__.py"
+        
+        try {
+            $pythonCode = Invoke-RestMethod -Uri $githubUrl -TimeoutSec 10 -ErrorAction Stop
+            Write-ColorOutput "  ✓ Downloaded __init__.py from main branch" "Green"
+        } catch {
+            Write-ColorOutput "  Warning: Could not download template from GitHub: $($_.Exception.Message)" "Yellow"
+            Write-ColorOutput "  Using embedded fallback (this may be outdated)" "Yellow"
+            
+            # Final fallback: use embedded code (for backwards compatibility, e.g., when downloaded via irm)
+            $pythonCode = @'
 import logging
 import json
 import traceback
@@ -650,28 +702,58 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     
     # Create host.json
     $hostJsonPath = Join-Path (Split-Path $tempDir -Parent) "host.json"
-    $hostJson = @{
-        version = "2.0"
-        extensionBundle = @{
-            id = "Microsoft.Azure.Functions.ExtensionBundle"
-            version = "[4.*, 5.0.0)"
-        }
-        logging = @{
-            logLevel = @{
-                default = "Information"
-                Function = "Information"
-                Host = "Information"
-            }
-            applicationInsights = @{
-                samplingSettings = @{
-                    isEnabled = $true
-                    maxTelemetryItemsPerSecond = 20
-                }
-            }
-        }
-    } | ConvertTo-Json -Depth 10
     
-    Set-Content -Path $hostJsonPath -Value $hostJson -Encoding UTF8
+    # Try to locate the template file first
+    $hostJsonContent = $null
+    if ($PSCommandPath) {
+        $scriptDir = Split-Path -Parent $PSCommandPath
+        $templatePath = Join-Path $scriptDir "azure-function-template" "host.json"
+        
+        if (Test-Path $templatePath) {
+            Write-ColorOutput "  Reading host.json from template: $templatePath" "White"
+            Copy-Item -Path $templatePath -Destination $hostJsonPath -Force
+            $hostJsonContent = "loaded"
+        }
+    }
+    
+    # If template not found locally, download from GitHub main branch
+    if (-not $hostJsonContent) {
+        Write-ColorOutput "  Downloading host.json from GitHub main branch..." "Yellow"
+        $githubUrl = "https://raw.githubusercontent.com/iricigor/ZeppNightscout/main/scripts/azure-function-template/host.json"
+        
+        try {
+            $hostJsonContent = Invoke-RestMethod -Uri $githubUrl -TimeoutSec 10 -ErrorAction Stop
+            Set-Content -Path $hostJsonPath -Value $hostJsonContent -Encoding UTF8
+            Write-ColorOutput "  ✓ Downloaded host.json from main branch" "Green"
+        } catch {
+            Write-ColorOutput "  Warning: Could not download template from GitHub: $($_.Exception.Message)" "Yellow"
+            Write-ColorOutput "  Using embedded fallback (this may be outdated)" "Yellow"
+            
+            # Final fallback: generate inline
+            $hostJson = @{
+                version = "2.0"
+                extensionBundle = @{
+                    id = "Microsoft.Azure.Functions.ExtensionBundle"
+                    version = "[4.*, 5.0.0)"
+                }
+                logging = @{
+                    logLevel = @{
+                        default = "Information"
+                        Function = "Information"
+                        Host = "Information"
+                    }
+                    applicationInsights = @{
+                        samplingSettings = @{
+                            isEnabled = $true
+                            maxTelemetryItemsPerSecond = 20
+                        }
+                    }
+                }
+            } | ConvertTo-Json -Depth 10
+            
+            Set-Content -Path $hostJsonPath -Value $hostJson -Encoding UTF8
+        }
+    }
     
     Write-ColorOutput "✓ Function code created locally" "Green"
     Write-Host ""

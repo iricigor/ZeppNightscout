@@ -322,26 +322,44 @@ try {
         
         Set-Content -Path $functionJsonPath -Value $functionJsonContent -Encoding UTF8
     } else {
-        # Fallback: generate inline (for backwards compatibility when downloaded via irm)
-        Write-ColorOutput "  Using embedded function.json (template not found)" "Yellow"
-        $functionJson = @{
-            bindings = @(
-                @{
-                    authLevel = $authLevel
-                    type = "httpTrigger"
-                    direction = "in"
-                    name = "req"
-                    methods = @("get", "post")
-                }
-                @{
-                    type = "http"
-                    direction = "out"
-                    name = "res"
-                }
-            )
-        } | ConvertTo-Json -Depth 10
+        # Template not found locally - download from GitHub main branch
+        Write-ColorOutput "  Downloading function.json from GitHub main branch..." "Yellow"
+        $githubUrl = "https://raw.githubusercontent.com/iricigor/ZeppNightscout/main/scripts/azure-function-template/function.json"
         
-        Set-Content -Path $functionJsonPath -Value $functionJson -Encoding UTF8
+        try {
+            $functionJsonContent = Invoke-RestMethod -Uri $githubUrl -TimeoutSec 10 -ErrorAction Stop
+            
+            # Parse JSON to modify authLevel if needed
+            $functionJson = $functionJsonContent | ConvertFrom-Json
+            $functionJson.bindings[0].authLevel = $authLevel
+            $functionJsonContent = $functionJson | ConvertTo-Json -Depth 10
+            
+            Set-Content -Path $functionJsonPath -Value $functionJsonContent -Encoding UTF8
+            Write-ColorOutput "  ✓ Downloaded and configured function.json from main branch" "Green"
+        } catch {
+            Write-ColorOutput "  Warning: Could not download template from GitHub: $($_.Exception.Message)" "Yellow"
+            Write-ColorOutput "  Using embedded fallback (this may be outdated)" "Yellow"
+            
+            # Final fallback: generate inline (for backwards compatibility)
+            $functionJson = @{
+                bindings = @(
+                    @{
+                        authLevel = $authLevel
+                        type = "httpTrigger"
+                        direction = "in"
+                        name = "req"
+                        methods = @("get", "post")
+                    }
+                    @{
+                        type = "http"
+                        direction = "out"
+                        name = "res"
+                    }
+                )
+            } | ConvertTo-Json -Depth 10
+            
+            Set-Content -Path $functionJsonPath -Value $functionJson -Encoding UTF8
+        }
     }
     
     # Create __init__.py with the function code
@@ -357,10 +375,20 @@ try {
         $pythonCode = Get-Content -Path $pythonTemplatePath -Raw -Encoding UTF8
     }
     
-    # If template not found, use embedded code (for backwards compatibility, e.g., when downloaded via irm)
+    # If template not found locally, download from GitHub
     if (-not $pythonCode) {
-        Write-ColorOutput "  Using embedded Python code (template not found)" "Yellow"
-        $pythonCode = @'
+        Write-ColorOutput "  Downloading __init__.py from GitHub main branch..." "Yellow"
+        $githubUrl = "https://raw.githubusercontent.com/iricigor/ZeppNightscout/main/scripts/azure-function-template/__init__.py"
+        
+        try {
+            $pythonCode = Invoke-RestMethod -Uri $githubUrl -TimeoutSec 10 -ErrorAction Stop
+            Write-ColorOutput "  ✓ Downloaded __init__.py from main branch" "Green"
+        } catch {
+            Write-ColorOutput "  Warning: Could not download template from GitHub: $($_.Exception.Message)" "Yellow"
+            Write-ColorOutput "  Using embedded fallback (this may be outdated)" "Yellow"
+            
+            # Final fallback: use embedded code (for backwards compatibility, e.g., when downloaded via irm)
+            $pythonCode = @'
 import logging
 import json
 import traceback
@@ -476,30 +504,42 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         Write-ColorOutput "  Reading host.json from template: $hostJsonTemplatePath" "White"
         Copy-Item -Path $hostJsonTemplatePath -Destination $hostJsonPath -Force
     } else {
-        # Fallback: generate inline (for backwards compatibility when downloaded via irm)
-        Write-ColorOutput "  Using embedded host.json (template not found)" "Yellow"
-        $hostJson = @{
-            version = "2.0"
-            extensionBundle = @{
-                id = "Microsoft.Azure.Functions.ExtensionBundle"
-                version = "[4.*, 5.0.0)"
-            }
-            logging = @{
-                logLevel = @{
-                    default = "Information"
-                    Function = "Debug"
-                    Host = "Information"
+        # Template not found locally - download from GitHub main branch
+        Write-ColorOutput "  Downloading host.json from GitHub main branch..." "Yellow"
+        $githubUrl = "https://raw.githubusercontent.com/iricigor/ZeppNightscout/main/scripts/azure-function-template/host.json"
+        
+        try {
+            $hostJsonContent = Invoke-RestMethod -Uri $githubUrl -TimeoutSec 10 -ErrorAction Stop
+            Set-Content -Path $hostJsonPath -Value $hostJsonContent -Encoding UTF8
+            Write-ColorOutput "  ✓ Downloaded host.json from main branch" "Green"
+        } catch {
+            Write-ColorOutput "  Warning: Could not download template from GitHub: $($_.Exception.Message)" "Yellow"
+            Write-ColorOutput "  Using embedded fallback (this may be outdated)" "Yellow"
+            
+            # Final fallback: generate inline (for backwards compatibility when downloaded via irm)
+            $hostJson = @{
+                version = "2.0"
+                extensionBundle = @{
+                    id = "Microsoft.Azure.Functions.ExtensionBundle"
+                    version = "[4.*, 5.0.0)"
                 }
-                applicationInsights = @{
-                    samplingSettings = @{
-                        isEnabled = $true
-                        maxTelemetryItemsPerSecond = 20
+                logging = @{
+                    logLevel = @{
+                        default = "Information"
+                        Function = "Debug"
+                        Host = "Information"
+                    }
+                    applicationInsights = @{
+                        samplingSettings = @{
+                            isEnabled = $true
+                            maxTelemetryItemsPerSecond = 20
+                        }
                     }
                 }
-            }
-        } | ConvertTo-Json -Depth 10
-        
-        Set-Content -Path $hostJsonPath -Value $hostJson -Encoding UTF8
+            } | ConvertTo-Json -Depth 10
+            
+            Set-Content -Path $hostJsonPath -Value $hostJson -Encoding UTF8
+        }
     }
     
     Write-ColorOutput "✓ Function code created locally" "Green"
