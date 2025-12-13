@@ -31,19 +31,16 @@ function Update-ZeppAzureToken {
         Prompts you to securely enter the new token and updates the function.
 
     .EXAMPLE
-        Update-ZeppAzureToken -ResourceGroupName "rg-zeppnightscout" -FunctionAppName "func-zepptoken" -Token "my-secret-token-abc123"
-        
-        Updates the function with the specified token.
-
-    .EXAMPLE
         Update-ZeppAzureToken -LoadConfig
         
-        Loads configuration from saved file and prompts for the new token.
+        Loads configuration from saved file and prompts for the new token (recommended method).
 
     .EXAMPLE
         Update-ZeppAzureToken -LoadConfig -Token "my-secret-token-abc123" -Message "Production API token"
         
         Updates using saved configuration with specified token and custom message.
+        WARNING: Passing tokens as parameters makes them visible in command history and process lists.
+        Use the secure prompt method (without -Token parameter) for better security.
 
     .NOTES
         Prerequisites:
@@ -190,8 +187,9 @@ function Update-ZeppAzureToken {
         if ($currentCode) {
             # Update existing code - preserve everything except the token and message values
             # Regex matches the field name, opening quote, any content (including escaped chars), and closing quote
-            $updatedCode = $currentCode -replace '("token":\s*")[^"]*(?:\\.[^"]*)*(")', "`${1}$escapedToken`${2}"
-            $updatedCode = $updatedCode -replace '("message":\s*")[^"]*(?:\\.[^"]*)*(")', "`${1}$escapedMessage`${2}"
+            # Pattern: [^"\\]* matches non-quote/non-backslash, \\. matches escaped char sequence
+            $updatedCode = $currentCode -replace '("token":\s*")[^"\\]*(?:\\.[^"\\]*)*(")', "`${1}$escapedToken`${2}"
+            $updatedCode = $updatedCode -replace '("message":\s*")[^"\\]*(?:\\.[^"\\]*)*(")', "`${1}$escapedMessage`${2}"
         } else {
             # Use template code with new token
             # Use single-quoted here-string to avoid variable expansion, then replace placeholders
