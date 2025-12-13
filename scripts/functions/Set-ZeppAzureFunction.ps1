@@ -323,26 +323,23 @@ try {
         
         Set-Content -Path $functionJsonPath -Value $functionJsonContent -Encoding UTF8
     } else {
-        # Fallback: generate inline (for backwards compatibility when downloaded via irm)
-        Write-ColorOutput "  Using embedded function.json (template not found)" "Yellow"
-        $functionJson = @{
-            bindings = @(
-                @{
-                    authLevel = $authLevel
-                    type = "httpTrigger"
-                    direction = "in"
-                    name = "req"
-                    methods = @("get", "post")
-                }
-                @{
-                    type = "http"
-                    direction = "out"
-                    name = "res"
-                }
-            )
-        } | ConvertTo-Json -Depth 10
+        # Template not found locally - download from GitHub main branch
+        Write-ColorOutput "  Downloading function.json from GitHub main branch..." "Yellow"
+        $githubUrl = "https://raw.githubusercontent.com/iricigor/ZeppNightscout/main/scripts/azure-function-template/function.json"
         
-        Set-Content -Path $functionJsonPath -Value $functionJson -Encoding UTF8
+        $functionJson = Invoke-RestMethod -Uri $githubUrl -TimeoutSec 10 -ErrorAction Stop
+        
+        # Validate that we got a valid structure
+        if (-not $functionJson.bindings -or $functionJson.bindings.Count -eq 0) {
+            throw "Downloaded template has no bindings"
+        }
+        
+        # Modify authLevel if needed
+        $functionJson.bindings[0].authLevel = $authLevel
+        $functionJsonContent = $functionJson | ConvertTo-Json -Depth 10
+        
+        Set-Content -Path $functionJsonPath -Value $functionJsonContent -Encoding UTF8
+        Write-ColorOutput "  ✓ Downloaded and configured function.json from main branch" "Green"
     }
     
     # Create __init__.py with the function code
@@ -358,113 +355,13 @@ try {
         $pythonCode = Get-Content -Path $pythonTemplatePath -Raw -Encoding UTF8
     }
     
-    # If template not found, use embedded code (for backwards compatibility, e.g., when downloaded via irm)
+    # If template not found locally, download from GitHub
     if (-not $pythonCode) {
-        Write-ColorOutput "  Using embedded Python code (template not found)" "Yellow"
-        $pythonCode = @'
-import logging
-import json
-import traceback
-import azure.functions as func
-
-# Configuration constants
-MAX_BODY_LOG_SIZE = 1024 * 1024  # 1MB
-SENSITIVE_PARAM_NAMES = {'code', 'key', 'token', 'secret', 'password', 'api_key', 'apikey', 'auth'}
-SENSITIVE_HEADER_NAMES = {'authorization', 'x-functions-key', 'cookie'}
-
-def main(req: func.HttpRequest) -> func.HttpResponse:
-    """
-    HTTP trigger function that returns a dummy API token.
-    
-    This function can be edited directly in the Azure Portal.
-    Simply navigate to your Function App, select this function,
-    and use the Code + Test feature to modify the response.
-    """
-    try:
-        # Log function invocation with detailed request information
-        logging.info('=== GetToken Function Invoked ===')
-        logging.info(f'Request Method: {req.method}')
-        logging.info(f'Request URL: {req.url}')
+        Write-ColorOutput "  Downloading __init__.py from GitHub main branch..." "Yellow"
+        $githubUrl = "https://raw.githubusercontent.com/iricigor/ZeppNightscout/main/scripts/azure-function-template/__init__.py"
         
-        # Log query parameters (if any)
-        try:
-            params = dict(req.params)
-            # Mask sensitive data in logs (using set for O(1) lookup performance)
-            for param_name in params:
-                param_name_lower = param_name.lower()
-                if param_name_lower in SENSITIVE_PARAM_NAMES:
-                    params[param_name] = '***REDACTED***'
-            logging.info(f'Query Parameters: {params}')
-        except Exception as e:
-            logging.warning(f'Could not parse query parameters: {str(e)}')
-        
-        # Log headers (exclude sensitive ones - using set for O(1) lookup performance)
-        try:
-            safe_headers = {}
-            for key, value in req.headers.items():
-                key_lower = key.lower()
-                if key_lower in SENSITIVE_HEADER_NAMES:
-                    safe_headers[key] = '***REDACTED***'
-                else:
-                    safe_headers[key] = value
-            logging.info(f'Request Headers: {safe_headers}')
-        except Exception as e:
-            logging.warning(f'Could not parse headers: {str(e)}')
-        
-        # Log request body (if present, with size limit protection)
-        try:
-            body = req.get_body()
-            if body:
-                body_len = len(body)
-                # Protect against logging very large bodies
-                if body_len > MAX_BODY_LOG_SIZE:
-                    logging.info(f'Request Body Length: {body_len} bytes (too large for detailed logging)')
-                else:
-                    logging.info(f'Request Body Length: {body_len} bytes')
-        except Exception as e:
-            logging.warning(f'Could not read request body: {str(e)}')
-        
-        logging.info('Generating token response...')
-        
-        # Prepare the response data
-        response_data = {
-            "token": "DUMMY-TOKEN",
-            "message": "This is a dummy API token for testing purposes"
-        }
-        
-        # Convert to JSON
-        response_json = json.dumps(response_data)
-        logging.info(f'Response prepared successfully: {len(response_json)} bytes')
-        
-        # Return the dummy token
-        response = func.HttpResponse(
-            body=response_json,
-            mimetype="application/json",
-            status_code=200
-        )
-        
-        logging.info('=== GetToken Function Completed Successfully ===')
-        return response
-        
-    except Exception as e:
-        # Comprehensive error logging
-        logging.error('=== GetToken Function ERROR ===')
-        logging.error(f'Exception Type: {type(e).__name__}')
-        logging.error(f'Exception Message: {str(e)}')
-        logging.error(f'Traceback: {traceback.format_exc()}')
-        
-        # Return generic error response (detailed error info is in logs only)
-        error_response = {
-            "error": "Internal server error",
-            "message": "An error occurred while processing your request. Please check the function logs for details."
-        }
-        
-        return func.HttpResponse(
-            body=json.dumps(error_response),
-            mimetype="application/json",
-            status_code=500
-        )
-'@
+        $pythonCode = Invoke-RestMethod -Uri $githubUrl -TimeoutSec 10 -ErrorAction Stop
+        Write-ColorOutput "  ✓ Downloaded __init__.py from main branch" "Green"
     }
     
     Set-Content -Path $initPyPath -Value $pythonCode -Encoding UTF8
@@ -477,30 +374,14 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         Write-ColorOutput "  Reading host.json from template: $hostJsonTemplatePath" "White"
         Copy-Item -Path $hostJsonTemplatePath -Destination $hostJsonPath -Force
     } else {
-        # Fallback: generate inline (for backwards compatibility when downloaded via irm)
-        Write-ColorOutput "  Using embedded host.json (template not found)" "Yellow"
-        $hostJson = @{
-            version = "2.0"
-            extensionBundle = @{
-                id = "Microsoft.Azure.Functions.ExtensionBundle"
-                version = "[4.*, 5.0.0)"
-            }
-            logging = @{
-                logLevel = @{
-                    default = "Information"
-                    Function = "Debug"
-                    Host = "Information"
-                }
-                applicationInsights = @{
-                    samplingSettings = @{
-                        isEnabled = $true
-                        maxTelemetryItemsPerSecond = 20
-                    }
-                }
-            }
-        } | ConvertTo-Json -Depth 10
+        # Template not found locally - download from GitHub main branch
+        Write-ColorOutput "  Downloading host.json from GitHub main branch..." "Yellow"
+        $githubUrl = "https://raw.githubusercontent.com/iricigor/ZeppNightscout/main/scripts/azure-function-template/host.json"
         
-        Set-Content -Path $hostJsonPath -Value $hostJson -Encoding UTF8
+        $hostJson = Invoke-RestMethod -Uri $githubUrl -TimeoutSec 10 -ErrorAction Stop
+        $hostJsonContent = $hostJson | ConvertTo-Json -Depth 10
+        Set-Content -Path $hostJsonPath -Value $hostJsonContent -Encoding UTF8
+        Write-ColorOutput "  ✓ Downloaded host.json from main branch" "Green"
     }
     
     Write-ColorOutput "✓ Function code created locally" "Green"
