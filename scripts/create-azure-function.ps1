@@ -360,16 +360,22 @@ try {
     # Create __init__.py with the function code
     # Read the Python code from the separate template file
     $initPyPath = Join-Path $tempDir "__init__.py"
-    $scriptDir = Split-Path -Parent $PSCommandPath
-    $templatePath = Join-Path $scriptDir "azure-function-template" "__init__.py"
     
-    # Check if template file exists, otherwise use embedded code
-    if (Test-Path $templatePath) {
-        Write-ColorOutput "  Reading Python code from template: $templatePath" "White"
-        $pythonCode = Get-Content -Path $templatePath -Raw -Encoding UTF8
-    } else {
-        Write-ColorOutput "  Template file not found, using embedded code" "Yellow"
-        # Fallback to embedded code for backwards compatibility (e.g., when downloaded via irm)
+    # Try to locate the template file (handles both normal execution and direct download scenarios)
+    $pythonCode = $null
+    if ($PSCommandPath) {
+        $scriptDir = Split-Path -Parent $PSCommandPath
+        $templatePath = Join-Path $scriptDir "azure-function-template" "__init__.py"
+        
+        if (Test-Path $templatePath) {
+            Write-ColorOutput "  Reading Python code from template: $templatePath" "White"
+            $pythonCode = Get-Content -Path $templatePath -Raw -Encoding UTF8
+        }
+    }
+    
+    # If template not found, use embedded code (for backwards compatibility, e.g., when downloaded via irm)
+    if (-not $pythonCode) {
+        Write-ColorOutput "  Using embedded Python code (template not found)" "Yellow"
         $pythonCode = @'
 import logging
 import json
