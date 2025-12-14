@@ -410,12 +410,19 @@ AppSideService({
 
     // Use standard fetch API available in Zepp OS App-Side environment
     // Note: Zepp OS fetch API uses an options object format
-    return fetch({
+    const fetchOptions = {
       url: options.url,
       method: options.method || 'GET',
       headers: options.headers || {},
       timeout: 30000 // 30 second timeout
-    })
+    };
+    
+    // Add body/data if provided (for POST/PUT requests)
+    if (options.body) {
+      fetchOptions.body = typeof options.body === 'string' ? options.body : JSON.stringify(options.body);
+    }
+
+    return fetch(fetchOptions)
     .then(response => {
       try {
         // Parse response body as JSON
