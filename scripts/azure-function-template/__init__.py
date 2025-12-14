@@ -8,10 +8,11 @@ MAX_BODY_LOG_SIZE = 1024 * 1024  # 1MB
 SENSITIVE_PARAM_NAMES = {'code', 'key', 'token', 'secret', 'password', 'api_key', 'apikey', 'auth'}
 SENSITIVE_HEADER_NAMES = {'authorization', 'x-functions-key', 'cookie'}
 
-def main(req: func.HttpRequest) -> func.HttpResponse:
+def main(req: func.HttpRequest, res: func.Out[func.HttpResponse]) -> None:
     """
-    HTTP trigger function that returns a dummy API token.
+    HTTP trigger function that provides a dummy API token.
     
+    Uses output binding to set the HTTP response via the 'res' parameter.
     This function can be edited directly in the Azure Portal.
     Simply navigate to your Function App, select this function,
     and use the Code + Test feature to modify the response.
@@ -72,7 +73,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         response_json = json.dumps(response_data)
         logging.info(f'Response prepared successfully: {len(response_json)} bytes')
         
-        # Return the dummy token
+        # Set the response using output binding
         response = func.HttpResponse(
             body=response_json,
             mimetype="application/json",
@@ -80,7 +81,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         )
         
         logging.info('=== GetToken Function Completed Successfully ===')
-        return response
+        res.set(response)
         
     except Exception as e:
         # Comprehensive error logging
@@ -95,8 +96,8 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
             "message": "An error occurred while processing your request. Please check the function logs for details."
         }
         
-        return func.HttpResponse(
+        res.set(func.HttpResponse(
             body=json.dumps(error_response),
             mimetype="application/json",
             status_code=500
-        )
+        ))

@@ -518,7 +518,7 @@ Get-Help Update-ZeppAzureToken -Detailed
 
 ### Option 2: Edit in Azure Portal
 
-The deployment script automatically enables portal editing by setting `WEBSITE_RUN_FROM_PACKAGE=0`.
+The deployment script uses Flex Consumption plan where portal editing is enabled by default after zip deployment.
 
 To edit the function in the Azure Portal:
 
@@ -535,13 +535,9 @@ To edit the function in the Azure Portal:
    ```
 6. Click **Save** to deploy your changes
 
-**Note:** If you see the message "This function has been edited through an external editor. Portal editing is disabled", you can either:
+**Note:** Portal editing is enabled by default on Flex Consumption plans. If you encounter any issues with editing:
 - Use Option 1 above (Update-ZeppAzureToken cmdlet) - **recommended**
-- Or manually set `WEBSITE_RUN_FROM_PACKAGE` to `0` in Application Settings:
-  1. Go to your Function App → **Configuration** → **Application settings**
-  2. Find or add `WEBSITE_RUN_FROM_PACKAGE` setting
-  3. Set its value to `0`
-  4. Click **Save** and restart the function app
+- Or check the function logs for any deployment errors
 
 ### Option 3: Edit Before Deployment
 

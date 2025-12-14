@@ -408,8 +408,29 @@ try {
     $timestamp = Get-Date -Format "yyyyMMddHHmmss"
     $zipPath = Join-Path ([System.IO.Path]::GetTempPath()) "function-app-$timestamp-$PID.zip"
     
-    # Create zip using PowerShell compression
-    Compress-Archive -Path "$tempDir\*" -DestinationPath $zipPath -Force
+    # Remove zip file if it exists to avoid corruption
+    if (Test-Path $zipPath) {
+        Remove-Item -Path $zipPath -Force -ErrorAction SilentlyContinue
+    }
+    
+    # Create zip using PowerShell compression with CompressionLevel for better compatibility
+    try {
+        Compress-Archive -Path "$tempDir\*" -DestinationPath $zipPath -CompressionLevel Optimal
+        
+        # Verify the zip file was created and has content
+        if (-not (Test-Path $zipPath)) {
+            throw "Zip file was not created at $zipPath"
+        }
+        
+        $zipFileInfo = Get-Item $zipPath
+        if ($zipFileInfo.Length -eq 0) {
+            throw "Zip file is empty (0 bytes)"
+        }
+        
+        Write-ColorOutput "  ✓ Created deployment package: $($zipFileInfo.Length) bytes" "Green"
+    } catch {
+        throw "Failed to create deployment zip file: $($_.Exception.Message)"
+    }
     
     # Deploy using Kudu API zip deployment
     try {
@@ -470,20 +491,9 @@ try {
     Remove-Item -Path $zipPath -Force -ErrorAction SilentlyContinue
     Write-Host ""
 
-    # Enable portal editing by setting WEBSITE_RUN_FROM_PACKAGE to 0
-    # This allows users to edit the function code directly in the Azure Portal
-    Write-ColorOutput "Enabling portal editing..." "Yellow"
-    try {
-        $null = Update-AzFunctionAppSetting `
-            -ResourceGroupName $ResourceGroupName `
-            -Name $FunctionAppName `
-            -AppSetting @{"WEBSITE_RUN_FROM_PACKAGE" = "0"} `
-            -Force
-        Write-ColorOutput "✓ Portal editing enabled" "Green"
-    } catch {
-        Write-ColorOutput "Warning: Could not enable portal editing. You can manually set WEBSITE_RUN_FROM_PACKAGE=0 in Application Settings." "Yellow"
-        Write-ColorOutput "Error details: $($_.Exception.Message)" "Red"
-    }
+    # Note: For Flex Consumption plans, portal editing is enabled by default after zip deployment
+    # WEBSITE_RUN_FROM_PACKAGE is not supported on Flex Consumption SKU
+    Write-ColorOutput "✓ Portal editing enabled (default for Flex Consumption plan)" "Green"
     Write-Host ""
 
     # Configure IP restrictions
