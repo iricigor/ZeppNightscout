@@ -70,16 +70,15 @@ if ($functionsDir -and (Test-Path $functionsDir)) {
     
     
     # Download and execute each function file from GitHub
+    Write-Host "Loading functions from GitHub..." -ForegroundColor Cyan
     foreach ($file in $functionFiles) {
         $url = "$githubBaseUrl/$file"
         try {
-            Write-Verbose "Downloading function file from: $url"
             $functionCode = Invoke-RestMethod -Uri $url -ErrorAction Stop
             # Execute the downloaded code to define the functions
             Invoke-Expression $functionCode
         } catch {
-            Write-Error "Failed to download function file '$file' from GitHub: $($_.Exception.Message)"
-            Write-Error "This script requires internet access to download function files when run via 'iex (irm ...)'."
+            Write-Error "Failed to download function file '$file' from GitHub. This script requires internet access to download function files when run via 'iex (irm ...)'. Error: $($_.Exception.Message)"
             throw
         }
     }
