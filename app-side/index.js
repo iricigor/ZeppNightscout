@@ -402,7 +402,14 @@ AppSideService({
    * @returns {Promise} Promise that resolves with response
    */
   request(options) {
+    // Check if fetch is available, fallback to simulation for testing
+    if (typeof fetch === 'undefined') {
+      console.log('Fetch not available, using simulated response for testing');
+      return this.getSimulatedResponse(options);
+    }
+
     // Use standard fetch API available in Zepp OS App-Side environment
+    // Note: Zepp OS fetch API uses an options object format
     return fetch({
       url: options.url,
       method: options.method || 'GET',
@@ -410,23 +417,20 @@ AppSideService({
       timeout: 30000 // 30 second timeout
     })
     .then(response => {
-      // Parse response body as JSON
-      const body = typeof response.body === 'string' ? JSON.parse(response.body) : response.body;
-      return {
-        body: body,
-        status: response.status
-      };
+      try {
+        // Parse response body as JSON
+        const body = typeof response.body === 'string' ? JSON.parse(response.body) : response.body;
+        return {
+          body: body,
+          status: response.status
+        };
+      } catch (parseError) {
+        console.error('JSON parse error:', parseError);
+        throw new Error('Failed to parse response as JSON: ' + parseError.message);
+      }
     })
     .catch(error => {
       console.error('Fetch error:', error);
-      
-      // For testing/simulator environment, provide fallback dummy data
-      // This allows the app to work in development without real API access
-      if (typeof fetch === 'undefined') {
-        console.log('Fetch not available, using simulated response');
-        return this.getSimulatedResponse(options);
-      }
-      
       throw error;
     });
   },
