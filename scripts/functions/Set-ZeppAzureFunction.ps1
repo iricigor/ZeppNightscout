@@ -13,7 +13,7 @@ function Set-ZeppAzureFunction {
         - Uses Azure PowerShell (Az module) - designed for Azure Cloud Shell
         - Configuration save/load support for easier re-deployment
         
-        Note: The function app is created with default Consumption plan (determined automatically by Azure).
+        Note: The function app is created with Flex Consumption plan for cost-effective hosting.
 
     .PARAMETER ResourceGroupName
         Name of the Azure Resource Group. Will be created if it doesn't exist.
@@ -278,7 +278,7 @@ try {
         New-AzFunctionApp `
             -Name $FunctionAppName `
             -ResourceGroupName $ResourceGroupName `
-            -Location $Location `
+            -FlexConsumptionLocation $Location `
             -StorageAccountName $StorageAccountName `
             -Runtime Python `
             -RuntimeVersion "3.11" `
