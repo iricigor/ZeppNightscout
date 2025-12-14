@@ -3,6 +3,8 @@
  * Displays second page with back navigation via swipe gesture
  */
 
+import * as messaging from '@zos/ble';
+
 Page({
   onInit() {
     console.log('Second page starting');
