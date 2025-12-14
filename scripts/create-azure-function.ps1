@@ -480,9 +480,7 @@ try {
             -StorageAccountName $StorageAccountName `
             -FlexConsumptionLocation $Location `
             -Runtime Python `
-            -RuntimeVersion 3.11 `
-            -FunctionsVersion 4 `
-            -OSType Linux | Out-Null
+            -RuntimeVersion 3.11 | Out-Null
         Write-ColorOutput "✓ Function App created on Flex Consumption plan" "Green"
     } else {
         Write-ColorOutput "✓ Function App already exists" "Green"
