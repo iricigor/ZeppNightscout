@@ -42,6 +42,8 @@ AppSideService({
         this.verifyNightscoutUrl(data.apiUrl, data.apiToken);
       } else if (data.type === MESSAGE_TYPES.VALIDATE_TOKEN) {
         this.validateToken(data.apiUrl, data.apiToken);
+      } else if (data.type === MESSAGE_TYPES.GET_SECRET) {
+        this.getSecret();
       }
     });
   },
@@ -208,6 +210,48 @@ AppSideService({
   },
 
   /**
+   * Get secret token from the API
+   */
+  getSecret() {
+    console.log('Getting secret token');
+
+    const url = 'https://zeppnsapi.azurewebsites.net/api/GetToken';
+
+    this.request({
+      method: 'GET',
+      url: url,
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      endpointType: 'get-secret'
+    })
+    .then(response => {
+      console.log('Secret token response received');
+      const data = response.body;
+      
+      // Parse token from the response
+      if (data && data.token) {
+        this.sendSecretToDevice({
+          success: true,
+          token: data.token
+        });
+      } else {
+        this.sendSecretToDevice({
+          success: false,
+          error: 'No token in response'
+        });
+      }
+    })
+    .catch(error => {
+      console.error('Get secret error:', error);
+      this.sendSecretToDevice({
+        success: false,
+        error: error.message || 'Failed to get token'
+      });
+    });
+  },
+
+  /**
    * Parse Nightscout API response
    * @param {Array} entries - Array of glucose entries
    * @returns {Object} Parsed data
@@ -318,6 +362,18 @@ AppSideService({
   },
 
   /**
+   * Send secret token to device
+   * @param {Object} result - Secret token result
+   */
+  sendSecretToDevice(result) {
+    const message = messageBuilder.response({
+      secret: true,
+      ...result
+    });
+    messaging.peerSocket.send(message);
+  },
+
+  /**
    * Send error message to device
    * @param {string} errorMessage - Error message
    */
@@ -392,6 +448,15 @@ AppSideService({
           // By default, reject to simulate read-only token (expected behavior)
           // In real implementation, this would be determined by actual API response
           reject(new Error('Unauthorized - read-only token'));
+        } else if (options.endpointType === 'get-secret') {
+          // For get-secret, try to make a real HTTP request
+          // In real Zepp OS, this would use hmFetch.httpRequest
+          // For simulator/test, provide a simulated response
+          resolve({
+            body: {
+              token: 'demo-secret-token-' + Date.now()
+            }
+          });
         } else {
           reject(new Error('Unknown endpoint type'));
         }
