@@ -278,8 +278,7 @@ try {
             -ResourceGroupName $ResourceGroupName `
             -Name $planName `
             -Location $Location `
-            -Tier FlexConsumption `
-            -OSType Linux
+            -Tier FlexConsumption
         Write-ColorOutput "✓ Flex Consumption Plan created" "Green"
     } else {
         Write-ColorOutput "✓ Flex Consumption Plan already exists" "Green"
@@ -294,11 +293,10 @@ try {
             -Name $FunctionAppName `
             -ResourceGroupName $ResourceGroupName `
             -Location $Location `
-            -Plan $planName `
             -StorageAccountName $StorageAccountName `
-            -StorageAccountResourceGroupName $ResourceGroupName `
             -Runtime Python `
-            -RuntimeVersion 3.11 | Out-Null
+            -FunctionsVersion 4 `
+            -OSType Linux | Out-Null
         Write-ColorOutput "✓ Function App created on Flex Consumption plan" "Green"
     } else {
         Write-ColorOutput "✓ Function App already exists" "Green"
