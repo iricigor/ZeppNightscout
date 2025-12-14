@@ -3,6 +3,7 @@
  * Handles API calls to Nightscout server
  */
 
+import * as messaging from '@zos/ble';
 import { messageBuilder, MESSAGE_TYPES } from '../shared/message';
 
 // API configuration

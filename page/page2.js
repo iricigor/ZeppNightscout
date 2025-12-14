@@ -3,6 +3,7 @@
  * Displays second page with back navigation and secret token fetching
  */
 
+import * as messaging from '@zos/ble';
 import { messageBuilder, MESSAGE_TYPES } from '../shared/message';
 
 Page({
@@ -73,11 +74,20 @@ Page({
         widgets.resultText.setProperty(hmUI.prop.TEXT, 'Loading...');
         widgets.resultText.setProperty(hmUI.prop.COLOR, 0xffff00);
         
-        // Send message to app-side to fetch token
-        const message = messageBuilder.request({
-          type: MESSAGE_TYPES.GET_SECRET
-        });
-        messaging.peerSocket.send(message);
+        try {
+          // Send message to app-side to fetch token
+          const message = messageBuilder.request({
+            type: MESSAGE_TYPES.GET_SECRET
+          });
+          console.log('Sending message:', JSON.stringify(message));
+          
+          messaging.peerSocket.send(message);
+          console.log('Message sent successfully');
+        } catch (error) {
+          console.error('Error sending message:', error);
+          widgets.resultText.setProperty(hmUI.prop.TEXT, 'Error: ' + error.message);
+          widgets.resultText.setProperty(hmUI.prop.COLOR, 0xff0000);
+        }
       }
     });
 
