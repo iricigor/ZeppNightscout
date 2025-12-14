@@ -402,11 +402,42 @@ AppSideService({
    * @returns {Promise} Promise that resolves with response
    */
   request(options) {
-    return new Promise((resolve, reject) => {
-      // Simulated fetch for now - in real implementation, use Zepp OS fetch API
-      // Example: const response = hmFetch.httpRequest(options);
+    // Use standard fetch API available in Zepp OS App-Side environment
+    return fetch({
+      url: options.url,
+      method: options.method || 'GET',
+      headers: options.headers || {},
+      timeout: 30000 // 30 second timeout
+    })
+    .then(response => {
+      // Parse response body as JSON
+      const body = typeof response.body === 'string' ? JSON.parse(response.body) : response.body;
+      return {
+        body: body,
+        status: response.status
+      };
+    })
+    .catch(error => {
+      console.error('Fetch error:', error);
       
-      // For demonstration, return dummy data
+      // For testing/simulator environment, provide fallback dummy data
+      // This allows the app to work in development without real API access
+      if (typeof fetch === 'undefined') {
+        console.log('Fetch not available, using simulated response');
+        return this.getSimulatedResponse(options);
+      }
+      
+      throw error;
+    });
+  },
+
+  /**
+   * Get simulated response for testing when fetch is not available
+   * @param {Object} options - Request options
+   * @returns {Promise} Promise that resolves with simulated response
+   */
+  getSimulatedResponse(options) {
+    return new Promise((resolve, reject) => {
       setTimeout(() => {
         // Check endpoint type using the explicit parameter instead of string matching
         if (options.endpointType === 'status') {
@@ -450,9 +481,7 @@ AppSideService({
           // In real implementation, this would be determined by actual API response
           reject(new Error('Unauthorized - read-only token'));
         } else if (options.endpointType === 'get-secret') {
-          // For get-secret, try to make a real HTTP request
-          // In real Zepp OS, this would use hmFetch.httpRequest
-          // For simulator/test, provide a simulated response
+          // For get-secret, provide simulated response for testing
           resolve({
             body: {
               token: 'demo-secret-token-' + Date.now()
