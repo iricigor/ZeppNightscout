@@ -4,7 +4,7 @@ This document demonstrates how the app-side service can react to events happenin
 
 ## Overview
 
-The Zepp OS architecture separates device-side code (running on the watch) from app-side code (running on the companion phone). Communication between them happens via BLE messaging using the `@zos/ble` module.
+The Zepp OS architecture separates device-side code (running on the watch) from app-side code (running on the companion phone). Communication between them happens via BLE messaging using the `hmBle` global object on the device side.
 
 ## Implementation: "Get Secret" Feature
 
@@ -16,14 +16,16 @@ When the user taps the "get secret" button on the watch:
 
 ```javascript
 // Device side (page/page2.js)
-import * as messaging from '@zos/ble';
-import { messageBuilder, MESSAGE_TYPES } from '../shared/message';
+// Access messageBuilder from globalData (set in app.js)
+const { messageBuilder, MESSAGE_TYPES } = getApp()._options.globalData;
 
 // User taps button
 const message = messageBuilder.request({
   type: MESSAGE_TYPES.GET_SECRET
 });
-messaging.peerSocket.send(message);
+
+// Send via hmBle (global object provided by Zepp OS)
+hmBle.send(JSON.stringify(message));
 ```
 
 ### 2. App-Side Receives and Processes
@@ -32,6 +34,8 @@ The app-side service on the phone receives the message:
 
 ```javascript
 // App-side (app-side/index.js)
+import * as messaging from '@zos/ble';
+
 messaging.peerSocket.addListener('message', (data) => {
   if (data.type === MESSAGE_TYPES.GET_SECRET) {
     this.getSecret();  // React to device event
@@ -65,11 +69,12 @@ getSecret() {
 The device page listens for the response:
 
 ```javascript
-// Device side receives response
-messaging.peerSocket.addListener('message', (data) => {
-  if (data.data.secret && data.data.success) {
+// Device side receives response via hmBle.createListener
+hmBle.createListener((data) => {
+  const parsedData = JSON.parse(data);
+  if (parsedData.data.secret && parsedData.data.success) {
     // Update UI with token from app-side
-    widgets.resultText.setProperty(hmUI.prop.TEXT, 'Token: ' + data.data.token);
+    widgets.resultText.setProperty(hmUI.prop.TEXT, 'Token: ' + parsedData.data.token);
   }
 });
 ```
@@ -93,12 +98,30 @@ Page Navigation: page/page2 - init
 [2025-12-14T22:00:05.500Z] Secret token response received
 ```
 
-## Why This Works
+## Key Architecture Points
 
-1. **@zos/ble on Device**: In Zepp OS 1.0.x, device pages CAN import `@zos/ble` for messaging
-2. **Bidirectional**: Both device and app-side can send/receive messages
-3. **Message Protocol**: Shared message.js defines consistent message format
-4. **Event-Driven**: App-side reacts to device events via message listeners
+### Device Side (Watch)
+- **No `@zos/ble` imports** - Device pages cannot import `@zos/ble`
+- **Use `hmBle` global** - Zepp OS provides `hmBle` as a global object
+- **Access via globalData** - messageBuilder and MESSAGE_TYPES come from `getApp()._options.globalData`
+- **JSON serialization** - Messages are sent as JSON strings via `hmBle.send()`
+
+### App Side (Phone)
+- **Import `@zos/ble`** - App-side CAN import and use `@zos/ble`
+- **Use `messaging.peerSocket`** - Standard BLE messaging API
+- **Message listeners** - Receive messages from device via `addListener()`
+
+### Shared Layer
+- **app.js provides globalData** - Imports messageBuilder and MESSAGE_TYPES, makes them available to pages
+- **shared/message.js** - Defines message protocol used by both sides
+
+## Why This Pattern Works
+
+1. **Separation of concerns**: Device and app-side have different capabilities and restrictions
+2. **Global data sharing**: app.js sets up globalData that pages can access
+3. **Native BLE APIs**: Uses platform-provided `hmBle` on device, `@zos/ble` on app-side
+4. **Bidirectional**: Both sides can send and receive messages
+5. **Event-driven**: App-side reacts to device events via message listeners
 
 ## Testing
 
@@ -108,9 +131,9 @@ Run the GET_SECRET test to verify the implementation:
 node tests/test-get-secret.js
 ```
 
-Expected: 20 tests pass, including:
-- ✓ page2.js should import MESSAGE_TYPES
-- ✓ page2.js should send GET_SECRET message
+Expected: 21 tests pass, including:
+- ✓ page2.js should NOT import @zos/ble
+- ✓ page2.js should access MESSAGE_TYPES from globalData
 - ✓ page2.js should have messaging listener
 - ✓ app-side should handle GET_SECRET message
 
@@ -122,4 +145,4 @@ Expected: 20 tests pass, including:
 4. Watch displays "Loading..." then shows the token
 5. App-side logs show the entire interaction
 
-This demonstrates that **app-side CAN and DOES react to device events** through the BLE messaging system.
+This demonstrates that **app-side CAN and DOES react to device events** through the BLE messaging system, using the correct pattern for Zepp OS device pages.

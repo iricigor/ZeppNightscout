@@ -3,13 +3,13 @@
  * Displays second page with back navigation via swipe gesture
  */
 
-import * as messaging from '@zos/ble';
-import { messageBuilder, MESSAGE_TYPES } from '../shared/message';
-
 Page({
   onInit() {
     console.log('Second page starting');
     console.log('Page Navigation: page/page2 - init');
+    
+    // Get messageBuilder and MESSAGE_TYPES from globalData
+    const { messageBuilder, MESSAGE_TYPES } = getApp()._options.globalData;
     
     // Get device screen dimensions for proper layout
     const deviceInfo = hmSetting.getDeviceInfo();
@@ -71,8 +71,8 @@ Page({
           });
           console.log('Sending GET_SECRET message to app-side:', JSON.stringify(message));
           
-          if (typeof messaging === 'undefined') {
-            console.error('Messaging is undefined');
+          if (typeof hmBle === 'undefined') {
+            console.error('hmBle is undefined');
             widgets.resultText.setProperty(hmUI.prop.TEXT, 'Error: messaging unavailable');
             widgets.resultText.setProperty(hmUI.prop.COLOR, 0xff0000);
             widgets.getSecretButton.setProperty(hmUI.prop.TEXT, 'get secret');
@@ -80,7 +80,7 @@ Page({
             return;
           }
           
-          messaging.peerSocket.send(message);
+          hmBle.send(JSON.stringify(message));
           console.log('Message sent successfully to app-side');
         } catch (error) {
           console.error('Error sending message to app-side:', error);
@@ -106,30 +106,35 @@ Page({
     });
 
     // Setup messaging listener to receive responses from app-side
-    messaging.peerSocket.addListener('message', (data) => {
-      console.log('Received message from app-side:', JSON.stringify(data));
-      
-      // Handle secret response
-      if (data && data.data && data.data.secret) {
-        console.log('Processing secret response from app-side');
+    hmBle.createListener((data) => {
+      try {
+        const parsedData = JSON.parse(data);
+        console.log('Received message from app-side:', JSON.stringify(parsedData));
         
-        // Reset button state
-        widgets.getSecretButton.setProperty(hmUI.prop.TEXT, 'get secret');
-        widgets.getSecretButton.setProperty(hmUI.prop.COLOR, 0xffffff);
-        
-        if (data.data.success && data.data.token) {
-          // Success - display token (safely handle token display)
-          console.log('Token received successfully from app-side');
-          const token = String(data.data.token);
-          const displayToken = token.length > 20 ? token.substring(0, 20) + '...' : token;
-          widgets.resultText.setProperty(hmUI.prop.TEXT, 'Token: ' + displayToken);
-          widgets.resultText.setProperty(hmUI.prop.COLOR, 0x00ff00);
-        } else {
-          // Error - display error message
-          console.log('Error response from app-side:', data.data.error);
-          widgets.resultText.setProperty(hmUI.prop.TEXT, 'Error: ' + (data.data.error || 'Unknown error'));
-          widgets.resultText.setProperty(hmUI.prop.COLOR, 0xff0000);
+        // Handle secret response
+        if (parsedData && parsedData.data && parsedData.data.secret) {
+          console.log('Processing secret response from app-side');
+          
+          // Reset button state
+          widgets.getSecretButton.setProperty(hmUI.prop.TEXT, 'get secret');
+          widgets.getSecretButton.setProperty(hmUI.prop.COLOR, 0xffffff);
+          
+          if (parsedData.data.success && parsedData.data.token) {
+            // Success - display token (safely handle token display)
+            console.log('Token received successfully from app-side');
+            const token = String(parsedData.data.token);
+            const displayToken = token.length > 20 ? token.substring(0, 20) + '...' : token;
+            widgets.resultText.setProperty(hmUI.prop.TEXT, 'Token: ' + displayToken);
+            widgets.resultText.setProperty(hmUI.prop.COLOR, 0x00ff00);
+          } else {
+            // Error - display error message
+            console.log('Error response from app-side:', parsedData.data.error);
+            widgets.resultText.setProperty(hmUI.prop.TEXT, 'Error: ' + (parsedData.data.error || 'Unknown error'));
+            widgets.resultText.setProperty(hmUI.prop.COLOR, 0xff0000);
+          }
         }
+      } catch (error) {
+        console.error('Error parsing message from app-side:', error);
       }
     });
 
