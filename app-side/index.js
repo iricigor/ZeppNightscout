@@ -45,8 +45,6 @@ AppSideService({
         this.validateToken(data.apiUrl, data.apiToken);
       } else if (data.type === MESSAGE_TYPES.GET_SECRET) {
         this.getSecret();
-      } else if (data.type === MESSAGE_TYPES.PAGE_NAVIGATION) {
-        this.logPageNavigation(data.page, data.action);
       }
     });
   },
@@ -396,16 +394,6 @@ AppSideService({
     console.log('Updating settings:', settings);
     // Store settings (would use Zepp OS storage API in production)
     this.settings = settings;
-  },
-
-  /**
-   * Log page navigation events
-   * @param {string} page - Page identifier (e.g., 'page/index', 'page/page2')
-   * @param {string} action - Navigation action (e.g., 'init', 'destroy')
-   */
-  logPageNavigation(page, action) {
-    const timestamp = new Date().toISOString();
-    console.log(`[${timestamp}] Page Navigation: ${page} - ${action}`);
   },
 
   /**

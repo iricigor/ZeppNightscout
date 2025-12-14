@@ -3,23 +3,9 @@
  * Displays second page with back navigation via swipe gesture
  */
 
-import * as messaging from '@zos/ble';
-import { MESSAGE_TYPES } from '../shared/message';
-
 Page({
   onInit() {
     console.log('Second page starting');
-    
-    // Send navigation event to app-side for logging
-    try {
-      messaging.peerSocket.send({
-        type: MESSAGE_TYPES.PAGE_NAVIGATION,
-        page: 'page/page2',
-        action: 'init'
-      });
-    } catch (error) {
-      console.log('Could not send navigation event:', error);
-    }
     
     // Get device screen dimensions for proper layout
     const deviceInfo = hmSetting.getDeviceInfo();
@@ -91,16 +77,5 @@ Page({
 
   onDestroy() {
     console.log('Second page shutting down');
-    
-    // Send navigation event to app-side for logging
-    try {
-      messaging.peerSocket.send({
-        type: MESSAGE_TYPES.PAGE_NAVIGATION,
-        page: 'page/page2',
-        action: 'destroy'
-      });
-    } catch (error) {
-      console.log('Could not send navigation event:', error);
-    }
   }
 });
