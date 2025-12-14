@@ -5,13 +5,15 @@ function Set-ZeppAzureFunction {
 
     .DESCRIPTION
         This cmdlet creates an Azure Function App with the following features:
-        - Python 3.11 runtime (Functions v4) on Consumption plan
+        - Python 3.11 runtime (Functions v4)
         - HTTP trigger function that returns "DUMMY-TOKEN"
         - Automatic IP detection and firewall configuration for Azure Cloud Shell compatibility
         - IP access restrictions to allow access from specific IP addresses
         - Function code editable in the Azure Portal
         - Uses Azure PowerShell (Az module) - designed for Azure Cloud Shell
         - Configuration save/load support for easier re-deployment
+        
+        Note: The function app is created with default Consumption plan (determined automatically by Azure).
 
     .PARAMETER ResourceGroupName
         Name of the Azure Resource Group. Will be created if it doesn't exist.
