@@ -280,7 +280,6 @@ try {
             -Location $Location `
             -Tier FlexConsumption `
             -Family FC `
-            -WorkerSize Default `
             -OSType Linux
         Write-ColorOutput "✓ Flex Consumption Plan created" "Green"
     } else {
