@@ -81,14 +81,6 @@ Page({
           });
           console.log('Sending message:', JSON.stringify(message));
           
-          // Check if messaging is available
-          if (typeof messaging === 'undefined') {
-            console.error('messaging is undefined');
-            widgets.resultText.setProperty(hmUI.prop.TEXT, 'Error: messaging unavailable');
-            widgets.resultText.setProperty(hmUI.prop.COLOR, 0xff0000);
-            return;
-          }
-          
           messaging.peerSocket.send(message);
           console.log('Message sent successfully');
         } catch (error) {
