@@ -470,6 +470,24 @@ try {
         Write-ColorOutput "⚠ Function-level authentication disabled - relying on IP firewall only!" "Yellow"
     }
 
+    # Create Flex Consumption Plan (App Service Plan)
+    $planName = "${FunctionAppName}-Plan"
+    Write-ColorOutput "Creating Flex Consumption Plan '$planName'..." "Yellow"
+    $plan = Get-AzAppServicePlan -ResourceGroupName $ResourceGroupName -Name $planName -ErrorAction SilentlyContinue
+    if (-not $plan) {
+        New-AzAppServicePlan `
+            -ResourceGroupName $ResourceGroupName `
+            -Name $planName `
+            -Location $Location `
+            -Tier FlexConsumption `
+            -WorkerSize Default `
+            -OSType Linux | Out-Null
+        Write-ColorOutput "✓ Flex Consumption Plan created" "Green"
+    } else {
+        Write-ColorOutput "✓ Flex Consumption Plan already exists" "Green"
+    }
+    Write-Host ""
+
     # Create Function App with Python runtime on Flex Consumption plan
     Write-ColorOutput "Creating Function App '$FunctionAppName' with Python 3.11 runtime on Flex Consumption plan..." "Yellow"
     $functionApp = Get-AzFunctionApp -ResourceGroupName $ResourceGroupName -Name $FunctionAppName -ErrorAction SilentlyContinue
@@ -477,10 +495,10 @@ try {
         New-AzFunctionApp `
             -Name $FunctionAppName `
             -ResourceGroupName $ResourceGroupName `
-            -StorageAccountName $StorageAccountName `
-            -FlexConsumptionLocation $Location `
+            -PlanName $planName `
             -Runtime Python `
-            -RuntimeVersion 3.11 | Out-Null
+            -RuntimeVersion 3.11 `
+            -StorageAccountName $StorageAccountName | Out-Null
         Write-ColorOutput "✓ Function App created on Flex Consumption plan" "Green"
     } else {
         Write-ColorOutput "✓ Function App already exists" "Green"
