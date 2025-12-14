@@ -282,8 +282,7 @@ try {
             -StorageAccountName $StorageAccountName `
             -Runtime Python `
             -RuntimeVersion "3.11" `
-            -FunctionsVersion 4 `
-            -OSType Linux | Out-Null
+            -InstanceMemoryMB 512 | Out-Null
         Write-ColorOutput "✓ Function App created" "Green"
     } else {
         Write-ColorOutput "✓ Function App already exists" "Green"
