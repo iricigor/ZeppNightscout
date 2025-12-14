@@ -30,7 +30,7 @@
           "path": "app-side/index"
         },
         "app-settings": {
-          "path": "settings/index"
+          "path": "setting/index"
         }
       },
       "platforms": [
@@ -58,7 +58,7 @@
           "path": "app-side/index"
         },
         "app-settings": {
-          "path": "settings/index"
+          "path": "setting/index"
         }
       },
       "platforms": [
