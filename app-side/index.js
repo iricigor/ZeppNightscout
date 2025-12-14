@@ -402,11 +402,53 @@ AppSideService({
    * @returns {Promise} Promise that resolves with response
    */
   request(options) {
+    // Check if fetch is available, fallback to simulation for testing
+    if (typeof fetch === 'undefined') {
+      console.log('Fetch not available, using simulated response for testing');
+      return this.getSimulatedResponse(options);
+    }
+
+    // Use standard fetch API available in Zepp OS App-Side environment
+    // Note: Zepp OS fetch API uses an options object format
+    const fetchOptions = {
+      url: options.url,
+      method: options.method || 'GET',
+      headers: options.headers || {},
+      timeout: 30000 // 30 second timeout
+    };
+    
+    // Add body/data if provided (for POST/PUT requests)
+    if (options.body) {
+      fetchOptions.body = typeof options.body === 'string' ? options.body : JSON.stringify(options.body);
+    }
+
+    return fetch(fetchOptions)
+    .then(response => {
+      try {
+        // Parse response body as JSON
+        const body = typeof response.body === 'string' ? JSON.parse(response.body) : response.body;
+        return {
+          body: body,
+          status: response.status
+        };
+      } catch (parseError) {
+        console.error('JSON parse error:', parseError);
+        throw new Error('Failed to parse response as JSON: ' + parseError.message);
+      }
+    })
+    .catch(error => {
+      console.error('Fetch error:', error);
+      throw error;
+    });
+  },
+
+  /**
+   * Get simulated response for testing when fetch is not available
+   * @param {Object} options - Request options
+   * @returns {Promise} Promise that resolves with simulated response
+   */
+  getSimulatedResponse(options) {
     return new Promise((resolve, reject) => {
-      // Simulated fetch for now - in real implementation, use Zepp OS fetch API
-      // Example: const response = hmFetch.httpRequest(options);
-      
-      // For demonstration, return dummy data
       setTimeout(() => {
         // Check endpoint type using the explicit parameter instead of string matching
         if (options.endpointType === 'status') {
@@ -450,9 +492,7 @@ AppSideService({
           // In real implementation, this would be determined by actual API response
           reject(new Error('Unauthorized - read-only token'));
         } else if (options.endpointType === 'get-secret') {
-          // For get-secret, try to make a real HTTP request
-          // In real Zepp OS, this would use hmFetch.httpRequest
-          // For simulator/test, provide a simulated response
+          // For get-secret, provide simulated response for testing
           resolve({
             body: {
               token: 'demo-secret-token-' + Date.now()
