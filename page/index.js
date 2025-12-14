@@ -3,9 +3,23 @@
  * Simplified interface with button and swipe detection
  */
 
+import * as messaging from '@zos/ble';
+import { MESSAGE_TYPES } from '../shared/message';
+
 Page({
   onInit() {
     console.log('App starting');
+    
+    // Send navigation event to app-side for logging
+    try {
+      messaging.peerSocket.send({
+        type: MESSAGE_TYPES.PAGE_NAVIGATION,
+        page: 'page/index',
+        action: 'init'
+      });
+    } catch (error) {
+      console.log('Could not send navigation event:', error);
+    }
     
     // Get device screen dimensions for proper layout
     const deviceInfo = hmSetting.getDeviceInfo();
@@ -122,5 +136,16 @@ Page({
 
   onDestroy() {
     console.log('App shutting down');
+    
+    // Send navigation event to app-side for logging
+    try {
+      messaging.peerSocket.send({
+        type: MESSAGE_TYPES.PAGE_NAVIGATION,
+        page: 'page/index',
+        action: 'destroy'
+      });
+    } catch (error) {
+      console.log('Could not send navigation event:', error);
+    }
   }
 });
