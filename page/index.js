@@ -6,6 +6,7 @@
 Page({
   onInit() {
     console.log('App starting');
+    console.log('Page Navigation: page/index - init');
     
     // Get device screen dimensions for proper layout
     const deviceInfo = hmSetting.getDeviceInfo();
@@ -122,5 +123,6 @@ Page({
 
   onDestroy() {
     console.log('App shutting down');
+    console.log('Page Navigation: page/index - destroy');
   }
 });
