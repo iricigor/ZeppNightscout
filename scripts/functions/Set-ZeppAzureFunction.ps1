@@ -5,7 +5,7 @@ function Set-ZeppAzureFunction {
 
     .DESCRIPTION
         This cmdlet creates an Azure Function App with the following features:
-        - Python runtime (version 3.11) on Flex Consumption plan
+        - Python runtime (Functions v4) on Flex Consumption plan
         - HTTP trigger function that returns "DUMMY-TOKEN"
         - Automatic IP detection and firewall configuration for Azure Cloud Shell compatibility
         - IP access restrictions to allow access from specific IP addresses
@@ -286,7 +286,7 @@ try {
     Write-Host ""
 
     # Create Function App with Python runtime using the Flex Consumption plan
-    Write-ColorOutput "Creating Function App '$FunctionAppName' with Python 3.11 runtime..." "Yellow"
+    Write-ColorOutput "Creating Function App '$FunctionAppName' with Python runtime..." "Yellow"
     $functionApp = Get-AzFunctionApp -ResourceGroupName $ResourceGroupName -Name $FunctionAppName -ErrorAction SilentlyContinue
     if (-not $functionApp) {
         New-AzFunctionApp `
@@ -599,7 +599,7 @@ try {
     Write-ColorOutput "Function App:     $FunctionAppName" "White"
     Write-ColorOutput "Storage Account:  $StorageAccountName" "White"
     Write-ColorOutput "Location:         $Location" "White"
-    Write-ColorOutput "Runtime:          Python 3.11 on Flex Consumption" "White"
+    Write-ColorOutput "Runtime:          Python on Flex Consumption (Functions v4)" "White"
     Write-ColorOutput "Function Name:    GetToken" "White"
     Write-ColorOutput "Auth Level:       $authLevel" "White"
     if ($AllowedIpAddress -ne "0.0.0.0/0") {
