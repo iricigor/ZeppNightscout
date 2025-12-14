@@ -10,8 +10,9 @@ SENSITIVE_HEADER_NAMES = {'authorization', 'x-functions-key', 'cookie'}
 
 def main(req: func.HttpRequest, res: func.Out[func.HttpResponse]) -> None:
     """
-    HTTP trigger function that returns a dummy API token.
+    HTTP trigger function that provides a dummy API token.
     
+    Uses output binding to set the HTTP response via the 'res' parameter.
     This function can be edited directly in the Azure Portal.
     Simply navigate to your Function App, select this function,
     and use the Code + Test feature to modify the response.
