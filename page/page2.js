@@ -99,18 +99,19 @@ Page({
     messaging.peerSocket.addListener('message', (data) => {
       console.log('Received message from app-side:', data);
       
-      if (data.type === 'response' && data.data) {
-        if (data.data.secret) {
-          // Handle secret token response
-          if (data.data.success && data.data.token) {
-            widgets.resultText.setProperty(hmUI.prop.TEXT, 'Token:\n' + data.data.token);
-            widgets.resultText.setProperty(hmUI.prop.COLOR, 0x00ff00);
-          } else {
-            const errorMsg = data.data.error || 'Unknown error';
-            widgets.resultText.setProperty(hmUI.prop.TEXT, 'Error:\n' + errorMsg);
-            widgets.resultText.setProperty(hmUI.prop.COLOR, 0xff0000);
-          }
-        }
+      // Check if this is a secret response
+      if (data.type !== 'response' || !data.data || !data.data.secret) {
+        return; // Not a secret response, ignore
+      }
+      
+      // Handle secret token response
+      if (data.data.success && data.data.token) {
+        widgets.resultText.setProperty(hmUI.prop.TEXT, 'Token:\n' + data.data.token);
+        widgets.resultText.setProperty(hmUI.prop.COLOR, 0x00ff00);
+      } else {
+        const errorMsg = data.data.error || 'Unknown error';
+        widgets.resultText.setProperty(hmUI.prop.TEXT, 'Error:\n' + errorMsg);
+        widgets.resultText.setProperty(hmUI.prop.COLOR, 0xff0000);
       }
     });
 

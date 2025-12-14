@@ -10,14 +10,16 @@ const fs = require('fs');
 const messagePath = path.join(__dirname, '../shared/message.js');
 const messageContent = fs.readFileSync(messagePath, 'utf8');
 
-// Extract MESSAGE_TYPES manually (since we can't use ES6 import directly in Node)
-const MESSAGE_TYPES = {
-  FETCH_DATA: 'FETCH_DATA',
-  UPDATE_SETTINGS: 'UPDATE_SETTINGS',
-  VERIFY_URL: 'VERIFY_URL',
-  VALIDATE_TOKEN: 'VALIDATE_TOKEN',
-  GET_SECRET: 'GET_SECRET'
-};
+// Parse MESSAGE_TYPES from the actual file content
+const messageTypesMatch = messageContent.match(/export const MESSAGE_TYPES = \{([^}]+)\}/s);
+let MESSAGE_TYPES = {};
+if (messageTypesMatch) {
+  const typesContent = messageTypesMatch[1];
+  const typeMatches = typesContent.matchAll(/(\w+):\s*['"](\w+)['"]/g);
+  for (const match of typeMatches) {
+    MESSAGE_TYPES[match[1]] = match[2];
+  }
+}
 
 console.log('==================================================');
 console.log('Testing GET_SECRET Message Type');
@@ -55,8 +57,8 @@ test('GET_SECRET should exist', MESSAGE_TYPES.GET_SECRET === 'GET_SECRET');
 console.log('\nTest 3: Source File Validation');
 console.log('--------------------------------------------------');
 test('shared/message.js should contain GET_SECRET', messageContent.includes('GET_SECRET'));
-test('shared/message.js should export GET_SECRET', 
-     messageContent.includes("GET_SECRET: 'GET_SECRET'"));
+test('shared/message.js should export GET_SECRET in MESSAGE_TYPES', 
+     MESSAGE_TYPES.GET_SECRET === 'GET_SECRET');
 
 // Test 4: App-side index.js contains getSecret handler
 console.log('\nTest 4: App-Side Handler Validation');
