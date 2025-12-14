@@ -131,7 +131,7 @@ Run the GET_SECRET test to verify the implementation:
 node tests/test-get-secret.js
 ```
 
-Expected: 21 tests pass, including:
+Expected: All 21 GET_SECRET tests pass, including:
 - ✓ page2.js should NOT import @zos/ble
 - ✓ page2.js should access MESSAGE_TYPES from globalData
 - ✓ page2.js should have messaging listener

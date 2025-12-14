@@ -80,8 +80,17 @@ Page({
             return;
           }
           
-          hmBle.send(JSON.stringify(message));
-          console.log('Message sent successfully to app-side');
+          try {
+            const messageStr = JSON.stringify(message);
+            hmBle.send(messageStr);
+            console.log('Message sent successfully to app-side');
+          } catch (sendError) {
+            console.error('Error sending/serializing message:', sendError);
+            widgets.resultText.setProperty(hmUI.prop.TEXT, 'Error: failed to send');
+            widgets.resultText.setProperty(hmUI.prop.COLOR, 0xff0000);
+            widgets.getSecretButton.setProperty(hmUI.prop.TEXT, 'get secret');
+            widgets.getSecretButton.setProperty(hmUI.prop.COLOR, 0xffffff);
+          }
         } catch (error) {
           console.error('Error sending message to app-side:', error);
           widgets.resultText.setProperty(hmUI.prop.TEXT, 'Error: ' + error.message);
@@ -134,7 +143,7 @@ Page({
           }
         }
       } catch (error) {
-        console.error('Error parsing message from app-side:', error);
+        console.error('Error parsing message from app-side. Data:', data, 'Error:', error);
       }
     });
 
