@@ -1,6 +1,6 @@
 /**
  * Nightscout Zepp OS App - Second Test Page
- * Displays second page with back navigation
+ * Displays second page with back navigation via swipe gesture
  */
 
 Page({
@@ -41,7 +41,7 @@ Page({
       align_v: hmUI.align.CENTER_V
     });
 
-    // Swipe instructions
+    // Swipe instructions for navigation back to first page
     widgets.swipeText = hmUI.createWidget(hmUI.widget.TEXT, {
       x: 0,
       y: 200,
