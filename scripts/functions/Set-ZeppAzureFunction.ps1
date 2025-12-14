@@ -5,7 +5,7 @@ function Set-ZeppAzureFunction {
 
     .DESCRIPTION
         This cmdlet creates an Azure Function App with the following features:
-        - Python runtime (Functions v4) on Flex Consumption plan
+        - Python 3.11 runtime (Functions v4) on Consumption plan
         - HTTP trigger function that returns "DUMMY-TOKEN"
         - Automatic IP detection and firewall configuration for Azure Cloud Shell compatibility
         - IP access restrictions to allow access from specific IP addresses
@@ -269,23 +269,7 @@ try {
         Write-ColorOutput "⚠ Function-level authentication disabled - relying on IP firewall only!" "Yellow"
     }
 
-    # Create Flex Consumption Plan (App Service Plan)
-    Write-ColorOutput "Creating Flex Consumption Plan '${FunctionAppName}_Plan'..." "Yellow"
-    $planName = "${FunctionAppName}_Plan"
-    $plan = Get-AzAppServicePlan -ResourceGroupName $ResourceGroupName -Name $planName -ErrorAction SilentlyContinue
-    if (-not $plan) {
-        $plan = New-AzAppServicePlan `
-            -ResourceGroupName $ResourceGroupName `
-            -Name $planName `
-            -Location $Location `
-            -Tier FlexConsumption
-        Write-ColorOutput "✓ Flex Consumption Plan created" "Green"
-    } else {
-        Write-ColorOutput "✓ Flex Consumption Plan already exists" "Green"
-    }
-    Write-Host ""
-
-    # Create Function App with Python runtime using the Flex Consumption plan
+    # Create Function App with Python runtime (without explicit plan)
     Write-ColorOutput "Creating Function App '$FunctionAppName' with Python runtime..." "Yellow"
     $functionApp = Get-AzFunctionApp -ResourceGroupName $ResourceGroupName -Name $FunctionAppName -ErrorAction SilentlyContinue
     if (-not $functionApp) {
@@ -295,9 +279,10 @@ try {
             -Location $Location `
             -StorageAccountName $StorageAccountName `
             -Runtime Python `
+            -RuntimeVersion "3.11" `
             -FunctionsVersion 4 `
             -OSType Linux | Out-Null
-        Write-ColorOutput "✓ Function App created on Flex Consumption plan" "Green"
+        Write-ColorOutput "✓ Function App created" "Green"
     } else {
         Write-ColorOutput "✓ Function App already exists" "Green"
     }
@@ -599,7 +584,7 @@ try {
     Write-ColorOutput "Function App:     $FunctionAppName" "White"
     Write-ColorOutput "Storage Account:  $StorageAccountName" "White"
     Write-ColorOutput "Location:         $Location" "White"
-    Write-ColorOutput "Runtime:          Python on Flex Consumption (Functions v4)" "White"
+    Write-ColorOutput "Runtime:          Python 3.11 (Functions v4)" "White"
     Write-ColorOutput "Function Name:    GetToken" "White"
     Write-ColorOutput "Auth Level:       $authLevel" "White"
     if ($AllowedIpAddress -ne "0.0.0.0/0") {
