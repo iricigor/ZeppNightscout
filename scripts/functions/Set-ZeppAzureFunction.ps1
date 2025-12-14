@@ -279,7 +279,6 @@ try {
             -Name $planName `
             -Location $Location `
             -Tier FlexConsumption `
-            -Family FC `
             -OSType Linux
         Write-ColorOutput "✓ Flex Consumption Plan created" "Green"
     } else {
