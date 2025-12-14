@@ -408,8 +408,29 @@ try {
     $timestamp = Get-Date -Format "yyyyMMddHHmmss"
     $zipPath = Join-Path ([System.IO.Path]::GetTempPath()) "function-app-$timestamp-$PID.zip"
     
-    # Create zip using PowerShell compression
-    Compress-Archive -Path "$tempDir\*" -DestinationPath $zipPath -Force
+    # Remove zip file if it exists to avoid corruption
+    if (Test-Path $zipPath) {
+        Remove-Item -Path $zipPath -Force -ErrorAction SilentlyContinue
+    }
+    
+    # Create zip using PowerShell compression with CompressionLevel for better compatibility
+    try {
+        Compress-Archive -Path "$tempDir\*" -DestinationPath $zipPath -CompressionLevel Optimal
+        
+        # Verify the zip file was created and has content
+        if (-not (Test-Path $zipPath)) {
+            throw "Zip file was not created at $zipPath"
+        }
+        
+        $zipFileInfo = Get-Item $zipPath
+        if ($zipFileInfo.Length -eq 0) {
+            throw "Zip file is empty (0 bytes)"
+        }
+        
+        Write-ColorOutput "  ✓ Created deployment package: $($zipFileInfo.Length) bytes" "Green"
+    } catch {
+        throw "Failed to create deployment zip file: $($_.Exception.Message)"
+    }
     
     # Deploy using Kudu API zip deployment
     try {
