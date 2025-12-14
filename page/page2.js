@@ -1,10 +1,7 @@
 /**
  * Nightscout Zepp OS App - Second Test Page
- * Displays second page with back navigation and secret token fetching
+ * Displays second page with back navigation
  */
-
-import * as messaging from '@zos/ble';
-import { messageBuilder, MESSAGE_TYPES } from '../shared/message';
 
 Page({
   onInit() {
@@ -44,85 +41,17 @@ Page({
       align_v: hmUI.align.CENTER_V
     });
 
-    // Swipe instructions (now in one row as per requirement)
+    // Swipe instructions
     widgets.swipeText = hmUI.createWidget(hmUI.widget.TEXT, {
       x: 0,
       y: 200,
       w: screenWidth,
       h: 40,
-      text: 'Swipe right...',
+      text: 'Swipe right to go back',
       text_size: 18,
       color: 0x888888,
       align_h: hmUI.align.CENTER_H,
       align_v: hmUI.align.CENTER_V
-    });
-
-    // Get secret button
-    widgets.secretButton = hmUI.createWidget(hmUI.widget.BUTTON, {
-      x: (screenWidth - 140) / 2,
-      y: 250,
-      w: 140,
-      h: 50,
-      radius: 25,
-      normal_color: 0x0066cc,
-      press_color: 0x0099ff,
-      text: 'get secret',
-      text_size: 20,
-      color: 0xffffff,
-      click_func: () => {
-        console.log('Get secret button clicked');
-        widgets.resultText.setProperty(hmUI.prop.TEXT, 'Loading...');
-        widgets.resultText.setProperty(hmUI.prop.COLOR, 0xffff00);
-        
-        try {
-          // Send message to app-side to fetch token
-          const message = messageBuilder.request({
-            type: MESSAGE_TYPES.GET_SECRET
-          });
-          console.log('Sending message:', JSON.stringify(message));
-          
-          messaging.peerSocket.send(message);
-          console.log('Message sent successfully');
-        } catch (error) {
-          console.error('Error sending message:', error);
-          widgets.resultText.setProperty(hmUI.prop.TEXT, 'Error: ' + error.message);
-          widgets.resultText.setProperty(hmUI.prop.COLOR, 0xff0000);
-        }
-      }
-    });
-
-    // Result text (displayed below button)
-    widgets.resultText = hmUI.createWidget(hmUI.widget.TEXT, {
-      x: 20,
-      y: 320,
-      w: screenWidth - 40,
-      h: 120,
-      text: '',
-      text_size: 16,
-      color: 0xffffff,
-      align_h: hmUI.align.CENTER_H,
-      align_v: hmUI.align.TOP,
-      text_style: hmUI.text_style.WRAP
-    });
-
-    // Setup message listener for app-side responses
-    messaging.peerSocket.addListener('message', (data) => {
-      console.log('Received message from app-side:', data);
-      
-      // Check if this is a secret response
-      if (data.type !== 'response' || !data.data || !data.data.secret) {
-        return; // Not a secret response, ignore
-      }
-      
-      // Handle secret token response
-      if (data.data.success && data.data.token) {
-        widgets.resultText.setProperty(hmUI.prop.TEXT, 'Token:\n' + data.data.token);
-        widgets.resultText.setProperty(hmUI.prop.COLOR, 0x00ff00);
-      } else {
-        const errorMsg = data.data.error || 'Unknown error';
-        widgets.resultText.setProperty(hmUI.prop.TEXT, 'Error:\n' + errorMsg);
-        widgets.resultText.setProperty(hmUI.prop.COLOR, 0xff0000);
-      }
     });
 
     // Gesture event listener for swipe detection
