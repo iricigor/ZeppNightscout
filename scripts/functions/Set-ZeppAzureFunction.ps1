@@ -297,10 +297,10 @@ try {
             -ResourceGroupName $ResourceGroupName `
             -Location $Location `
             -Plan $planName `
-            -Runtime Python `
-            -RuntimeVersion 3.11 `
             -StorageAccountName $StorageAccountName `
-            -StorageAccountResourceGroupName $ResourceGroupName | Out-Null
+            -StorageAccountResourceGroupName $ResourceGroupName `
+            -Runtime Python `
+            -RuntimeVersion 3.11 | Out-Null
         Write-ColorOutput "✓ Function App created on Flex Consumption plan" "Green"
     } else {
         Write-ColorOutput "✓ Function App already exists" "Green"
