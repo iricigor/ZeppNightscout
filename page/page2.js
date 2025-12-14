@@ -118,9 +118,11 @@ Page({
         widgets.getSecretButton.setProperty(hmUI.prop.COLOR, 0xffffff);
         
         if (data.data.success && data.data.token) {
-          // Success - display token
+          // Success - display token (safely handle token display)
           console.log('Token received successfully from app-side');
-          widgets.resultText.setProperty(hmUI.prop.TEXT, 'Token: ' + data.data.token.substring(0, 20) + '...');
+          const token = String(data.data.token);
+          const displayToken = token.length > 20 ? token.substring(0, 20) + '...' : token;
+          widgets.resultText.setProperty(hmUI.prop.TEXT, 'Token: ' + displayToken);
           widgets.resultText.setProperty(hmUI.prop.COLOR, 0x00ff00);
         } else {
           // Error - display error message
