@@ -212,6 +212,72 @@ Check app-side is actually sending response back
 ### If callback invoked but parsing fails:
 Check data format - may need different parsing approach
 
+## Alternative Implementations Created
+
+To help diagnose and fix the issue, I've created two additional files:
+
+### 1. page/page2-alternative.js
+An alternative implementation that tries multiple BLE communication patterns:
+- **Direct string send** without buffer conversion
+- **Buffer send** with conversion (current approach)
+- **createConnect** listener (current approach)
+- **mstOnConnect** pattern (alternative)
+- **onMessage** callback (alternative)
+
+### 2. page/ble-inspector.js  
+A diagnostic page that inspects and reports all available BLE APIs:
+- Lists all methods on the `hmBle` object
+- Checks for specific methods we need
+- Reports types and availability
+- Can be used to see what's actually available at runtime
+
+## How to Use Alternative Implementation
+
+To test the alternative page2 implementation:
+
+1. Temporarily rename current page2.js:
+   ```bash
+   mv page/page2.js page/page2-original.js
+   mv page/page2-alternative.js page/page2.js
+   ```
+
+2. Build and run:
+   ```bash
+   zeus build
+   zeus install
+   # Or: zeus dev
+   ```
+
+3. Check logs for which pattern works
+
+4. Once identified, restore and update original:
+   ```bash
+   mv page/page2.js page/page2-test-results.js
+   mv page/page2-original.js page/page2.js
+   # Update page2.js with working pattern
+   ```
+
+## How to Use BLE Inspector
+
+To see what BLE APIs are actually available:
+
+1. Add inspector to app.json pages:
+   ```json
+   "pages": [
+     "page/index",
+     "page/page2", 
+     "page/ble-inspector"
+   ]
+   ```
+
+2. Build and run the app
+
+3. Navigate to BLE inspector page
+
+4. Read the output to see available methods
+
+5. Use this info to implement correct pattern
+
 ## Testing the Fix
 
 Once we identify and fix the issue, verify:
