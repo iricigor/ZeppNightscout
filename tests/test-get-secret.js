@@ -86,7 +86,7 @@ test('page2.js should have "get secret" button',
 test('page2.js should send GET_SECRET message', 
      page2Content.includes('MESSAGE_TYPES.GET_SECRET'));
 test('page2.js should have messaging listener', 
-     page2Content.includes('hmBle.createListener'));
+     page2Content.includes('hmBle.on'));
 test('page2.js should handle secret response', 
      page2Content.includes('data.secret'));
 test('page2.js should display token', 

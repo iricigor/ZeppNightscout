@@ -81,11 +81,10 @@ Page({
           }
           
           try {
-            const messageStr = JSON.stringify(message);
-            hmBle.send(messageStr);
+            hmBle.send(JSON.stringify(message));
             console.log('Message sent successfully to app-side');
           } catch (sendError) {
-            console.error('Error sending/serializing message:', sendError);
+            console.error('Error sending message:', sendError);
             widgets.resultText.setProperty(hmUI.prop.TEXT, 'Error: failed to send');
             widgets.resultText.setProperty(hmUI.prop.COLOR, 0xff0000);
             widgets.getSecretButton.setProperty(hmUI.prop.TEXT, 'get secret');
@@ -115,9 +114,9 @@ Page({
     });
 
     // Setup messaging listener to receive responses from app-side
-    hmBle.createListener((data) => {
+    hmBle.on('message', (data) => {
       try {
-        const parsedData = JSON.parse(data);
+        const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
         console.log('Received message from app-side:', JSON.stringify(parsedData));
         
         // Handle secret response

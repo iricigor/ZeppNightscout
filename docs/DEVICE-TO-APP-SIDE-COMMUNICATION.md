@@ -69,9 +69,9 @@ getSecret() {
 The device page listens for the response:
 
 ```javascript
-// Device side receives response via hmBle.createListener
-hmBle.createListener((data) => {
-  const parsedData = JSON.parse(data);
+// Device side receives response via hmBle.on
+hmBle.on('message', (data) => {
+  const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
   if (parsedData.data.secret && parsedData.data.success) {
     // Update UI with token from app-side
     widgets.resultText.setProperty(hmUI.prop.TEXT, 'Token: ' + parsedData.data.token);
