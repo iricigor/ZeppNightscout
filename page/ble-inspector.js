@@ -92,9 +92,7 @@ Page({
     resultText.setProperty(hmUI.prop.TEXT, report);
     
     // Store widgets reference
-    const widgets = {
-      swipeText: null
-    };
+    const widgets = {};
     
     // Swipe instructions for navigation back to first page
     widgets.swipeText = hmUI.createWidget(hmUI.widget.TEXT, {

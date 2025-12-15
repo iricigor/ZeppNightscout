@@ -16,6 +16,9 @@ Page({
     // Store widget references
     const widgets = {};
     
+    // Swipe instruction text constant to avoid duplication
+    const SWIPE_INSTRUCTIONS = 'Swipe for debug pages:\nLeft = GET_SECRET test\nUp = BLE Inspector\nDown = Alt BLE test';
+    
     // Title
     hmUI.createWidget(hmUI.widget.TEXT, {
       x: 0,
@@ -70,7 +73,7 @@ Page({
       y: 280,
       w: screenWidth,
       h: 100,
-      text: 'Swipe for debug pages:\nLeft = GET_SECRET test\nUp = BLE Inspector\nDown = Alternative BLE',
+      text: SWIPE_INSTRUCTIONS,
       text_size: 16,
       color: 0x888888,
       align_h: hmUI.align.CENTER_H,
@@ -120,7 +123,7 @@ Page({
         widgets.swipeText.setProperty(hmUI.prop.TEXT, feedbackText);
         widgets.swipeText.setProperty(hmUI.prop.COLOR, feedbackColor);
         setTimeout(() => {
-          widgets.swipeText.setProperty(hmUI.prop.TEXT, 'Swipe for debug pages:\nLeft = GET_SECRET test\nUp = BLE Inspector\nDown = Alternative BLE');
+          widgets.swipeText.setProperty(hmUI.prop.TEXT, SWIPE_INSTRUCTIONS);
           widgets.swipeText.setProperty(hmUI.prop.COLOR, 0x888888);
         }, 2000);
       }
