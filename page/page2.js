@@ -3,8 +3,6 @@
  * Displays second page with back navigation via swipe gesture
  */
 
-import * as messaging from '@zos/ble';
-
 Page({
   onInit() {
     console.log('Second page starting');
@@ -73,9 +71,9 @@ Page({
           });
           console.log('Sending GET_SECRET message to app-side:', JSON.stringify(message));
           
-          if (typeof messaging === 'undefined' || !messaging.peerSocket) {
-            console.error('messaging is undefined or peerSocket not available');
-            widgets.resultText.setProperty(hmUI.prop.TEXT, 'Error: messaging unavailable');
+          if (typeof hmBle === 'undefined') {
+            console.error('hmBle is undefined or not available');
+            widgets.resultText.setProperty(hmUI.prop.TEXT, 'Error: BLE unavailable');
             widgets.resultText.setProperty(hmUI.prop.COLOR, 0xff0000);
             widgets.getSecretButton.setProperty(hmUI.prop.TEXT, 'get secret');
             widgets.getSecretButton.setProperty(hmUI.prop.COLOR, 0xffffff);
@@ -83,7 +81,15 @@ Page({
           }
           
           try {
-            messaging.peerSocket.send(message);
+            // Convert message to buffer for hmBle.send
+            const messageStr = JSON.stringify(message);
+            const messageBuffer = hmBle.str2buf(messageStr);
+            
+            if (!messageBuffer || messageBuffer.byteLength === 0) {
+              throw new Error('Failed to convert message to buffer');
+            }
+            
+            hmBle.send(messageBuffer, messageBuffer.byteLength);
             console.log('Message sent successfully to app-side');
           } catch (sendError) {
             console.error('Error sending message:', sendError);
@@ -115,10 +121,12 @@ Page({
       align_v: hmUI.align.CENTER_V
     });
 
-    // Setup messaging listener to receive responses from app-side
-    messaging.peerSocket.addListener('message', (data) => {
+    // Setup BLE connection to receive responses from app-side
+    hmBle.createConnect(function(index, data, size) {
       try {
-        const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+        // Convert buffer to string
+        const dataStr = hmBle.buf2str(data, size);
+        const parsedData = JSON.parse(dataStr);
         console.log('Received message from app-side:', JSON.stringify(parsedData));
         
         // Handle secret response
@@ -144,7 +152,7 @@ Page({
           }
         }
       } catch (error) {
-        console.error('Error parsing message from app-side. Data:', data, 'Error:', error);
+        console.error('Error parsing message from app-side. Size:', size, 'Error:', error);
       }
     });
 
@@ -185,5 +193,12 @@ Page({
   onDestroy() {
     console.log('Second page shutting down');
     console.log('Page Navigation: page/page2 - destroy');
+    
+    // Disconnect BLE connection
+    try {
+      hmBle.disConnect();
+    } catch (error) {
+      console.error('Error disconnecting BLE:', error);
+    }
   }
 });
