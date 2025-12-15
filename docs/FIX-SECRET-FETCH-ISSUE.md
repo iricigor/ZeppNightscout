@@ -1,5 +1,19 @@
 # Fix for Secret Fetch Issues
 
+## ⚠️ IMPORTANT CORRECTION (2025-12-15)
+
+**The original fix in this document caused a NEW issue**: The ES6 `import * as messaging from '@zos/ble'` statement added to `page/page2.js` caused the app to crash with a `ReferenceError: '__$RQR$__' is not defined` error.
+
+**Root cause**: Device page files in Zepp OS **CANNOT** use ES6 imports. They must use global objects.
+
+**Correct solution**: Use the global `hmBle` object instead of importing `@zos/ble`.
+
+See the updated implementation in `page/page2.js` and the corrected documentation in `DEVICE-TO-APP-SIDE-COMMUNICATION.md`.
+
+---
+
+# Original Issue Documentation
+
 ## Problem Statement
 
 Two issues were identified in the app when using the "get secret" button on page 2:
@@ -80,15 +94,17 @@ Updated documentation to reflect correct patterns for both device-side and app-s
 - Send: `messaging.peerSocket.send(message)` (sends object, not string)
 - Receive: `messaging.peerSocket.addListener('message', callback)`
 
-**Previous misconception** (now corrected):
-- ❌ Device pages cannot import `@zos/ble`
-- ❌ Device pages must use global `hmBle` object
-- ❌ Messages must be JSON.stringify'd
+**Previous misconception** (from original fix - now corrected again):
+- ❌ Device pages cannot import `@zos/ble` ← **THIS WAS ACTUALLY CORRECT**
+- ❌ Device pages must use global `hmBle` object ← **THIS WAS ACTUALLY CORRECT**
+- ❌ Messages must be JSON.stringify'd ← **This is partially correct for hmBle**
 
-**Correct understanding:**
-- ✅ Both device and app-side import `@zos/ble`
-- ✅ Both use `messaging.peerSocket` API
-- ✅ Messages are sent as objects
+**Actual correct understanding** (after second fix):
+- ✅ Device pages CANNOT import `@zos/ble` (causes `__$RQR$__` error)
+- ✅ Device pages MUST use global `hmBle` object
+- ✅ App-side CAN import `@zos/ble` and uses `messaging.peerSocket`
+- ✅ Device-side uses `hmBle.send(buffer, size)` with buffer conversion
+- ✅ Device-side uses `hmBle.createConnect(callback)` to receive messages
 
 ### GlobalData Access
 
@@ -114,7 +130,7 @@ const data = getApp()._options.globalData;
 ## Test Results
 
 All tests pass after the fix:
-- ✅ 21/21 GET_SECRET tests pass
+- ✅ 24/24 GET_SECRET tests pass (updated to verify hmBle usage)
 - ✅ 26/26 Parser tests pass  
 - ✅ 25/25 URL/Token validation tests pass
 - ✅ 6/6 Checkbox tests pass
