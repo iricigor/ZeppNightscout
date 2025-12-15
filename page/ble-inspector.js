@@ -10,6 +10,9 @@ Page({
     const screenWidth = deviceInfo.width;
     const screenHeight = deviceInfo.height;
     
+    // Store widgets reference
+    const widgets = {};
+    
     // Title
     hmUI.createWidget(hmUI.widget.TEXT, {
       x: 0,
@@ -90,9 +93,6 @@ Page({
     
     // Display the report
     resultText.setProperty(hmUI.prop.TEXT, report);
-    
-    // Store widgets reference
-    const widgets = {};
     
     // Swipe instructions for navigation back to first page
     widgets.swipeText = hmUI.createWidget(hmUI.widget.TEXT, {
