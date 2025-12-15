@@ -5,11 +5,31 @@
 
 Page({
   onInit() {
+    console.log('=== PAGE2 INIT START ===');
     console.log('Second page starting');
     console.log('Page Navigation: page/page2 - init');
     
+    // Verify getApp() exists
+    console.log('Checking getApp():', typeof getApp !== 'undefined' ? 'EXISTS' : 'UNDEFINED');
+    if (typeof getApp === 'undefined') {
+      console.error('CRITICAL: getApp is undefined');
+      return;
+    }
+    
+    // Get app instance
+    const app = getApp();
+    console.log('app instance:', app ? 'EXISTS' : 'NULL');
+    console.log('app.globalData:', app && app.globalData ? 'EXISTS' : 'UNDEFINED');
+    
+    // Log globalData contents
+    if (app && app.globalData) {
+      console.log('globalData keys:', Object.keys(app.globalData).join(', '));
+      console.log('messageBuilder:', typeof app.globalData.messageBuilder);
+      console.log('MESSAGE_TYPES:', typeof app.globalData.MESSAGE_TYPES);
+    }
+    
     // Get messageBuilder and MESSAGE_TYPES from globalData
-    const { messageBuilder, MESSAGE_TYPES } = getApp().globalData;
+    const { messageBuilder, MESSAGE_TYPES } = app.globalData;
     
     // Get device screen dimensions for proper layout
     const deviceInfo = hmSetting.getDeviceInfo();
@@ -71,8 +91,13 @@ Page({
           });
           console.log('Sending GET_SECRET message to app-side:', JSON.stringify(message));
           
+          // Extensive BLE logging
+          console.log('=== BLE SEND START ===');
+          console.log('typeof hmBle:', typeof hmBle);
+          console.log('hmBle exists:', typeof hmBle !== 'undefined' ? 'YES' : 'NO');
+          
           if (typeof hmBle === 'undefined') {
-            console.error('hmBle is undefined or not available');
+            console.error('CRITICAL: hmBle is undefined or not available');
             widgets.resultText.setProperty(hmUI.prop.TEXT, 'Error: BLE unavailable');
             widgets.resultText.setProperty(hmUI.prop.COLOR, 0xff0000);
             widgets.getSecretButton.setProperty(hmUI.prop.TEXT, 'get secret');
@@ -80,20 +105,45 @@ Page({
             return;
           }
           
+          // Log hmBle methods
+          console.log('hmBle.send:', typeof hmBle.send);
+          console.log('hmBle.str2buf:', typeof hmBle.str2buf);
+          console.log('hmBle.buf2str:', typeof hmBle.buf2str);
+          console.log('hmBle.createConnect:', typeof hmBle.createConnect);
+          console.log('hmBle.disConnect:', typeof hmBle.disConnect);
+          
           try {
             // Convert message to buffer for hmBle.send
             const messageStr = JSON.stringify(message);
+            console.log('Message string:', messageStr);
+            console.log('Message string length:', messageStr.length);
+            
+            if (typeof hmBle.str2buf !== 'function') {
+              throw new Error('hmBle.str2buf is not a function');
+            }
+            
             const messageBuffer = hmBle.str2buf(messageStr);
+            console.log('Buffer created:', messageBuffer ? 'YES' : 'NO');
+            console.log('Buffer byteLength:', messageBuffer ? messageBuffer.byteLength : 'N/A');
             
             if (!messageBuffer || messageBuffer.byteLength === 0) {
               throw new Error('Failed to convert message to buffer');
             }
             
-            hmBle.send(messageBuffer, messageBuffer.byteLength);
+            if (typeof hmBle.send !== 'function') {
+              throw new Error('hmBle.send is not a function');
+            }
+            
+            const sendResult = hmBle.send(messageBuffer, messageBuffer.byteLength);
+            console.log('hmBle.send() result:', sendResult);
             console.log('Message sent successfully to app-side');
+            console.log('=== BLE SEND END ===');
           } catch (sendError) {
-            console.error('Error sending message:', sendError);
-            widgets.resultText.setProperty(hmUI.prop.TEXT, 'Error: failed to send');
+            console.error('=== BLE SEND ERROR ===');
+            console.error('Error name:', sendError.name);
+            console.error('Error message:', sendError.message);
+            console.error('Error stack:', sendError.stack);
+            widgets.resultText.setProperty(hmUI.prop.TEXT, 'Error: ' + sendError.message);
             widgets.resultText.setProperty(hmUI.prop.COLOR, 0xff0000);
             widgets.getSecretButton.setProperty(hmUI.prop.TEXT, 'get secret');
             widgets.getSecretButton.setProperty(hmUI.prop.COLOR, 0xffffff);
@@ -122,39 +172,101 @@ Page({
     });
 
     // Setup BLE connection to receive responses from app-side
-    hmBle.createConnect(function(index, data, size) {
-      try {
-        // Convert buffer to string
-        const dataStr = hmBle.buf2str(data, size);
-        const parsedData = JSON.parse(dataStr);
-        console.log('Received message from app-side:', JSON.stringify(parsedData));
+    console.log('=== BLE RECEIVE SETUP START ===');
+    console.log('Setting up BLE listener for responses from app-side');
+    console.log('typeof hmBle:', typeof hmBle);
+    console.log('typeof hmBle.createConnect:', typeof hmBle.createConnect);
+    
+    if (typeof hmBle === 'undefined') {
+      console.error('CRITICAL: hmBle undefined, cannot setup listener');
+      return;
+    }
+    
+    if (typeof hmBle.createConnect !== 'function') {
+      console.error('CRITICAL: hmBle.createConnect is not a function');
+      console.error('Available hmBle methods:', Object.keys(hmBle).join(', '));
+      return;
+    }
+    
+    try {
+      const connectResult = hmBle.createConnect(function(index, data, size) {
+        console.log('=== BLE MESSAGE RECEIVED ===');
+        console.log('Callback invoked with index:', index, 'size:', size);
+        console.log('data type:', typeof data);
+        console.log('data value:', data);
         
-        // Handle secret response
-        if (parsedData && parsedData.data && parsedData.data.secret) {
-          console.log('Processing secret response from app-side');
-          
-          // Reset button state
-          widgets.getSecretButton.setProperty(hmUI.prop.TEXT, 'get secret');
-          widgets.getSecretButton.setProperty(hmUI.prop.COLOR, 0xffffff);
-          
-          if (parsedData.data.success && parsedData.data.token) {
-            // Success - display token (safely handle token display)
-            console.log('Token received successfully from app-side');
-            const token = String(parsedData.data.token);
-            const displayToken = token.length > 20 ? token.substring(0, 20) + '...' : token;
-            widgets.resultText.setProperty(hmUI.prop.TEXT, 'Token: ' + displayToken);
-            widgets.resultText.setProperty(hmUI.prop.COLOR, 0x00ff00);
-          } else {
-            // Error - display error message
-            console.log('Error response from app-side:', parsedData.data.error);
-            widgets.resultText.setProperty(hmUI.prop.TEXT, 'Error: ' + (parsedData.data.error || 'Unknown error'));
-            widgets.resultText.setProperty(hmUI.prop.COLOR, 0xff0000);
+        try {
+          // Verify buf2str exists
+          if (typeof hmBle.buf2str !== 'function') {
+            console.error('CRITICAL: hmBle.buf2str is not a function');
+            return;
           }
+          
+          // Convert buffer to string
+          console.log('Converting buffer to string...');
+          const dataStr = hmBle.buf2str(data, size);
+          console.log('Buffer converted, string length:', dataStr ? dataStr.length : 'NULL');
+          console.log('Data string:', dataStr);
+          
+          // Parse JSON
+          console.log('Parsing JSON...');
+          const parsedData = JSON.parse(dataStr);
+          console.log('JSON parsed successfully');
+          console.log('Parsed data type:', typeof parsedData);
+          console.log('Parsed data:', JSON.stringify(parsedData));
+          
+          // Check for secret response
+          console.log('Checking for secret response...');
+          console.log('parsedData.data exists:', parsedData && parsedData.data ? 'YES' : 'NO');
+          console.log('parsedData.data.secret exists:', parsedData && parsedData.data && parsedData.data.secret ? 'YES' : 'NO');
+          
+          // Handle secret response
+          if (parsedData && parsedData.data && parsedData.data.secret) {
+            console.log('Processing secret response from app-side');
+            console.log('success:', parsedData.data.success);
+            console.log('token exists:', parsedData.data.token ? 'YES' : 'NO');
+            console.log('error:', parsedData.data.error);
+            
+            // Reset button state
+            widgets.getSecretButton.setProperty(hmUI.prop.TEXT, 'get secret');
+            widgets.getSecretButton.setProperty(hmUI.prop.COLOR, 0xffffff);
+            
+            if (parsedData.data.success && parsedData.data.token) {
+              // Success - display token (safely handle token display)
+              console.log('Token received successfully from app-side');
+              const token = String(parsedData.data.token);
+              const displayToken = token.length > 20 ? token.substring(0, 20) + '...' : token;
+              console.log('Display token:', displayToken);
+              widgets.resultText.setProperty(hmUI.prop.TEXT, 'Token: ' + displayToken);
+              widgets.resultText.setProperty(hmUI.prop.COLOR, 0x00ff00);
+            } else {
+              // Error - display error message
+              console.log('Error response from app-side:', parsedData.data.error);
+              widgets.resultText.setProperty(hmUI.prop.TEXT, 'Error: ' + (parsedData.data.error || 'Unknown error'));
+              widgets.resultText.setProperty(hmUI.prop.COLOR, 0xff0000);
+            }
+          } else {
+            console.log('Message received but not a secret response');
+          }
+        } catch (error) {
+          console.error('=== BLE MESSAGE PARSE ERROR ===');
+          console.error('Error name:', error.name);
+          console.error('Error message:', error.message);
+          console.error('Error stack:', error.stack);
         }
-      } catch (error) {
-        console.error('Error parsing message from app-side. Size:', size, 'Error:', error);
-      }
-    });
+        
+        console.log('=== BLE MESSAGE RECEIVED END ===');
+      });
+      
+      console.log('createConnect result:', connectResult);
+      console.log('BLE listener setup complete');
+      console.log('=== BLE RECEIVE SETUP END ===');
+    } catch (setupError) {
+      console.error('=== BLE SETUP ERROR ===');
+      console.error('Error name:', setupError.name);
+      console.error('Error message:', setupError.message);
+      console.error('Error stack:', setupError.stack);
+    }
 
     // Swipe instructions for navigation back to first page
     widgets.swipeText = hmUI.createWidget(hmUI.widget.TEXT, {
@@ -188,17 +300,31 @@ Page({
       
       return true;
     });
+    
+    console.log('=== PAGE2 INIT COMPLETE ===');
   },
 
   onDestroy() {
+    console.log('=== PAGE2 DESTROY START ===');
     console.log('Second page shutting down');
     console.log('Page Navigation: page/page2 - destroy');
     
     // Disconnect BLE connection
-    try {
-      hmBle.disConnect();
-    } catch (error) {
-      console.error('Error disconnecting BLE:', error);
+    console.log('typeof hmBle:', typeof hmBle);
+    console.log('typeof hmBle.disConnect:', typeof hmBle.disConnect);
+    
+    if (typeof hmBle !== 'undefined' && typeof hmBle.disConnect === 'function') {
+      try {
+        const disconnectResult = hmBle.disConnect();
+        console.log('hmBle.disConnect() result:', disconnectResult);
+        console.log('BLE disconnected successfully');
+      } catch (error) {
+        console.error('Error disconnecting BLE:', error.name, error.message);
+      }
+    } else {
+      console.log('hmBle.disConnect not available, skipping cleanup');
     }
+    
+    console.log('=== PAGE2 DESTROY END ===');
   }
 });
