@@ -16,16 +16,18 @@ When the user taps the "get secret" button on the watch:
 
 ```javascript
 // Device side (page/page2.js)
+import * as messaging from '@zos/ble';
+
 // Access messageBuilder from globalData (set in app.js)
-const { messageBuilder, MESSAGE_TYPES } = getApp()._options.globalData;
+const { messageBuilder, MESSAGE_TYPES } = getApp().globalData;
 
 // User taps button
 const message = messageBuilder.request({
   type: MESSAGE_TYPES.GET_SECRET
 });
 
-// Send via hmBle (global object provided by Zepp OS)
-hmBle.send(JSON.stringify(message));
+// Send via messaging.peerSocket
+messaging.peerSocket.send(message);
 ```
 
 ### 2. App-Side Receives and Processes
@@ -69,8 +71,8 @@ getSecret() {
 The device page listens for the response:
 
 ```javascript
-// Device side receives response via hmBle.on
-hmBle.on('message', (data) => {
+// Device side receives response via messaging.peerSocket.addListener
+messaging.peerSocket.addListener('message', (data) => {
   const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
   if (parsedData.data.secret && parsedData.data.success) {
     // Update UI with token from app-side
@@ -101,10 +103,10 @@ Page Navigation: page/page2 - init
 ## Key Architecture Points
 
 ### Device Side (Watch)
-- **No `@zos/ble` imports** - Device pages cannot import `@zos/ble`
-- **Use `hmBle` global** - Zepp OS provides `hmBle` as a global object
-- **Access via globalData** - messageBuilder and MESSAGE_TYPES come from `getApp()._options.globalData`
-- **JSON serialization** - Messages are sent as JSON strings via `hmBle.send()`
+- **Import `@zos/ble`** - Device pages import `@zos/ble` for messaging
+- **Use `messaging.peerSocket`** - Standard BLE messaging API for both device and app-side
+- **Access via globalData** - messageBuilder and MESSAGE_TYPES come from `getApp().globalData`
+- **Message sending** - Messages are sent as objects via `messaging.peerSocket.send()`
 
 ### App Side (Phone)
 - **Import `@zos/ble`** - App-side CAN import and use `@zos/ble`
@@ -132,7 +134,7 @@ node tests/test-get-secret.js
 ```
 
 Expected: All 21 GET_SECRET tests pass, including:
-- ✓ page2.js should NOT import @zos/ble
+- ✓ page2.js should import @zos/ble
 - ✓ page2.js should access MESSAGE_TYPES from globalData
 - ✓ page2.js should have messaging listener
 - ✓ app-side should handle GET_SECRET message

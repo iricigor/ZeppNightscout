@@ -77,16 +77,16 @@ console.log('\nTest 5: Page2 Implementation Validation');
 console.log('--------------------------------------------------');
 const page2Path = path.join(__dirname, '../page/page2.js');
 const page2Content = fs.readFileSync(page2Path, 'utf8');
-test('page2.js should NOT import @zos/ble', 
-     !page2Content.includes('@zos/ble'));
+test('page2.js should import @zos/ble', 
+     page2Content.includes('@zos/ble'));
 test('page2.js should access MESSAGE_TYPES from globalData', 
-     page2Content.includes('getApp()._options.globalData'));
+     page2Content.includes('getApp().globalData'));
 test('page2.js should have "get secret" button', 
      page2Content.includes('get secret'));
 test('page2.js should send GET_SECRET message', 
      page2Content.includes('MESSAGE_TYPES.GET_SECRET'));
 test('page2.js should have messaging listener', 
-     page2Content.includes('hmBle.on'));
+     page2Content.includes('messaging.peerSocket.addListener'));
 test('page2.js should handle secret response', 
      page2Content.includes('data.secret'));
 test('page2.js should display token', 
