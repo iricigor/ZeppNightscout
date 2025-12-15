@@ -84,6 +84,11 @@ Page({
             // Convert message to buffer for hmBle.send
             const messageStr = JSON.stringify(message);
             const messageBuffer = hmBle.str2buf(messageStr);
+            
+            if (!messageBuffer || messageBuffer.byteLength === 0) {
+              throw new Error('Failed to convert message to buffer');
+            }
+            
             hmBle.send(messageBuffer, messageBuffer.byteLength);
             console.log('Message sent successfully to app-side');
           } catch (sendError) {
@@ -147,7 +152,7 @@ Page({
           }
         }
       } catch (error) {
-        console.error('Error parsing message from app-side. Error:', error);
+        console.error('Error parsing message from app-side. Size:', size, 'Error:', error);
       }
     });
 
