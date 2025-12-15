@@ -16,6 +16,9 @@ Page({
     // Store widget references
     const widgets = {};
     
+    // Swipe instruction text constant to avoid duplication
+    const SWIPE_INSTRUCTIONS = 'Swipe for debug pages:\nLeft = GET_SECRET test\nUp = BLE Inspector\nDown = Alt BLE test';
+    
     // Title
     hmUI.createWidget(hmUI.widget.TEXT, {
       x: 0,
@@ -69,9 +72,9 @@ Page({
       x: 0,
       y: 280,
       w: screenWidth,
-      h: 80,
-      text: 'Try swiping\n(left = next page)',
-      text_size: 18,
+      h: 100,
+      text: SWIPE_INSTRUCTIONS,
+      text_size: 16,
       color: 0x888888,
       align_h: hmUI.align.CENTER_H,
       align_v: hmUI.align.CENTER_V
@@ -86,16 +89,24 @@ Page({
       
       // Check gesture type and provide feedback
       if (event === hmApp.gesture.UP) {
-        console.log('Swipe up detected');
-        feedbackText = 'Swipe up detected!';
+        console.log('Swipe up detected - navigating to BLE Inspector');
+        feedbackText = 'Opening BLE Inspector...';
         feedbackColor = 0x00ff00;
+        // Navigate to BLE Inspector page
+        setTimeout(() => {
+          hmApp.gotoPage({ url: 'page/ble-inspector' });
+        }, 300);
       } else if (event === hmApp.gesture.DOWN) {
-        console.log('Swipe down detected');
-        feedbackText = 'Swipe down detected!';
+        console.log('Swipe down detected - navigating to Alternative BLE');
+        feedbackText = 'Opening Alternative BLE...';
         feedbackColor = 0x00ffff;
+        // Navigate to Alternative BLE page
+        setTimeout(() => {
+          hmApp.gotoPage({ url: 'page/page2-alternative' });
+        }, 300);
       } else if (event === hmApp.gesture.LEFT) {
         console.log('Swipe left detected');
-        feedbackText = 'Swipe left detected!';
+        feedbackText = 'Opening GET_SECRET test...';
         feedbackColor = 0xffff00;
         // Navigate to second page
         setTimeout(() => {
@@ -112,7 +123,7 @@ Page({
         widgets.swipeText.setProperty(hmUI.prop.TEXT, feedbackText);
         widgets.swipeText.setProperty(hmUI.prop.COLOR, feedbackColor);
         setTimeout(() => {
-          widgets.swipeText.setProperty(hmUI.prop.TEXT, 'Try swiping\n(left = next page)');
+          widgets.swipeText.setProperty(hmUI.prop.TEXT, SWIPE_INSTRUCTIONS);
           widgets.swipeText.setProperty(hmUI.prop.COLOR, 0x888888);
         }, 2000);
       }
