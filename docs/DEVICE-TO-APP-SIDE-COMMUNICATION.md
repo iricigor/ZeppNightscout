@@ -16,7 +16,7 @@ When the user taps the "get secret" button on the watch:
 
 ```javascript
 // Device side (page/page2.js)
-import * as messaging from '@zos/ble';
+// Note: Device pages use global hmBle object, NOT imports
 
 // Access messageBuilder from globalData (set in app.js)
 const { messageBuilder, MESSAGE_TYPES } = getApp().globalData;
@@ -26,8 +26,10 @@ const message = messageBuilder.request({
   type: MESSAGE_TYPES.GET_SECRET
 });
 
-// Send via messaging.peerSocket
-messaging.peerSocket.send(message);
+// Send via hmBle (convert to buffer first)
+const messageStr = JSON.stringify(message);
+const messageBuffer = hmBle.str2buf(messageStr);
+hmBle.send(messageBuffer, messageBuffer.byteLength);
 ```
 
 ### 2. App-Side Receives and Processes
@@ -71,9 +73,12 @@ getSecret() {
 The device page listens for the response:
 
 ```javascript
-// Device side receives response via messaging.peerSocket.addListener
-messaging.peerSocket.addListener('message', (data) => {
-  const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+// Device side receives response via hmBle.createConnect
+hmBle.createConnect(function(index, data, size) {
+  // Convert buffer to string and parse
+  const dataStr = hmBle.buf2str(data, size);
+  const parsedData = JSON.parse(dataStr);
+  
   if (parsedData.data.secret && parsedData.data.success) {
     // Update UI with token from app-side
     widgets.resultText.setProperty(hmUI.prop.TEXT, 'Token: ' + parsedData.data.token);
@@ -103,10 +108,12 @@ Page Navigation: page/page2 - init
 ## Key Architecture Points
 
 ### Device Side (Watch)
-- **Import `@zos/ble`** - Device pages import `@zos/ble` for messaging
-- **Use `messaging.peerSocket`** - Standard BLE messaging API for both device and app-side
+- **Use global `hmBle` object** - Device pages use the global `hmBle` object, NOT ES6 imports
+- **Cannot import `@zos/ble`** - ES6 imports in device page files cause build errors (`__$RQR$__` error)
+- **Use `hmBle.createConnect(callback)`** - Set up BLE message listener with callback function
+- **Use `hmBle.send(buffer, size)`** - Send messages as buffers (use `hmBle.str2buf()` to convert)
+- **Use `hmBle.buf2str(data, size)`** - Convert received buffers to strings
 - **Access via globalData** - messageBuilder and MESSAGE_TYPES come from `getApp().globalData`
-- **Message sending** - Messages are sent as objects via `messaging.peerSocket.send()`
 
 ### App Side (Phone)
 - **Import `@zos/ble`** - App-side CAN import and use `@zos/ble`
@@ -121,9 +128,10 @@ Page Navigation: page/page2 - init
 
 1. **Separation of concerns**: Device and app-side have different capabilities and restrictions
 2. **Global data sharing**: app.js sets up globalData that pages can access
-3. **Native BLE APIs**: Uses platform-provided `hmBle` on device, `@zos/ble` on app-side
+3. **Different BLE APIs**: Device pages use global `hmBle`, app-side uses `@zos/ble` import
 4. **Bidirectional**: Both sides can send and receive messages
 5. **Event-driven**: App-side reacts to device events via message listeners
+6. **Import restrictions**: Device page files cannot use ES6 imports - they must use global objects
 
 ## Testing
 
@@ -133,10 +141,11 @@ Run the GET_SECRET test to verify the implementation:
 node tests/test-get-secret.js
 ```
 
-Expected: All 21 GET_SECRET tests pass, including:
-- ✓ page2.js should import @zos/ble
+Expected: All 24 GET_SECRET tests pass, including:
+- ✓ page2.js should NOT import @zos/ble (uses global hmBle instead)
 - ✓ page2.js should access MESSAGE_TYPES from globalData
-- ✓ page2.js should have messaging listener
+- ✓ page2.js should use hmBle.createConnect for receiving messages
+- ✓ page2.js should use hmBle.send for sending messages
 - ✓ app-side should handle GET_SECRET message
 
 ## How to See It in Action
@@ -147,4 +156,4 @@ Expected: All 21 GET_SECRET tests pass, including:
 4. Watch displays "Loading..." then shows the token
 5. App-side logs show the entire interaction
 
-This demonstrates that **app-side CAN and DOES react to device events** through the BLE messaging system, using the correct pattern for Zepp OS device pages.
+This demonstrates that **app-side CAN and DOES react to device events** through the BLE messaging system. Device pages use the global `hmBle` object (not ES6 imports), while app-side uses `@zos/ble` imports. This is the correct pattern for Zepp OS device-to-app-side communication.
