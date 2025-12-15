@@ -81,7 +81,7 @@ Page({
           }
           
           try {
-            hmBle.send(message);
+            hmBle.send(JSON.stringify(message));
             console.log('Message sent successfully to app-side');
           } catch (sendError) {
             console.error('Error sending message:', sendError);
