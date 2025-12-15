@@ -92,9 +92,14 @@ adb devices
 zeus build --production
 zeus install
 
-# View logs
+# View device logs (from watch)
 adb logcat | grep Nightscout
+
+# View app-side logs (from phone - Android only)
+adb logcat | grep jsapp
 ```
+
+**Note**: For detailed instructions on viewing app-side logs, see [VIEWING-APP-SIDE-LOGS.md](VIEWING-APP-SIDE-LOGS.md).
 
 ## Testing Checklist
 

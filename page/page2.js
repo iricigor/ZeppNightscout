@@ -3,13 +3,15 @@
  * Displays second page with back navigation via swipe gesture
  */
 
+import * as messaging from '@zos/ble';
+
 Page({
   onInit() {
     console.log('Second page starting');
     console.log('Page Navigation: page/page2 - init');
     
     // Get messageBuilder and MESSAGE_TYPES from globalData
-    const { messageBuilder, MESSAGE_TYPES } = getApp()._options.globalData;
+    const { messageBuilder, MESSAGE_TYPES } = getApp().globalData;
     
     // Get device screen dimensions for proper layout
     const deviceInfo = hmSetting.getDeviceInfo();
@@ -71,8 +73,8 @@ Page({
           });
           console.log('Sending GET_SECRET message to app-side:', JSON.stringify(message));
           
-          if (typeof hmBle === 'undefined') {
-            console.error('hmBle is undefined');
+          if (typeof messaging === 'undefined' || !messaging.peerSocket) {
+            console.error('messaging is undefined or peerSocket not available');
             widgets.resultText.setProperty(hmUI.prop.TEXT, 'Error: messaging unavailable');
             widgets.resultText.setProperty(hmUI.prop.COLOR, 0xff0000);
             widgets.getSecretButton.setProperty(hmUI.prop.TEXT, 'get secret');
@@ -81,7 +83,7 @@ Page({
           }
           
           try {
-            hmBle.send(JSON.stringify(message));
+            messaging.peerSocket.send(message);
             console.log('Message sent successfully to app-side');
           } catch (sendError) {
             console.error('Error sending message:', sendError);
@@ -114,7 +116,7 @@ Page({
     });
 
     // Setup messaging listener to receive responses from app-side
-    hmBle.on('message', (data) => {
+    messaging.peerSocket.addListener('message', (data) => {
       try {
         const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
         console.log('Received message from app-side:', JSON.stringify(parsedData));

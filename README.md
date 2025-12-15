@@ -232,6 +232,30 @@ state: {
 - [Zepp OS Samples](https://github.com/zepp-health/zeppos-samples)
 - [Nightscout API](http://www.nightscout.info/)
 
+## Debugging and Logs
+
+### Viewing App-Side Logs
+
+App-side code runs on your phone (inside the Zepp app), not on the watch. To view these logs:
+
+- **During Development**: Use `zeus dev` simulator - shows both device and app-side logs
+- **On Android Phone**: Use `adb logcat | grep jsapp` to view Zepp app logs
+- **On iOS Phone**: No direct access - use simulator for debugging
+
+See [VIEWING-APP-SIDE-LOGS.md](docs/VIEWING-APP-SIDE-LOGS.md) for comprehensive instructions.
+
+### Viewing Device-Side Logs
+
+Device-side code runs on the watch. To view these logs:
+
+```bash
+# Connect to watch via WiFi or USB
+adb connect <watch-ip>:5555
+
+# View watch logs
+adb logcat | grep Nightscout
+```
+
 ## License
 
 MIT
