@@ -91,6 +91,24 @@ Page({
     // Display the report
     resultText.setProperty(hmUI.prop.TEXT, report);
     
+    // Store widgets reference
+    const widgets = {
+      swipeText: null
+    };
+    
+    // Swipe instructions for navigation back to first page
+    widgets.swipeText = hmUI.createWidget(hmUI.widget.TEXT, {
+      x: 0,
+      y: screenHeight - 90,
+      w: screenWidth,
+      h: 30,
+      text: 'Swipe right to go back',
+      text_size: 16,
+      color: 0x888888,
+      align_h: hmUI.align.CENTER_H,
+      align_v: hmUI.align.CENTER_V
+    });
+    
     // Button to go back
     hmUI.createWidget(hmUI.widget.BUTTON, {
       x: (screenWidth - 100) / 2,
@@ -106,6 +124,26 @@ Page({
       click_func: () => {
         hmApp.gotoPage({ url: 'page/index' });
       }
+    });
+    
+    // Gesture event listener for swipe detection
+    hmApp.registerGestureEvent(function(event) {
+      console.log('Gesture event received on BLE inspector:', event);
+      
+      // Check for right swipe to go back
+      if (event === hmApp.gesture.RIGHT) {
+        console.log('Swipe right detected - going back to first page');
+        // Show feedback before navigating
+        widgets.swipeText.setProperty(hmUI.prop.TEXT, 'Going back...');
+        widgets.swipeText.setProperty(hmUI.prop.COLOR, 0xff8800);
+        
+        // Navigate back after brief delay
+        setTimeout(() => {
+          hmApp.gotoPage({ url: 'page/index' });
+        }, 300);
+      }
+      
+      return true;
     });
     
     console.log('=== BLE INSPECTOR END ===');

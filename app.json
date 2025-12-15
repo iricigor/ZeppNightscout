@@ -24,7 +24,7 @@
     "amazfit-balance": {
       "module": {
         "page": {
-          "pages": ["page/index", "page/page2"]
+          "pages": ["page/index", "page/page2", "page/ble-inspector", "page/page2-alternative"]
         },
         "app-side": {
           "path": "app-side/index"
@@ -52,7 +52,7 @@
     "gtr-3": {
       "module": {
         "page": {
-          "pages": ["page/index", "page/page2"]
+          "pages": ["page/index", "page/page2", "page/ble-inspector", "page/page2-alternative"]
         },
         "app-side": {
           "path": "app-side/index"
