@@ -165,7 +165,7 @@ createConnect result: [value]
 typeof hmBle: object
 hmBle.send: function
 hmBle.str2buf: function
-Message string: {"type":"request","type":"GET_SECRET"}
+Message string: {"type":"request","messageType":"GET_SECRET"}
 Buffer created: YES
 Buffer byteLength: [number]
 hmBle.send() result: [value]

@@ -94,8 +94,10 @@ Page({
             return;
           }
           
-          // Try to send a simple test message
-          const testMessage = { type: 'request', action: 'GET_SECRET' };
+          // Try to send a test message using proper message format
+          const testMessage = messageBuilder.request({
+            type: MESSAGE_TYPES.GET_SECRET
+          });
           const messageStr = JSON.stringify(testMessage);
           
           console.log('Test message:', messageStr);

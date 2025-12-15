@@ -21,14 +21,16 @@ Page({
     console.log('app instance:', app ? 'EXISTS' : 'NULL');
     console.log('app.globalData:', app && app.globalData ? 'EXISTS' : 'UNDEFINED');
     
-    // Log globalData contents
-    if (app && app.globalData) {
-      console.log('globalData keys:', Object.keys(app.globalData).join(', '));
-      console.log('messageBuilder:', typeof app.globalData.messageBuilder);
-      console.log('MESSAGE_TYPES:', typeof app.globalData.MESSAGE_TYPES);
+    // Log globalData contents and get messageBuilder/MESSAGE_TYPES
+    if (!app || !app.globalData) {
+      console.error('CRITICAL: app.globalData is not available');
+      return;
     }
     
-    // Get messageBuilder and MESSAGE_TYPES from globalData
+    console.log('globalData keys:', Object.keys(app.globalData).join(', '));
+    console.log('messageBuilder:', typeof app.globalData.messageBuilder);
+    console.log('MESSAGE_TYPES:', typeof app.globalData.MESSAGE_TYPES);
+    
     const { messageBuilder, MESSAGE_TYPES } = app.globalData;
     
     // Get device screen dimensions for proper layout
@@ -94,7 +96,6 @@ Page({
           // Extensive BLE logging
           console.log('=== BLE SEND START ===');
           console.log('typeof hmBle:', typeof hmBle);
-          console.log('hmBle exists:', typeof hmBle !== 'undefined' ? 'YES' : 'NO');
           
           if (typeof hmBle === 'undefined') {
             console.error('CRITICAL: hmBle is undefined or not available');
